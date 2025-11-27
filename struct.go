@@ -1,0 +1,203 @@
+package cex
+
+import (
+	//"strings"
+
+	"github.com/shopspring/decimal"
+)
+
+type SpotExchangePairRule struct {
+	Symbol        string          // BTCUSDT
+	Base          string          // BTC
+	Quote         string          // USDT
+	MinPrice      decimal.Decimal // MUST
+	MaxPrice      decimal.Decimal // MUST
+	PriceTickSize decimal.Decimal // MUST 价格最小变动单位
+	MinOrderQty   decimal.Decimal // MUST
+	MaxOrderQty   decimal.Decimal // MUST
+	QtyStep       decimal.Decimal // MUST 数量最小变动单位
+	MinNotional   decimal.Decimal // MUST
+	BaseScale     int32           // for bigone
+	Time          int64           // 取到数据的时间 second
+}
+
+func (exp *SpotExchangePairRule) AdjustPrice(v decimal.Decimal) decimal.Decimal {
+	if v.LessThan(exp.MinPrice) || v.GreaterThan(exp.MaxPrice) {
+		return decimal.Decimal{}
+	}
+	return v.Div(exp.PriceTickSize).Floor().Mul(exp.PriceTickSize)
+}
+func (exp *SpotExchangePairRule) AdjustQty(v decimal.Decimal) decimal.Decimal {
+	if v.LessThan(exp.MinOrderQty) || v.GreaterThan(exp.MaxOrderQty) {
+		return decimal.Decimal{}
+	}
+	return v.Div(exp.QtyStep).Floor().Mul(exp.QtyStep)
+}
+
+type ContractExchangePairRule struct {
+	Symbol             string // BTCUSDT
+	Base               string
+	Quote              string
+	ContractSize       decimal.Decimal // 合约面值
+	ContractMultiplier decimal.Decimal // 合约乘数，每个合约代表多少单位的标的资产
+	MinPrice           decimal.Decimal
+	MaxPrice           decimal.Decimal
+	PriceTickSize      decimal.Decimal // 价格最小变动单位
+	MinOrderQty        decimal.Decimal // 标的资产数量，不是张数
+	MaxOrderQty        decimal.Decimal // 标的资产数量，不是张数
+	QtyStep            decimal.Decimal // 合约数量最小单位(不是张数)
+	MinNotional        decimal.Decimal // MUST
+	MinLeverage        int
+	MaxLeverage        int
+	LeverageStep       int   // 有些cex是支持小数点的，大可不必
+	Time               int64 // 取到数据的时间 second
+}
+
+func (exp *ContractExchangePairRule) AdjustPrice(v decimal.Decimal) decimal.Decimal {
+	if v.LessThan(exp.MinPrice) || v.GreaterThan(exp.MaxPrice) {
+		return decimal.Decimal{}
+	}
+	return v.Div(exp.PriceTickSize).Floor().Mul(exp.PriceTickSize)
+}
+func (exp *ContractExchangePairRule) AdjustQty(v decimal.Decimal) decimal.Decimal {
+	if v.LessThan(exp.MinOrderQty) || v.GreaterThan(exp.MaxOrderQty) {
+		return decimal.Decimal{}
+	}
+	return v.Div(exp.QtyStep).Floor().Mul(exp.QtyStep)
+}
+
+type UnifiedAsset struct {
+	Symbol string          // BTC
+	Total  decimal.Decimal // 总共
+	Avail  decimal.Decimal // 可用
+	Locked decimal.Decimal
+}
+
+func (sa *UnifiedAsset) Val(v *UnifiedAsset) {
+	if v.Symbol != "" {
+		sa.Symbol = v.Symbol
+	}
+	if !v.Avail.Equals(decimal.NewFromInt(999999999)) {
+		sa.Avail = v.Avail
+	}
+	if !v.Total.Equals(decimal.NewFromInt(999999999)) {
+		sa.Total = v.Total
+	}
+	if !v.Locked.Equals(decimal.NewFromInt(999999999)) {
+		sa.Locked = v.Locked
+	}
+}
+
+type SpotOrder struct {
+	RequestId string // for ws 不要超过28, 在SpotWsPlaceOrder成功后返回
+	Err       string // for ws
+	// 如果ws api下单失败，会只返回以上部分
+
+	Symbol   string // BTCUSDT
+	OrderId  string
+	ClientId string
+	// 如果ws api下单成功，会只返回以上部分
+
+	Price decimal.Decimal
+	Qty   decimal.Decimal // 用户设置的原始订单数量
+
+	FilledQty decimal.Decimal // 交易的订单数量
+	FilledAmt decimal.Decimal // 累计交易的金额
+
+	Status      string          // NEW/PARTIALLY_FILLED/FILLED/CANCELED/REJECTED/EXPIRED
+	Type        string          // LIMIT/MARKET
+	TimeInForce string          // GTC/FOK/IOC
+	Side        string          // BUY/SELL
+	FeeAsset    string          // 交易费资产类型, 比如GT,BNB,USDT
+	FeeQty      decimal.Decimal // 手续费数量(消耗为负值)
+	CTime       int64           // msec
+	UTime       int64           // msec
+}
+
+type Ticker struct {
+	Price    decimal.Decimal
+	Quantity decimal.Decimal
+}
+type OrderBookDepth struct {
+	Symbol string // BTCUSDT
+	Level  int    // 保存传入的参数，必须
+	Time   int64  // msec  0  表示交易所不提供
+	Bids   []Ticker
+	Asks   []Ticker
+}
+type Spot24hTicker struct {
+	Cex         string          // for internel
+	Symbol      string          // BTCUSDT
+	LastPrice   decimal.Decimal // 最近成交价
+	Volume      decimal.Decimal
+	QuoteVolume decimal.Decimal
+}
+type Contract24hTicker struct {
+	Cex         string          // for internel
+	Symbol      string          // BTCUSDT
+	LastPrice   decimal.Decimal // 最近成交价
+	Volume      decimal.Decimal
+	QuoteVolume decimal.Decimal
+}
+
+type ContractOrder struct {
+	RequestId string // for ws
+	Err       string // for ws
+
+	OrderId   string
+	ClientId  string
+	Symbol    string          // BTCUSDT
+	Side      string          // BUY/SELL
+	Type      string          // LIMIT/MARKET
+	Price     decimal.Decimal // 下单价
+	Qty       decimal.Decimal // 下单数量 (不是size)
+	Status    string          // NEW/PARTIALLY_FILLED/FILLED/CANCELED/REJECTED
+	FilledQty decimal.Decimal // 累计成交数量
+	FilledAmt decimal.Decimal // 累计交易的金额
+
+	FeeAsset string          // 交易费资产类型
+	FeeQty   decimal.Decimal // 手续费金额 一般是指usdt金额
+	CTime    int64
+	UTime    int64
+}
+type ContractPosition struct {
+	Symbol      string // BTCUSDT
+	Side        string
+	PositionQty decimal.Decimal // 持仓数量  正数
+	EntryPrice  decimal.Decimal // 开仓均价
+	// 以上必须
+	Leverage decimal.Decimal // 杠杆  币安推送不带个值
+	UTime    int64           // mill second
+}
+
+func (cp *ContractPosition) Val(v *ContractPosition) {
+	if v.Symbol != "" {
+		cp.Symbol = v.Symbol
+	}
+	if v.Side != "" {
+		cp.Side = v.Side
+	}
+	cp.PositionQty = v.PositionQty
+	cp.EntryPrice = v.EntryPrice
+	if !v.Leverage.Equals(decimal.NewFromInt(999999999)) {
+		cp.Leverage = v.Leverage
+	}
+	if v.UTime > 0 {
+		cp.UTime = v.UTime
+	}
+}
+
+type FundingRate struct {
+	Symbol   string          // BTCUSDT
+	Val      decimal.Decimal // 当前资金费率
+	NextTime int64           // 下次结算时间second
+	UTime    int64           // second
+}
+type KLine struct {
+	OpenTime int64 // sec
+	//OpenPrice   decimal.Decimal
+	//HighPrice   decimal.Decimal
+	ClosePrice decimal.Decimal
+	//LowPrice    decimal.Decimal
+	//QuoteVolume decimal.Decimal // 成交金额
+}
