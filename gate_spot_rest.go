@@ -3,7 +3,6 @@ package cex
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -19,12 +18,9 @@ func (gt *Gate) SpotSupported() bool {
 func (gt *Gate) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	path := "/api/v4/spot/currency_pairs"
 	url := gtUniEndpoint + path
-	retCode, resp, err := ihttp.Get(url, gtApiDeadline, nil)
+	_, resp, err := ihttp.Get(url, gtApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(gt.Name() + " net error! " + err.Error())
-	}
-	if retCode != 200 {
-		return nil, errors.New(gt.Name() + " http code " + fmt.Sprintf("%d", retCode))
 	}
 
 	recv := []struct {
@@ -74,12 +70,9 @@ func (gt *Gate) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) 
 func (gt *Gate) SpotGetAll24hTicker() (map[string]Spot24hTicker, error) {
 	path := "/api/v4/spot/tickers"
 	url := gtUniEndpoint + path
-	retCode, resp, err := ihttp.Get(url, gtApiDeadline, nil)
+	_, resp, err := ihttp.Get(url, gtApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(gt.Name() + " net error! " + err.Error())
-	}
-	if retCode != 200 {
-		return nil, errors.New(gt.Name() + " http code " + fmt.Sprintf("%d", retCode))
 	}
 	if resp[0] == '{' {
 		return nil, gt.handleExceptionResp("SpotGetAll24hTicker", resp)
@@ -128,12 +121,9 @@ func (gt *Gate) SpotPlaceOrder(symbol, clientId string, price, qty decimal.Decim
 		`,"type":"` + gt.fromStdOrderType(orderType) + `"` + // LIMIT/MARKET
 		`}`
 	headers := gt.buildHeaders("POST", path, "", payload)
-	retCode, resp, err := ihttp.Post(url, []byte(payload), gtApiDeadline, headers)
+	_, resp, err := ihttp.Post(url, []byte(payload), gtApiDeadline, headers)
 	if err != nil {
 		return "", errors.New(gt.Name() + " net error! " + err.Error())
-	}
-	if retCode != 200 {
-		return "", errors.New(gt.Name() + " http code " + fmt.Sprintf("%d", retCode))
 	}
 	ret := struct {
 		Label   string `json:"label,omitempty"`
@@ -146,7 +136,7 @@ func (gt *Gate) SpotPlaceOrder(symbol, clientId string, price, qty decimal.Decim
 		return "", errors.New(gt.Name() + " unmarshal fail! " + err.Error())
 	}
 	if ret.Label != "" {
-		return "", errors.New(gt.Name() + " request fail! msg=" + ret.Msg)
+		return "", errors.New(gt.Name() + " request fail! err=" + ret.Msg)
 	}
 
 	if len(ret.OrderId) == 0 {
@@ -164,12 +154,9 @@ func (gt *Gate) SpotCancelOrder(symbol string, orderId, cltId string) error {
 	params := "currency_pair=" + symbolS
 	headers := gt.buildHeaders("DELETE", path, params, "")
 	url := gtUniEndpoint + path + "?" + params
-	retCode, resp, err := ihttp.Delete(url, gtApiDeadline, headers)
+	_, resp, err := ihttp.Delete(url, gtApiDeadline, headers)
 	if err != nil {
 		return errors.New(gt.Name() + " net error! " + err.Error())
-	}
-	if retCode != 200 {
-		return errors.New(gt.Name() + " http code " + fmt.Sprintf("%d", retCode))
 	}
 
 	ret := struct {
@@ -200,12 +187,9 @@ func (gt *Gate) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error) 
 	params := "currency_pair=" + symbolS
 	headers := gt.buildHeaders("GET", path, params, "")
 	url := gtUniEndpoint + path + "?" + params
-	retCode, resp, err := ihttp.Get(url, gtApiDeadline, headers)
+	_, resp, err := ihttp.Get(url, gtApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(gt.Name() + " net error! " + err.Error())
-	}
-	if retCode != 200 {
-		return nil, errors.New(gt.Name() + " http code " + fmt.Sprintf("%d", retCode))
 	}
 	order := struct {
 		Label string `json:"label,omitempty"`

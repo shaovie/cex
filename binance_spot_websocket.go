@@ -26,12 +26,12 @@ var (
 func init() {
 	bnWsPubMsgPool = sync.Pool{
 		New: func() any {
-			return &OkxWsPubMsg{}
+			return &BinanceWsSpotPubMsg{}
 		},
 	}
 	bnWsPrivMsgPool = sync.Pool{
 		New: func() any {
-			return &OkxWsPrivMsg{}
+			return &BnWsPrivMsg{}
 		},
 	}
 }

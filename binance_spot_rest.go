@@ -16,12 +16,9 @@ func (bn *Binance) SpotSupported() bool {
 }
 func (bn *Binance) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	url := bnSpotEndpoint + "/api/v3/exchangeInfo?permissions=SPOT&symbolStatus=TRADING"
-	retCode, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+	_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
-	}
-	if retCode != 200 {
-		return nil, errors.New(bn.Name() + " http code " + fmt.Sprintf("%d", retCode))
 	}
 
 	recv := struct {
@@ -85,12 +82,9 @@ func (bn *Binance) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, erro
 }
 func (bn *Binance) SpotGetAll24hTicker() (map[string]Spot24hTicker, error) {
 	url := bnSpotEndpoint + "/api/v3/ticker/24hr"
-	retCode, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+	_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
-	}
-	if retCode != 200 {
-		return nil, errors.New(bn.Name() + " http code " + fmt.Sprintf("%d", retCode))
 	}
 	if resp[0] != '[' {
 		return nil, bn.handleExceptionResp("SpotGetAll24hTicker", resp)
@@ -140,12 +134,9 @@ func (bn *Binance) SpotPlaceOrder(symbol, cltId string /*BTCUSDT*/, price, qty d
 	}
 	url := bnSpotEndpoint + "/api/v3/order?" + bn.httpQuerySign(params)
 	headers := map[string]string{"X-MBX-APIKEY": bn.apikey}
-	retCode, resp, err := ihttp.Post(url, nil, bnApiDeadline, headers)
+	_, resp, err := ihttp.Post(url, nil, bnApiDeadline, headers)
 	if err != nil {
 		return "", errors.New(bn.Name() + " net error! " + err.Error())
-	}
-	if retCode != 200 {
-		return "", errors.New(bn.Name() + " http code " + fmt.Sprintf("%d", retCode))
 	}
 
 	ret := struct {
@@ -178,12 +169,9 @@ func (bn *Binance) SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId str
 	}
 	url := bnSpotEndpoint + "/api/v3/order?" + bn.httpQuerySign(params)
 	headers := map[string]string{"X-MBX-APIKEY": bn.apikey}
-	retCode, resp, err := ihttp.Delete(url, bnApiDeadline, headers)
+	_, resp, err := ihttp.Delete(url, bnApiDeadline, headers)
 	if err != nil {
 		return errors.New(bn.Name() + " net error! " + err.Error())
-	}
-	if retCode != 200 {
-		return errors.New(bn.Name() + " http code " + fmt.Sprintf("%d", retCode))
 	}
 
 	ret := struct {
@@ -215,12 +203,9 @@ func (bn *Binance) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, erro
 	}
 	url := bnSpotEndpoint + "/api/v3/order?" + bn.httpQuerySign(params)
 	headers := map[string]string{"X-MBX-APIKEY": bn.apikey}
-	retCode, resp, err := ihttp.Get(url, bnApiDeadline, headers)
+	_, resp, err := ihttp.Get(url, bnApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
-	}
-	if retCode != 200 {
-		return nil, errors.New(bn.Name() + " http code " + fmt.Sprintf("%d", retCode))
 	}
 
 	order := struct {
