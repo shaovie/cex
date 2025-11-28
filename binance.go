@@ -1,14 +1,6 @@
 package cex
 
 import (
-	/*
-		"crypto/ed25519"
-		"crypto/x509"
-		"encoding/base64"
-		"encoding/pem"
-		"net/url"
-		"unsafe"
-	*/
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"

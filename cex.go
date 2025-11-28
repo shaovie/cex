@@ -29,6 +29,7 @@ type Exchanger interface {
 	SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error)
 
 	//= ws public
+	// cex object 如果closed需要重新连接时，请不要复用，一定要创建新的obj
 	SpotWsPublicOpen() error
 	// channels: orderbook5@symbolA,symbolB
 	//           ticker@symbolA,symbolB
@@ -39,6 +40,9 @@ type Exchanger interface {
 	SpotWsPublicLoop(ch chan<- any)
 	SpotWsPublicClose()
 	SpotWsPublicIsClosed() bool
+
+	//= ws private
+	// cex object 如果closed需要重新连接时，请不要复用，一定要创建新的obj
 	SpotWsPrivateOpen() error
 	// channels: orders
 	SpotWsPrivateSubscribe(channels []string)
@@ -123,7 +127,7 @@ func Init() error {
 func init() {
 	CexList = make(map[string]string)
 	CexList["binance"] = "Binance"
-	//CexList["gate"] = "Gate"
+	CexList["gate"] = "Gate"
 	//CexList["okx"] = "Okx"
 	//CexList["bybit"] 	= "Bybit"
 	//CexList["bitget"] 	= "Bitget"
@@ -148,14 +152,14 @@ func New(cexName, account, apikey, secretkey, passwd string) (Exchanger, error) 
 			apikey:    apikey,
 			secretkey: secretkey,
 		}
-	} /*else if cexName == "gate" {
+	} else if cexName == "gate" {
 		cexObj = &Gate{
 			name:      cexName,
 			account:   account,
 			apikey:    apikey,
 			secretkey: secretkey,
 		}
-	} else if cexName == "okx" {
+	} /*else if cexName == "okx" {
 		cexObj = &Okx{
 			name:      cexName,
 			account:   account,

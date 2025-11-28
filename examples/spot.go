@@ -54,11 +54,14 @@ func spotPubWs(cexObj cex.Exchanger) {
 	cexObj.SpotWsPublicSetTickerPool(spotTicker24hPool)
 	cexObj.SpotWsPublicSetOrderBookPool(spotOrderBookPool)
 	go cexObj.SpotWsPublicLoop(ch)
-	ticker := time.NewTicker(time.Duration(999) * time.Millisecond)
+	ticker := time.NewTicker(time.Duration(99) * time.Millisecond)
 	defer ticker.Stop()
 	for {
 		select {
-		case v := <-ch:
+		case v, ok := <-ch:
+			if !ok {
+				continue
+			}
 			switch val := v.(type) {
 			case *cex.OrderBookDepth:
 				ilog.Rinfo("%s orderbook5 bids-1:%v ask-1:%v", val.Symbol, val.Bids[0], val.Asks[0])
@@ -70,7 +73,6 @@ func spotPubWs(cexObj cex.Exchanger) {
 		case <-ticker.C:
 			if cexObj.SpotWsPublicIsClosed() {
 				ilog.Rinfo("pub ch close")
-				close(ch)
 				return
 			}
 		}
@@ -87,30 +89,61 @@ func spotPrivWs(cexObj cex.Exchanger) {
 	cexObj.SpotWsPrivateSubscribe([]string{"orders"})
 	ch := make(chan any, 256)
 	go cexObj.SpotWsPrivateLoop(ch)
-	go func() {
-		ticker := time.NewTicker(time.Duration(999) * time.Millisecond)
-		defer ticker.Stop()
-		for {
-			select {
-			case v := <-ch:
-				if orderP := v.(*cex.SpotOrder); orderP != nil {
-					ilog.Rinfo("order:%v", *orderP)
-					if orderP.Status == "NEW" {
-						ilog.Rinfo("to cancel order:%s", orderP.OrderId)
-						if err = cexObj.SpotWsCancelOrder(orderP.Symbol, orderP.OrderId, ""); err != nil {
-							ilog.Rinfo("cancel err: " + err.Error())
-						}
+	ticker := time.NewTicker(time.Duration(99) * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case v, ok := <-ch:
+			if !ok {
+				continue
+			}
+			if orderP := v.(*cex.SpotOrder); orderP != nil {
+				ilog.Rinfo("order:%v", *orderP)
+				if orderP.Status == "NEW" {
+					ilog.Rinfo("to cancel order:%s", orderP.OrderId)
+					if err = cexObj.SpotWsCancelOrder(orderP.Symbol, orderP.OrderId, ""); err != nil {
+						ilog.Rinfo("cancel err: " + err.Error())
 					}
 				}
-			case <-ticker.C:
-				if cexObj.SpotWsPrivateIsClosed() {
-					ilog.Rinfo("priv ch close")
-					close(ch)
-					return
-				}
+			}
+		case <-ticker.C:
+			if cexObj.SpotWsPrivateIsClosed() {
+				ilog.Rinfo("priv ch close")
+				return
 			}
 		}
-	}()
+	}
+}
+func testPubRest(cexObj cex.Exchanger) {
+}
+func testPubWs(cexObj cex.Exchanger) {
+	go spotPubWs(cexObj)
+	time.Sleep(10 * time.Second)
+	cexObj.SpotWsPublicUnsubscribe([]string{"orderbook5@ETHUSDT,SOLUSDT"})
+	ilog.Rinfo("spot ws public unsubscribe ethusdt,solusdt")
+	time.Sleep(600 * time.Second)
+	cexObj.SpotWsPublicClose()
+	time.Sleep(1 * time.Second)
+}
+func testPrivWs(cexObj cex.Exchanger) {
+	price := decimal.NewFromFloat(80990.238)
+	qty := decimal.NewFromFloat(0.00032486)
+	if exRule := cex.SpotGetExPairRule(cexObj.Name(), "BTCUSDT"); exRule != nil {
+		price = exRule.AdjustPrice(price)
+		qty = exRule.AdjustQty(qty)
+		ilog.Rinfo("to palce order: price=%s qty=%s", price.String(), qty.String())
+	}
+	go spotPrivWs(cexObj)
+	time.Sleep(2 * time.Second)
+	cltId := gutils.RandomStr(24)
+	_, err := cexObj.SpotWsPlaceOrder("BTCUSDT", cltId, price, qty, "BUY", "GTC", "LIMIT")
+	if err != nil {
+		ilog.Rinfo("ws place order fail: ", err.Error())
+	}
+
+	time.Sleep(120 * time.Second)
+	cexObj.SpotWsPrivateClose()
+	time.Sleep(1 * time.Second)
 }
 func main() {
 	var err error
@@ -122,35 +155,15 @@ func main() {
 		fmt.Println("cex init failed! " + err.Error())
 		os.Exit(1)
 	}
-	price := decimal.NewFromFloat(80990.238)
-	qty := decimal.NewFromFloat(0.00032486)
 	apiKey := os.Getenv("APIKEY")
 	secretKey := os.Getenv("SECRETKEY")
-	fmt.Println(secretKey)
 	// ok,gate,bybit,binance
-	cexObj, _ := cex.New("binance", "", apiKey, secretKey, "")
-	if exRule := cex.SpotGetExPairRule(cexObj.Name(), "BTCUSDT"); exRule != nil {
-		price = exRule.AdjustPrice(price)
-		qty = exRule.AdjustQty(qty)
-		ilog.Rinfo("to palce order: price=%s qty=%s", price.String(), qty.String())
-	}
-	go spotPrivWs(cexObj)
-	time.Sleep(2 * time.Second)
-	cltId := gutils.RandomStr(24)
-	_, err = cexObj.SpotWsPlaceOrder("BTCUSDT", cltId, price, qty, "BUY", "GTC", "LIMIT")
-
-	time.Sleep(120 * time.Second)
+	cexObj, _ := cex.New("gate", "", apiKey, secretKey, "")
+	//testPubWs(cexObj)
+	testPrivWs(cexObj)
 	return
 
-	go spotPubWs(cexObj)
-	time.Sleep(10 * time.Second)
-	cexObj.SpotWsPublicUnsubscribe([]string{"orderbook5@ETHUSDT,SOLUSDT"})
-	ilog.Rinfo("spot ws public unsubscribe ethusdt,solusdt")
-	time.Sleep(600 * time.Second)
-	cexObj.SpotWsPublicClose()
-	ilog.Rinfo("spot ws public closed")
-	return
-
+	/*
 	as, err := cexObj.UnifiedGetAssets()
 	if err != nil {
 		ilog.Rinfo("get asset err: %s", err.Error())
@@ -203,4 +216,5 @@ func main() {
 
 	time.Sleep(1 * time.Second)
 	ilog.Rinfo("test end")
+	*/
 }

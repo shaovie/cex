@@ -104,6 +104,27 @@ func (bn *Binance) SpotWsPublicSetOrderBookPool(p *sync.Pool) {
 }
 func (bn *Binance) SpotWsPublicLoop(ch chan<- any) {
 	defer bn.SpotWsPublicClose()
+	defer close(ch)
+
+	pingInterval := 26 * time.Second
+	pongWait  := pingInterval + 2 * time.Second
+	bn.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
+	bn.spotWsPublicConn.SetPongHandler(func(string) error {
+		bn.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
+	go func() {
+		ticker := time.NewTicker(pingInterval)
+		defer ticker.Stop()
+		for range ticker.C {
+			if bn.SpotWsPublicIsClosed() {
+				break
+			}
+			bn.spotWsPublicConnMtx.Lock()
+			bn.spotWsPublicConn.WriteMessage(websocket.PingMessage, nil)
+			bn.spotWsPublicConnMtx.Unlock()
+		}
+	}()
 
 	msgPool := sync.Pool{
 		New: func() any {
@@ -120,7 +141,7 @@ func (bn *Binance) SpotWsPublicLoop(ch chan<- any) {
 			break
 		}
 		msg := msgPool.Get().(*BinanceWsSpotPubMsg)
-		if err = json.Unmarshal(recv, msg); err != nil {
+		if err = easyjson.Unmarshal(recv, msg); err != nil {
 			ilog.Error(bn.Name() + " spot.ws.public invalid msg:" + string(recv))
 			goto END
 		}
@@ -265,6 +286,27 @@ func (bn *Binance) SpotWsPrivateClose() {
 }
 func (bn *Binance) SpotWsPrivateLoop(ch chan<- any) {
 	defer bn.SpotWsPrivateClose()
+	defer close(ch)
+
+	pingInterval := 24 * time.Second
+	pongWait  := pingInterval + 2 * time.Second
+	bn.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
+	bn.spotWsPrivateConn.SetPongHandler(func(string) error {
+		bn.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
+	go func() {
+		ticker := time.NewTicker(pingInterval)
+		defer ticker.Stop()
+		for range ticker.C {
+			if bn.SpotWsPrivateIsClosed() {
+				break
+			}
+			bn.spotWsPrivateConnMtx.Lock()
+			bn.spotWsPrivateConn.WriteMessage(websocket.PingMessage, nil)
+			bn.spotWsPrivateConnMtx.Unlock()
+		}
+	}()
 
 	type Msg struct {
 		Id     string `json:"id,omitempty"`
@@ -296,7 +338,7 @@ func (bn *Binance) SpotWsPrivateLoop(ch chan<- any) {
 		}
 		if msg.Status == 0 {
 			if msg.Data.Event == "executionReport" { // data
-				bn.wsSpotHandleOrder(recv, ch)
+				bn.spotWsHandleOrder(recv, ch)
 			} else if msg.Data.Event == "balanceUpdate" { // data
 			} else if msg.Data.Event == "outboundAccountPosition" {
 			} else if msg.Data.Event == "eventStreamTerminated" { // will be closed
@@ -305,16 +347,16 @@ func (bn *Binance) SpotWsPrivateLoop(ch chan<- any) {
 			}
 		} else { // ws api
 			if len(msg.Id) > 5 && msg.Id[0:5] == "sord-" {
-				bn.wsSpotHandlePlaceOrderResp(msg.Id, msg.Err.Msg, msg.Result, ch)
+				bn.spotWsHandlePlaceOrderResp(msg.Id, msg.Err.Msg, msg.Result, ch)
 			} else if len(msg.Id) > 5 && msg.Id[0:5] == "scle-" {
-				bn.wsSpotHandleCancelOrderResp(msg.Err.Msg)
+				bn.spotWsHandleCancelOrderResp(msg.Err.Msg)
 			} else if len(msg.Id) == 0 {
 				ilog.Error(bn.Name() + " spot.ws.priv recv unknown msg: " + string(recv))
 			}
 		}
 	}
 }
-func (bn *Binance) wsSpotHandleOrder(data json.RawMessage, ch chan<- any) {
+func (bn *Binance) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
 	order := struct {
 		Data struct {
 			ClientId     string          `json:"c,omitempty"` //
@@ -366,7 +408,7 @@ func (bn *Binance) wsSpotHandleOrder(data json.RawMessage, ch chan<- any) {
 		}
 	}
 }
-func (bn *Binance) wsSpotHandlePlaceOrderResp(reqId, errS string,
+func (bn *Binance) spotWsHandlePlaceOrderResp(reqId, errS string,
 	data json.RawMessage, ch chan<- any) {
 	if errS != "" {
 		order := &SpotOrder{
@@ -392,7 +434,7 @@ func (bn *Binance) wsSpotHandlePlaceOrderResp(reqId, errS string,
 		ClientId:  ret.ClientId,
 	}
 }
-func (bn *Binance) wsSpotHandleCancelOrderResp(errS string) {
+func (bn *Binance) spotWsHandleCancelOrderResp(errS string) {
 	if errS != "" {
 		ilog.Error(bn.Name() + " spot cancel order fail! " + errS)
 	}
