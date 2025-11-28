@@ -13,10 +13,27 @@ import (
 	"github.com/mailru/easyjson"
 	"github.com/shopspring/decimal"
 
-	"github.com/shaovie/gutils/ilog"
 	"github.com/shaovie/gutils/gutils"
+	"github.com/shaovie/gutils/ilog"
 )
 
+var (
+	gtWsPubMsgPool  sync.Pool
+	gtWsPrivMsgPool sync.Pool
+)
+
+func init() {
+	gtWsPubMsgPool = sync.Pool{
+		New: func() any {
+			return &GateWsSpotPubMsg{}
+		},
+	}
+	gtWsPrivMsgPool = sync.Pool{
+		New: func() any {
+			return &GtWsPrivMsg{}
+		},
+	}
+}
 func (gt *Gate) SpotWsPublicOpen() error {
 	url := "wss://api.gateio.ws/ws/v4/"
 	var err error
@@ -138,7 +155,7 @@ func (gt *Gate) SpotWsPublicLoop(ch chan<- any) {
 	defer close(ch)
 
 	pingInterval := 21 * time.Second
-	pongWait  := pingInterval + 2 * time.Second
+	pongWait := pingInterval + 2*time.Second
 	gt.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
 	go func() {
 		ticker := time.NewTicker(pingInterval)
@@ -154,11 +171,6 @@ func (gt *Gate) SpotWsPublicLoop(ch chan<- any) {
 		}
 	}()
 
-	msgPool := sync.Pool{
-		New: func() any {
-			return &GateWsSpotPubMsg{}
-		},
-	}
 	for {
 		_, recv, err := gt.spotWsPublicConn.ReadMessage()
 		if err != nil {
@@ -167,7 +179,8 @@ func (gt *Gate) SpotWsPublicLoop(ch chan<- any) {
 			}
 			break
 		}
-		msg := msgPool.Get().(*GateWsSpotPubMsg)
+		msg := gtWsPubMsgPool.Get().(*GateWsSpotPubMsg)
+		msg.reset()
 		if err = easyjson.Unmarshal(recv, msg); err != nil {
 			ilog.Error(gt.Name() + " spot.ws.public recv invalid msg:" + string(recv))
 			goto END
@@ -187,8 +200,7 @@ func (gt *Gate) SpotWsPublicLoop(ch chan<- any) {
 			ilog.Error(gt.Name() + " spot.ws.public recv unknown msg: " + string(recv))
 		}
 	END:
-		msg.Data = nil
-		msgPool.Put(msg)
+		gtWsPubMsgPool.Put(msg)
 	}
 }
 func (gt *Gate) SpotWsPublicIsClosed() bool {
@@ -341,12 +353,45 @@ func (gt *Gate) SpotWsPrivateClose() {
 	gt.spotWsPrivateClosed = true
 	gt.spotWsPrivateConn.Close()
 }
+
+type GtWsPrivMsg struct {
+	Channel string          `json:"channel,omitempty"`
+	Event   string          `json:"event,omitempty"`
+	Data    json.RawMessage `json:"result,omitempty"`
+
+	// api
+	RequestId string `json:"request_id,omitempty"`
+	Ack       bool   `json:"ack,omitempty"`
+	Header    struct {
+		Channel string `json:"channel,omitempty"`
+		Status  string `json:"status,omitempty"` // 200 is ok
+	} `json:"header,omitempty"`
+	RespData struct {
+		Result json.RawMessage `json:"result,omitempty"`
+		Errs   struct {
+			Label   string `json:"label,omitempty"`
+			Message string `json:"message,omitempty"`
+		} `json:"errs,omitempty"`
+	} `json:"data,omitempty"`
+}
+
+func (v *GtWsPrivMsg) reset() {
+	v.Channel = ""
+	v.Event = ""
+	v.Data = nil
+	v.RequestId = ""
+	v.Ack = false
+	v.Header.Channel = ""
+	v.RespData.Result = nil
+	v.RespData.Errs.Label = ""
+	v.RespData.Errs.Message = ""
+}
 func (gt *Gate) SpotWsPrivateLoop(ch chan<- any) {
 	defer gt.SpotWsPrivateClose()
 	defer close(ch)
 
 	pingInterval := 23 * time.Second
-	pongWait  := pingInterval + 2 * time.Second
+	pongWait := pingInterval + 2*time.Second
 	gt.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
 	go func() {
 		ticker := time.NewTicker(pingInterval)
@@ -362,26 +407,6 @@ func (gt *Gate) SpotWsPrivateLoop(ch chan<- any) {
 		}
 	}()
 
-	type Msg struct {
-		Channel string          `json:"channel,omitempty"`
-		Event   string          `json:"event,omitempty"`
-		Data    json.RawMessage `json:"result,omitempty"`
-
-		// api
-		RequestId string `json:"request_id,omitempty"`
-		Ack       bool   `json:"ack,omitempty"`
-		Header    struct {
-			Channel string `json:"channel,omitempty"`
-			Status  string `json:"status,omitempty"` // 200 is ok
-		} `json:"header,omitempty"`
-		RespData struct {
-			Result json.RawMessage `json:"result,omitempty"`
-			Errs   struct {
-				Label   string `json:"label,omitempty"`
-				Message string `json:"message,omitempty"`
-			} `json:"errs,omitempty"`
-		} `json:"data,omitempty"`
-	}
 	for {
 		_, recv, err := gt.spotWsPrivateConn.ReadMessage()
 		if err != nil {
@@ -391,10 +416,11 @@ func (gt *Gate) SpotWsPrivateLoop(ch chan<- any) {
 			break
 		}
 		ilog.Rinfo(gt.Name() + " spot priv ws: " + string(recv))
-		msg := &Msg{}
-		if err = json.Unmarshal(recv, &msg); err != nil {
+		msg := gtWsPrivMsgPool.Get().(*GtWsPrivMsg)
+		msg.reset()
+		if err = json.Unmarshal(recv, msg); err != nil {
 			ilog.Error(gt.Name() + " spot.ws.priv recv invalid msg:" + string(recv))
-			continue
+			goto END
 		}
 		if msg.RequestId != "" { // ws api
 			if msg.Ack != true { // ack 忽略
@@ -406,6 +432,7 @@ func (gt *Gate) SpotWsPrivateLoop(ch chan<- any) {
 				} else if msg.Header.Channel == "spot.login" {
 					if msg.Header.Status != "200" {
 						ilog.Error(gt.Name() + " spot.ws.priv login fail: " + msg.RespData.Errs.Message)
+						gtWsPrivMsgPool.Put(msg)
 						break // exit
 					}
 				}
@@ -421,6 +448,8 @@ func (gt *Gate) SpotWsPrivateLoop(ch chan<- any) {
 				ilog.Error(gt.Name() + " spot.ws.priv recv unknown msg: " + string(recv))
 			}
 		}
+	END:
+		gtWsPrivMsgPool.Put(msg)
 	}
 }
 func (gt *Gate) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {

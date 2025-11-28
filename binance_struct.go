@@ -17,6 +17,13 @@ type BinanceWsSpotPubMsg struct {
 	Stream string          `json:"stream,omitempty"`
 	Data   json.RawMessage `json:"data,omitempty"`
 }
+
+func (v *BinanceWsSpotPubMsg) reset() {
+	v.Code = 0
+	v.Stream = ""
+	v.Data = nil
+}
+
 type BinanceWsContractPubMsg struct {
 	Channel string          `json:"channel,omitempty"`
 	Event   string          `json:"event,omitempty"`

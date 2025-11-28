@@ -128,7 +128,7 @@ func init() {
 	CexList = make(map[string]string)
 	CexList["binance"] = "Binance"
 	CexList["gate"] = "Gate"
-	//CexList["okx"] = "Okx"
+	CexList["okx"] = "Okx"
 	//CexList["bybit"] 	= "Bybit"
 	//CexList["bitget"] 	= "Bitget"
 
@@ -159,7 +159,7 @@ func New(cexName, account, apikey, secretkey, passwd string) (Exchanger, error) 
 			apikey:    apikey,
 			secretkey: secretkey,
 		}
-	} /*else if cexName == "okx" {
+	} else if cexName == "okx" {
 		cexObj = &Okx{
 			name:      cexName,
 			account:   account,
@@ -167,7 +167,7 @@ func New(cexName, account, apikey, secretkey, passwd string) (Exchanger, error) 
 			secretkey: secretkey,
 			passwd:    passwd,
 		}
-	} else if cexName == "bybit" {
+	} /*else if cexName == "bybit" {
 		cexObj = &Bybit{
 			name:      cexName,
 			account:   account,

@@ -9,8 +9,8 @@ import (
 
 	"github.com/shopspring/decimal"
 
-	"github.com/shaovie/gutils/ilog"
 	"github.com/shaovie/gutils/ihttp"
+	"github.com/shaovie/gutils/ilog"
 )
 
 func (gt *Gate) SpotSupported() bool {
@@ -200,7 +200,7 @@ func (gt *Gate) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error) 
 	params := "currency_pair=" + symbolS
 	headers := gt.buildHeaders("GET", path, params, "")
 	url := gtUniEndpoint + path + "?" + params
-	retCode,resp, err := ihttp.Get(url, gtApiDeadline, headers)
+	retCode, resp, err := ihttp.Get(url, gtApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(gt.Name() + " net error! " + err.Error())
 	}

@@ -28,6 +28,13 @@ type GateWsSpotPubMsg struct {
 	Event   string          `json:"event,omitempty"`
 	Data    json.RawMessage `json:"result,omitempty"`
 }
+
+func (v *GateWsSpotPubMsg) reset() {
+	v.Channel = ""
+	v.Event = ""
+	v.Data = nil
+}
+
 type GateWsContractPubMsg struct {
 	Channel string          `json:"channel,omitempty"`
 	Event   string          `json:"event,omitempty"`

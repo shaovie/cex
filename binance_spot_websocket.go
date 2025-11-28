@@ -18,6 +18,23 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+var (
+	bnWsPubMsgPool  sync.Pool
+	bnWsPrivMsgPool sync.Pool
+)
+
+func init() {
+	bnWsPubMsgPool = sync.Pool{
+		New: func() any {
+			return &OkxWsPubMsg{}
+		},
+	}
+	bnWsPrivMsgPool = sync.Pool{
+		New: func() any {
+			return &OkxWsPrivMsg{}
+		},
+	}
+}
 func (bn *Binance) SpotWsPublicOpen() error {
 	url := "wss://stream.binance.com:443/stream"
 	var err error
@@ -107,7 +124,7 @@ func (bn *Binance) SpotWsPublicLoop(ch chan<- any) {
 	defer close(ch)
 
 	pingInterval := 26 * time.Second
-	pongWait  := pingInterval + 2 * time.Second
+	pongWait := pingInterval + 2*time.Second
 	bn.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
 	bn.spotWsPublicConn.SetPongHandler(func(string) error {
 		bn.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
@@ -126,11 +143,6 @@ func (bn *Binance) SpotWsPublicLoop(ch chan<- any) {
 		}
 	}()
 
-	msgPool := sync.Pool{
-		New: func() any {
-			return &BinanceWsSpotPubMsg{}
-		},
-	}
 	l := 0
 	for {
 		_, recv, err := bn.spotWsPublicConn.ReadMessage()
@@ -140,7 +152,8 @@ func (bn *Binance) SpotWsPublicLoop(ch chan<- any) {
 			}
 			break
 		}
-		msg := msgPool.Get().(*BinanceWsSpotPubMsg)
+		msg := bnWsPubMsgPool.Get().(*BinanceWsSpotPubMsg)
+		msg.reset()
 		if err = easyjson.Unmarshal(recv, msg); err != nil {
 			ilog.Error(bn.Name() + " spot.ws.public invalid msg:" + string(recv))
 			goto END
@@ -160,8 +173,7 @@ func (bn *Binance) SpotWsPublicLoop(ch chan<- any) {
 			}
 		}
 	END:
-		msg.Data = nil
-		msgPool.Put(msg)
+		bnWsPubMsgPool.Put(msg)
 	}
 }
 func (bn *Binance) SpotWsPublicIsClosed() bool {
@@ -284,12 +296,37 @@ func (bn *Binance) SpotWsPrivateClose() {
 	bn.spotWsPrivateClosed = true
 	bn.spotWsPrivateConn.Close()
 }
+
+type BnWsPrivMsg struct {
+	Id     string `json:"id,omitempty"`
+	Status int    `json:"status,omitempty"`
+	Err    struct {
+		Code int    `json:"code,omitempty"`
+		Msg  string `json:"msg,omitempty"`
+	} `json:"error,omitempty"`
+	Result json.RawMessage `json:"result,omitempty"`
+
+	Data struct {
+		Event string `json:"e,omitempty"`
+		Time  int64  `json:"E,omitempty"` // msec
+	} `json:"event,omitempty"`
+}
+
+func (v *BnWsPrivMsg) reset() {
+	v.Id = ""
+	v.Status = 0
+	v.Err.Code = 0
+	v.Err.Msg = ""
+	v.Result = nil
+	v.Data.Event = ""
+	v.Data.Time = 0
+}
 func (bn *Binance) SpotWsPrivateLoop(ch chan<- any) {
 	defer bn.SpotWsPrivateClose()
 	defer close(ch)
 
 	pingInterval := 24 * time.Second
-	pongWait  := pingInterval + 2 * time.Second
+	pongWait := pingInterval + 2*time.Second
 	bn.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
 	bn.spotWsPrivateConn.SetPongHandler(func(string) error {
 		bn.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
@@ -308,20 +345,6 @@ func (bn *Binance) SpotWsPrivateLoop(ch chan<- any) {
 		}
 	}()
 
-	type Msg struct {
-		Id     string `json:"id,omitempty"`
-		Status int    `json:"status,omitempty"`
-		Err    struct {
-			Code int    `json:"code,omitempty"`
-			Msg  string `json:"msg,omitempty"`
-		} `json:"error,omitempty"`
-		Result json.RawMessage `json:"result,omitempty"`
-
-		Data struct {
-			Event string `json:"e,omitempty"`
-			Time  int64  `json:"E,omitempty"` // msec
-		} `json:"event,omitempty"`
-	}
 	for {
 		_, recv, err := bn.spotWsPrivateConn.ReadMessage()
 		if err != nil {
@@ -331,10 +354,11 @@ func (bn *Binance) SpotWsPrivateLoop(ch chan<- any) {
 			break
 		}
 		ilog.Rinfo("spot.ws.priv " + string(recv))
-		msg := Msg{}
-		if err = json.Unmarshal(recv, &msg); err != nil {
+		msg := bnWsPrivMsgPool.Get().(*BnWsPrivMsg)
+		msg.reset()
+		if err = json.Unmarshal(recv, msg); err != nil {
 			ilog.Error(bn.Name() + " spot.ws.priv recv invalid msg:" + string(recv))
-			continue
+			goto END
 		}
 		if msg.Status == 0 {
 			if msg.Data.Event == "executionReport" { // data
@@ -354,6 +378,8 @@ func (bn *Binance) SpotWsPrivateLoop(ch chan<- any) {
 				ilog.Error(bn.Name() + " spot.ws.priv recv unknown msg: " + string(recv))
 			}
 		}
+	END:
+		bnWsPrivMsgPool.Put(msg)
 	}
 }
 func (bn *Binance) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
