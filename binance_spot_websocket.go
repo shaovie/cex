@@ -113,11 +113,11 @@ func (bn *Binance) SpotWsPublicUnsubscribe(channels []string) {
 		bn.spotWsPublicConnMtx.Unlock()
 	}
 }
-func (bn *Binance) SpotWsPublicSetTickerPool(p *sync.Pool) {
-	bn.spotWsPublicTickerPool = p
+func (bn *Binance) SpotWsPublicTickerPoolPut(v any) {
+	spotWsPublicTickerPool.Put(v)
 }
-func (bn *Binance) SpotWsPublicSetOrderBookPool(p *sync.Pool) {
-	bn.spotWsPublicOrderBookPool = p
+func (bn *Binance) SpotWsPublicOrderBook5PoolPut(v any) {
+	wsPublicOrderBook5Pool.Put(v)
 }
 func (bn *Binance) SpotWsPublicLoop(ch chan<- any) {
 	defer bn.SpotWsPublicClose()
@@ -200,7 +200,7 @@ func (bn *Binance) spotWsHandleOrderBook5(symbol string, data json.RawMessage, c
 			ilog.Error(bn.Name() + " spot.ws.public " + symbol + " orderbook5 exception")
 			return
 		}
-		obd := bn.spotWsPublicOrderBookPool.Get().(*OrderBookDepth)
+		obd := wsPublicOrderBook5Pool.Get().(*OrderBookDepth)
 		obd.Symbol = symbol
 		obd.Level = len(depth.Bids)
 		obd.Time = 0 // 币安不提供
@@ -221,7 +221,7 @@ func (bn *Binance) spotWsHandle24hTickers(data json.RawMessage, ch chan<- any) {
 	ticker := bn.spotWsPublicTickerInnerPool.Get().(*BinanceSpot24hTicker)
 	defer bn.spotWsPublicTickerInnerPool.Put(ticker)
 	if err := json.Unmarshal(data, ticker); err == nil {
-		tk := bn.spotWsPublicTickerPool.Get().(*Spot24hTicker)
+		tk := spotWsPublicTickerPool.Get().(*Spot24hTicker)
 		tk.Symbol = ticker.Symbol
 		tk.LastPrice = ticker.Last
 		tk.Volume = ticker.Volume

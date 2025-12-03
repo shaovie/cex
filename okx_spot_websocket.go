@@ -145,11 +145,11 @@ func (ok *Okx) SpotWsPublicUnsubscribe(channels []string) {
 		ok.spotWsPublicConnMtx.Unlock()
 	}
 }
-func (ok *Okx) SpotWsPublicSetTickerPool(p *sync.Pool) {
-	ok.spotWsPublicTickerPool = p
+func (ok *Okx) SpotWsPublicTickerPoolPut(v any) {
+	spotWsPublicTickerPool.Put(v)
 }
-func (ok *Okx) SpotWsPublicSetOrderBookPool(p *sync.Pool) {
-	ok.spotWsPublicOrderBookPool = p
+func (ok *Okx) SpotWsPublicOrderBook5PoolPut(v any) {
+	wsPublicOrderBook5Pool.Put(v)
 }
 func (ok *Okx) SpotWsPublicLoop(ch chan<- any) {
 	defer ok.SpotWsPublicClose()
@@ -249,7 +249,7 @@ func (ok *Okx) spotWsHandleOrderBook5(symbol string, data json.RawMessage, ch ch
 				ilog.Error(ok.Name() + " spot.ws.public " + symbol + " exception")
 				continue
 			}
-			obd := ok.spotWsPublicOrderBookPool.Get().(*OrderBookDepth)
+			obd := wsPublicOrderBook5Pool.Get().(*OrderBookDepth)
 			obd.Symbol = sym
 			obd.Level = len(depth.Bids)
 			obd.Time, _ = strconv.ParseInt(depth.Time, 10, 64)
@@ -277,7 +277,7 @@ func (ok *Okx) spotWsHandle24hTickers(data json.RawMessage, ch chan<- any) {
 				continue
 			}
 			sym := tk.Symbol[:firstDash] + tk.Symbol[firstDash+1:]
-			t := ok.spotWsPublicTickerPool.Get().(*Spot24hTicker)
+			t := spotWsPublicTickerPool.Get().(*Spot24hTicker)
 			t.Symbol = sym
 			t.LastPrice = tk.Last
 			t.Volume = tk.Volume

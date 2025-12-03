@@ -144,11 +144,11 @@ func (gt *Gate) SpotWsPublicUnsubscribe(channels []string) {
 		}
 	}
 }
-func (gt *Gate) SpotWsPublicSetTickerPool(p *sync.Pool) {
-	gt.spotWsPublicTickerPool = p
+func (gt *Gate) SpotWsPublicTickerPoolPut(v any) {
+	spotWsPublicTickerPool.Put(v)
 }
-func (gt *Gate) SpotWsPublicSetOrderBookPool(p *sync.Pool) {
-	gt.spotWsPublicOrderBookPool = p
+func (gt *Gate) SpotWsPublicOrderBook5PoolPut(v any) {
+	wsPublicOrderBook5Pool.Put(v)
 }
 func (gt *Gate) SpotWsPublicLoop(ch chan<- any) {
 	defer gt.SpotWsPublicClose()
@@ -227,7 +227,7 @@ func (gt *Gate) spotWsHandleOrderBook(data json.RawMessage, ch chan<- any) {
 			ilog.Error(gt.Name() + " spot.ws.public " + depth.Symbol + " orderbook exception")
 			return
 		}
-		obd := gt.spotWsPublicOrderBookPool.Get().(*OrderBookDepth)
+		obd := wsPublicOrderBook5Pool.Get().(*OrderBookDepth)
 		obd.Symbol = strings.ReplaceAll(depth.Symbol, "_", "")
 		obd.Level = len(depth.Bids)
 		obd.Time = depth.Time
@@ -248,7 +248,7 @@ func (gt *Gate) spotWsHandle24hTickers(data json.RawMessage, ch chan<- any) {
 	ticker := gt.spotWsPublicTickerInnerPool.Get().(*GateSpot24hTicker)
 	defer gt.spotWsPublicTickerInnerPool.Put(ticker)
 	if err := json.Unmarshal(data, ticker); err == nil {
-		tk := gt.spotWsPublicTickerPool.Get().(*Spot24hTicker)
+		tk := spotWsPublicTickerPool.Get().(*Spot24hTicker)
 		tk.Symbol = strings.ReplaceAll(ticker.Symbol, "_", "")
 		tk.LastPrice = ticker.Last
 		tk.Volume = ticker.Volume

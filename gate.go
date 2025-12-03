@@ -18,10 +18,8 @@ import (
 type Gate struct {
 	Unsupported
 	name      string
-	endpoint  string
 	account   string
 	apikey    string
-	passwd    string
 	secretkey string
 
 	// spot websocket
@@ -29,9 +27,7 @@ type Gate struct {
 	spotWsPublicConnMtx            sync.Mutex
 	spotWsPublicClosed             bool
 	spotWsPublicClosedMtx          sync.RWMutex
-	spotWsPublicTickerPool         *sync.Pool
 	spotWsPublicTickerInnerPool    *sync.Pool
-	spotWsPublicOrderBookPool      *sync.Pool
 	spotWsPublicOrderBookInnerPool *sync.Pool
 
 	spotWsPrivateConn      *websocket.Conn

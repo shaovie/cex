@@ -32,8 +32,8 @@ func (us *Unsupported) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, 
 func (us *Unsupported) SpotWsPublicOpen() error                   { return errors.New("not support") }
 func (us *Unsupported) SpotWsPublicSubscribe(channels []string)   {}
 func (us *Unsupported) SpotWsPublicUnsubscribe(channels []string) {}
-func (us *Unsupported) SpotWsPublicSetTickerPool(p *sync.Pool)    {}
-func (us *Unsupported) SpotWsPublicSetOrderBookPool(p *sync.Pool) {}
+func (us *Unsupported) SpotWsPublicTickerPoolPut(v any)           {}
+func (us *Unsupported) SpotWsPublicOrderBook5PoolPut(v any)       {}
 func (us *Unsupported) SpotWsPublicLoop(ch chan<- any)            {}
 func (us *Unsupported) SpotWsPublicClose()                        {}
 func (us *Unsupported) SpotWsPublicIsClosed() bool                { return true }
@@ -49,43 +49,43 @@ func (us *Unsupported) SpotWsPlaceOrder(symbol, cltId string, price, qty decimal
 func (us *Unsupported) SpotWsCancelOrder(s, o, c string) error { return errors.New("not support") }
 
 // = contract
-func (us *Unsupported) ContractSupported() bool { return false }
-func (us *Unsupported) ContractSizeToQty(symbol string, size decimal.Decimal) decimal.Decimal {
+func (us *Unsupported) FuturesSupported(typ string) bool { return false }
+func (us *Unsupported) FuturesLoadAllPairRule(typ string) (map[string]*FuturesExchangePairRule, error) {
+	return nil, errors.New("not support")
+}
+func (us *Unsupported) FuturesGetAll24hTicker(typ string) (map[string]Futures24hTicker, error) {
+	return nil, errors.New("not support")
+}
+func (us *Unsupported) FuturesGetAllFundingRate(typ string) (map[string]FundingRate, error) {
+	return nil, errors.New("not support")
+}
+func (us *Unsupported) FuturesGetKLine(typ, symbol, interval string, startTime, endTime, lmt int64) ([]KLine, error) {
+	return nil, errors.New("not support")
+}
+func (us *Unsupported) FuturesGetAllPositionList(typ string) (map[string]*FuturesPosition, error) {
+	return nil, errors.New("not support")
+}
+func (us *Unsupported) FuturesSizeToQty(typ, symbol string, size decimal.Decimal) decimal.Decimal {
 	return decimal.Zero
 }
-func (us *Unsupported) ContractQtyToSize(symbol string, qty decimal.Decimal) decimal.Decimal {
+func (us *Unsupported) FuturesQtyToSize(typ, symbol string, qty decimal.Decimal) decimal.Decimal {
 	return decimal.Zero
 }
-func (us *Unsupported) ContractLoadAllPairRule(c string) (map[string]*ContractExchangePairRule, error) {
-	return nil, errors.New("not support")
-}
-func (us *Unsupported) ContractGetKLine(c, symbol, interval string, startTime, endTime, lmt int64) ([]KLine, error) {
-	return nil, errors.New("not support")
-}
-func (us *Unsupported) ContractGetAll24hTicker(c string) (map[string]Contract24hTicker, error) {
-	return nil, errors.New("not support")
-}
-func (us *Unsupported) ContractGetAllFundingRate(c string) (map[string]FundingRate, error) {
-	return nil, errors.New("not support")
-}
-func (us *Unsupported) ContractGetAllPositionList(c string) (map[string]*ContractPosition, error) {
-	return nil, errors.New("not support")
-}
-func (us *Unsupported) ContractPlaceOrder(category, symbol, clientId string,
+func (us *Unsupported) FuturesPlaceOrder(typ, symbol, clientId string,
 	price, qty decimal.Decimal, side, orderType, timeInForce string,
 	positionMode /*0单仓,1双仓*/, tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error) {
 	return "", errors.New("not support")
 }
-func (us *Unsupported) ContractCancelOrder(category, symbol, orderId string) error {
+func (us *Unsupported) FuturesCancelOrder(typ, symbol, orderId, cltId string) error {
 	return errors.New("not support")
 }
-func (us *Unsupported) ContractGetOrder(category, symbol, orderId string) (*ContractOrder, error) {
+func (us *Unsupported) FuturesGetOrder(typ, symbol, orderId, cltId string) (*FuturesOrder, error) {
 	return nil, errors.New("not support")
 }
-func (us *Unsupported) ContractSwitchPositionMode(category string, mode int) error {
+func (us *Unsupported) FuturesSwitchPositionMode(typ string, mode int) error {
 	return errors.New("not support")
 }
-func (us *Unsupported) ContractSwitchTradeMode(category, symbol string, mode, lver int) error {
+func (us *Unsupported) FuturesSwitchTradeMode(typ, symbol string, mode, lver int) error {
 	return errors.New("not support")
 }
 func (us *Unsupported) WsContractPubChannelOpen() error                   { return errors.New("not support") }

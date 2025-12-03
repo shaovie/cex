@@ -34,11 +34,11 @@ func (exp *SpotExchangePairRule) AdjustQty(v decimal.Decimal) decimal.Decimal {
 	return v.Div(exp.QtyStep).Floor().Mul(exp.QtyStep)
 }
 
-type ContractExchangePairRule struct {
+type FuturesExchangePairRule struct {
 	Symbol             string // BTCUSDT
 	Base               string
 	Quote              string
-	ContractSize       decimal.Decimal // 合约面值
+	ContractSize       decimal.Decimal // 合约面值 for CM
 	ContractMultiplier decimal.Decimal // 合约乘数，每个合约代表多少单位的标的资产
 	MinPrice           decimal.Decimal
 	MaxPrice           decimal.Decimal
@@ -46,20 +46,17 @@ type ContractExchangePairRule struct {
 	MinOrderQty        decimal.Decimal // 标的资产数量，不是张数
 	MaxOrderQty        decimal.Decimal // 标的资产数量，不是张数
 	QtyStep            decimal.Decimal // 合约数量最小单位(不是张数)
-	MinNotional        decimal.Decimal // MUST
-	MinLeverage        int
-	MaxLeverage        int
-	LeverageStep       int   // 有些cex是支持小数点的，大可不必
-	Time               int64 // 取到数据的时间 second
+	MinNotional        decimal.Decimal // MUST for UM
+	Time               int64           // 取到数据的时间 second
 }
 
-func (exp *ContractExchangePairRule) AdjustPrice(v decimal.Decimal) decimal.Decimal {
+func (exp *FuturesExchangePairRule) AdjustPrice(v decimal.Decimal) decimal.Decimal {
 	if v.LessThan(exp.MinPrice) || v.GreaterThan(exp.MaxPrice) {
 		return decimal.Decimal{}
 	}
 	return v.Div(exp.PriceTickSize).Floor().Mul(exp.PriceTickSize)
 }
-func (exp *ContractExchangePairRule) AdjustQty(v decimal.Decimal) decimal.Decimal {
+func (exp *FuturesExchangePairRule) AdjustQty(v decimal.Decimal) decimal.Decimal {
 	if v.LessThan(exp.MinOrderQty) || v.GreaterThan(exp.MaxOrderQty) {
 		return decimal.Decimal{}
 	}
@@ -132,7 +129,7 @@ type Spot24hTicker struct {
 	Volume      decimal.Decimal
 	QuoteVolume decimal.Decimal
 }
-type Contract24hTicker struct {
+type Futures24hTicker struct {
 	Cex         string          // for internel
 	Symbol      string          // BTCUSDT
 	LastPrice   decimal.Decimal // 最近成交价
@@ -140,7 +137,7 @@ type Contract24hTicker struct {
 	QuoteVolume decimal.Decimal
 }
 
-type ContractOrder struct {
+type FuturesOrder struct {
 	RequestId string // for ws
 	Err       string // for ws
 
@@ -160,7 +157,7 @@ type ContractOrder struct {
 	CTime    int64
 	UTime    int64
 }
-type ContractPosition struct {
+type FuturesPosition struct {
 	Symbol      string // BTCUSDT
 	Side        string
 	PositionQty decimal.Decimal // 持仓数量  正数
@@ -170,7 +167,7 @@ type ContractPosition struct {
 	UTime    int64           // mill second
 }
 
-func (cp *ContractPosition) Val(v *ContractPosition) {
+func (cp *FuturesPosition) Val(v *FuturesPosition) {
 	if v.Symbol != "" {
 		cp.Symbol = v.Symbol
 	}
@@ -194,10 +191,11 @@ type FundingRate struct {
 	UTime    int64           // second
 }
 type KLine struct {
-	OpenTime int64 // sec
-	//OpenPrice   decimal.Decimal
-	//HighPrice   decimal.Decimal
-	ClosePrice decimal.Decimal
-	//LowPrice    decimal.Decimal
-	//QuoteVolume decimal.Decimal // 成交金额
+	OpenTime    int64 // sec
+	OpenPrice   decimal.Decimal
+	HighPrice   decimal.Decimal
+	ClosePrice  decimal.Decimal
+	LowPrice    decimal.Decimal
+	Volume      decimal.Decimal // 成交量
+	QuoteVolume decimal.Decimal // 成交金额
 }

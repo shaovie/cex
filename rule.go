@@ -11,15 +11,15 @@ import (
 )
 
 var (
-	spotExchangePairRule        map[string]map[string]*SpotExchangePairRule
-	spotExchangePairRuleMtx     sync.RWMutex
-	contractExchangePairRule    map[string]map[string]*ContractExchangePairRule
-	contractExchangePairRuleMtx sync.RWMutex
+	spotExchangePairRule       map[string]map[string]*SpotExchangePairRule
+	spotExchangePairRuleMtx    sync.RWMutex
+	futuresExchangePairRule    map[string]map[string]*FuturesExchangePairRule
+	futuresExchangePairRuleMtx sync.RWMutex
 )
 
 func init() {
 	spotExchangePairRule = make(map[string]map[string]*SpotExchangePairRule)
-	contractExchangePairRule = make(map[string]map[string]*ContractExchangePairRule)
+	futuresExchangePairRule = make(map[string]map[string]*FuturesExchangePairRule)
 }
 func ruleInit() {
 	var wg sync.WaitGroup
@@ -97,33 +97,33 @@ func spotUpdateExPairRule() {
 	}
 	wg.Wait()
 }
-func ContractGetAllExPairRule(cex string) map[string]*ContractExchangePairRule {
-	contractExchangePairRuleMtx.RLock()
-	defer contractExchangePairRuleMtx.RUnlock()
-	return contractExchangePairRule[cex]
+func FuturesGetAllExPairRule(cex string) map[string]*FuturesExchangePairRule {
+	futuresExchangePairRuleMtx.RLock()
+	defer futuresExchangePairRuleMtx.RUnlock()
+	return futuresExchangePairRule[cex]
 }
-func ContractGetExPairRule(cex, symbol string) *ContractExchangePairRule {
-	contractExchangePairRuleMtx.RLock()
-	defer contractExchangePairRuleMtx.RUnlock()
-	if exr := contractExchangePairRule[cex]; exr != nil {
+func FuturesGetExPairRule(cex, symbol string) *FuturesExchangePairRule {
+	futuresExchangePairRuleMtx.RLock()
+	defer futuresExchangePairRuleMtx.RUnlock()
+	if exr := futuresExchangePairRule[cex]; exr != nil {
 		return exr[symbol]
 	}
 	return nil
 }
-func GetContractMultiplier(cex, symbol /*btcusdt*/ string) decimal.Decimal {
-	contractExchangePairRuleMtx.RLock()
-	defer contractExchangePairRuleMtx.RUnlock()
-	if exr := contractExchangePairRule[cex]; exr != nil {
+func GetFuturesMultiplier(cex, symbol /*btcusdt*/ string) decimal.Decimal {
+	futuresExchangePairRuleMtx.RLock()
+	defer futuresExchangePairRuleMtx.RUnlock()
+	if exr := futuresExchangePairRule[cex]; exr != nil {
 		if v := exr[symbol]; v != nil {
 			return v.ContractMultiplier
 		}
 	}
 	return decimal.Zero
 }
-func ContractSymbolValid(cex, symbol /*btcusdt*/ string) bool {
-	contractExchangePairRuleMtx.RLock()
-	defer contractExchangePairRuleMtx.RUnlock()
-	if exr := contractExchangePairRule[cex]; exr != nil {
+func FuturesSymbolValid(cex, symbol /*btcusdt*/ string) bool {
+	futuresExchangePairRuleMtx.RLock()
+	defer futuresExchangePairRuleMtx.RUnlock()
+	if exr := futuresExchangePairRule[cex]; exr != nil {
 		return exr[symbol] != nil
 	}
 	return false
@@ -135,15 +135,14 @@ func contractUpdateExPairRule() {
 		go func(cexName string) {
 			defer wg.Done()
 			if co, _ := New(cexName, "", "", "", ""); co != nil {
-				if co.ContractSupported() == false {
-					return
-				}
-				if ret, err := co.ContractLoadAllPairRule("linear"); ret != nil {
-					contractExchangePairRuleMtx.Lock()
-					contractExchangePairRule[cexName] = ret
-					contractExchangePairRuleMtx.Unlock()
-				} else if err != nil {
-					ilog.Warning("cex.rule.contractUpdateExPairRule: " + err.Error())
+				if co.FuturesSupported("UM") {
+					if ret, err := co.FuturesLoadAllPairRule("UM"); ret != nil {
+						futuresExchangePairRuleMtx.Lock()
+						futuresExchangePairRule[cexName] = ret
+						futuresExchangePairRuleMtx.Unlock()
+					} else if err != nil {
+						ilog.Warning("cex.rule.FuturesUpdateExPairRule:UM " + err.Error())
+					}
 				}
 			}
 		}(k)

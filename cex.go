@@ -7,6 +7,25 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+var (
+	spotWsPublicTickerPool *sync.Pool
+	wsPublicOrderBook5Pool *sync.Pool
+)
+
+func init() {
+	spotWsPublicTickerPool = &sync.Pool{
+		New: func() any { return &Spot24hTicker{} },
+	}
+	wsPublicOrderBook5Pool = &sync.Pool{
+		New: func() any {
+			return &OrderBookDepth{
+				Bids: make([]Ticker, 0, 5),
+				Asks: make([]Ticker, 0, 5),
+			}
+		},
+	}
+}
+
 type Exchanger interface {
 	Init() error
 
@@ -18,7 +37,7 @@ type Exchanger interface {
 	// rest api
 	SpotSupported() bool
 	SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error)
-	SpotGetAll24hTicker() (map[string]Spot24hTicker, error)
+	SpotGetAll24hTicker() (map[string]Spot24hTicker, error) // bigone 不支持
 
 	// 市价BUY qty=quote amt, 市价SELL qty=base qty, 参数涵义参考 struct SpotOrder
 	SpotPlaceOrder(symbol, cltId string, price, qty decimal.Decimal,
@@ -32,11 +51,12 @@ type Exchanger interface {
 	// cex object 如果closed需要重新连接时，请不要复用，一定要创建新的obj
 	SpotWsPublicOpen() error
 	// channels: orderbook5@symbolA,symbolB
-	//           ticker@symbolA,symbolB
+	//           ticker@symbolA,symbolB     // bigone不支持
 	SpotWsPublicSubscribe(channels []string)
 	SpotWsPublicUnsubscribe(channels []string)
-	SpotWsPublicSetTickerPool(p *sync.Pool)
-	SpotWsPublicSetOrderBookPool(p *sync.Pool)
+	SpotWsPublicTickerPoolPut(v any)
+	SpotWsPublicOrderBook5PoolPut(v any)
+	// Loop结束时会close(ch)
 	SpotWsPublicLoop(ch chan<- any)
 	SpotWsPublicClose()
 	SpotWsPublicIsClosed() bool
@@ -46,6 +66,7 @@ type Exchanger interface {
 	SpotWsPrivateOpen() error
 	// channels: orders
 	SpotWsPrivateSubscribe(channels []string)
+	// Loop结束时会close(ch)
 	SpotWsPrivateLoop(ch chan<- any)
 	SpotWsPrivateClose()
 	SpotWsPrivateIsClosed() bool
@@ -55,26 +76,26 @@ type Exchanger interface {
 	// orderId, cltId 二选一
 	SpotWsCancelOrder(symbol, orderId, cltId string) error
 
-	//= contract
-	ContractSupported() bool
-	ContractSizeToQty(symbol string, size decimal.Decimal) decimal.Decimal
-	ContractQtyToSize(symbol string, qty decimal.Decimal) decimal.Decimal
+	//= futures, typ=UM,U本位 typ=CM,币本位
+	FuturesSupported(typ string) bool
+	FuturesLoadAllPairRule(typ string) (map[string]*FuturesExchangePairRule, error)
+	FuturesSizeToQty(typ, symbol string, size decimal.Decimal) decimal.Decimal
+	FuturesGetAll24hTicker(typ string) (map[string]Futures24hTicker, error)
+	FuturesGetAllFundingRate(typ string) (map[string]FundingRate, error)
+	FuturesGetKLine(typ, symbol, interval string, startTime, endTime, lmt int64) ([]KLine, error)
+	FuturesGetAllPositionList(typ string) (map[string]*FuturesPosition, error)
+	FuturesQtyToSize(typ, symbol string, qty decimal.Decimal) decimal.Decimal
 	// interval 1m,5m,30m,1h,6h,12h,1d startTime/endTime is second
 	// 返回顺序[11:15:00,11:16:00,11:17:00]
-	ContractGetKLine(category, symbol, interval string, startTime, endTime, lmt int64) ([]KLine, error)
-	ContractGetAll24hTicker(c string) (map[string]Contract24hTicker, error)
-	ContractGetAllFundingRate(c string) (map[string]FundingRate, error)
-	ContractLoadAllPairRule(c string) (map[string]*ContractExchangePairRule, error)
-	ContractGetAllPositionList(category string) (map[string]*ContractPosition, error)
-	ContractPlaceOrder(category, symbol, clientId string,
+	FuturesPlaceOrder(typ, symbol, clientId string,
 		price, qty decimal.Decimal, side, orderType, timeInForce string,
 		positionMode /*0单仓,1双仓*/, tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error)
-	ContractGetOrder(category, symbol, orderId string) (*ContractOrder, error)
-	ContractCancelOrder(category, symbol /*BTCUSDT*/, orderId string) error
+	FuturesGetOrder(typ, symbol, orderId, cltId string) (*FuturesOrder, error)
+	FuturesCancelOrder(typ string, symbol /*BTCUSDT*/, orderId, cltId string) error
 	//  单仓:0/双仓:1 切换
-	ContractSwitchPositionMode(category string, mode int) error
+	FuturesSwitchPositionMode(typ string, mode int) error
 	//  全仓:0/逐仓:1 切换
-	ContractSwitchTradeMode(category, symbol string /*BTCUSDT*/, mode, leverage int) error
+	FuturesSwitchTradeMode(typ string, symbol string /*BTCUSDT*/, mode, leverage int) error
 
 	// ws
 	// channels: orderbook@symbol
@@ -129,6 +150,7 @@ func init() {
 	CexList["binance"] = "Binance"
 	CexList["gate"] = "Gate"
 	CexList["okx"] = "Okx"
+	CexList["bigone"] = "BigONE"
 	//CexList["bybit"] 	= "Bybit"
 	//CexList["bitget"] 	= "Bitget"
 
@@ -136,7 +158,8 @@ func init() {
 	CexSXList["binance"] = "BN"
 	CexSXList["gate"] = "GT"
 	CexSXList["okx"] = "OK"
-	CexSXList["Bybit"] = "BY"
+	CexSXList["bybit"] = "BY"
+	CexSXList["bigone"] = "BO"
 
 	CexFeeCoinMap = make(map[string]string)
 	CexFeeCoinMap["gate"] = "GT"
@@ -166,6 +189,13 @@ func New(cexName, account, apikey, secretkey, passwd string) (Exchanger, error) 
 			apikey:    apikey,
 			secretkey: secretkey,
 			passwd:    passwd,
+		}
+	} else if cexName == "bigone" {
+		cexObj = &Bigone{
+			name:      cexName,
+			account:   account,
+			apikey:    apikey,
+			secretkey: secretkey,
 		}
 	} /*else if cexName == "bybit" {
 		cexObj = &Bybit{

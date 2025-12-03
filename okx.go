@@ -13,7 +13,6 @@ import (
 type Okx struct {
 	Unsupported
 	name      string
-	endpoint  string
 	account   string
 	apikey    string
 	passwd    string
@@ -24,9 +23,7 @@ type Okx struct {
 	spotWsPublicConnMtx         sync.Mutex
 	spotWsPublicClosed          bool
 	spotWsPublicClosedMtx       sync.RWMutex
-	spotWsPublicTickerPool      *sync.Pool
 	spotWsPublicTickerInnerPool *sync.Pool
-	spotWsPublicOrderBookPool   *sync.Pool
 
 	spotWsPrivateConn      *websocket.Conn
 	spotWsPrivateConnMtx   sync.Mutex

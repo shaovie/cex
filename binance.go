@@ -17,7 +17,6 @@ import (
 type Binance struct {
 	Unsupported
 	name      string
-	endpoint  string
 	account   string
 	apikey    string
 	secretkey string
@@ -27,9 +26,7 @@ type Binance struct {
 	spotWsPublicConnMtx            sync.Mutex
 	spotWsPublicClosed             bool
 	spotWsPublicClosedMtx          sync.RWMutex
-	spotWsPublicTickerPool         *sync.Pool
 	spotWsPublicTickerInnerPool    *sync.Pool
-	spotWsPublicOrderBookPool      *sync.Pool
 	spotWsPublicOrderBookInnerPool *sync.Pool
 
 	spotWsPrivateConn      *websocket.Conn
@@ -76,9 +73,8 @@ type BnWsApiArg struct {
 }
 
 const bnSpotEndpoint = "https://api2.binance.com"
-const bnUPContractEndpoint = "https://fapi.binance.com"
-const bnBPContractEndpoint = "https://dapi.binance.com"
-const bnFutureEndpoint = "https://fapi.binance.com"
+const bnUMFuturesEndpoint = "https://fapi.binance.com"
+const bnCMFuturesEndpoint = "https://dapi.binance.com"
 const bnApiDeadline = 1200 * time.Millisecond
 
 func (bn *Binance) Name() string {

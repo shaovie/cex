@@ -10,6 +10,8 @@ require (
 )
 
 require (
+	github.com/emirpasic/gods v1.18.1 // indirect
+	github.com/emirpasic/gods/v2 v2.0.0-alpha // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/mattn/go-sqlite3 v1.14.32 // indirect
 )

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"cex"
@@ -13,24 +12,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-var (
-	spotTicker24hPool *sync.Pool
-	spotOrderBookPool *sync.Pool
-)
-
-func init() {
-	spotTicker24hPool = &sync.Pool{
-		New: func() any { return &cex.Spot24hTicker{} },
-	}
-	spotOrderBookPool = &sync.Pool{
-		New: func() any {
-			return &cex.OrderBookDepth{
-				Bids: make([]cex.Ticker, 0, 5),
-				Asks: make([]cex.Ticker, 0, 5),
-			}
-		},
-	}
-}
 func spotPubWs(cexObj cex.Exchanger) {
 	ilog.Rinfo("public websocket test...")
 	err := cexObj.SpotWsPublicOpen()
@@ -52,8 +33,6 @@ func spotPubWs(cexObj cex.Exchanger) {
 	ilog.Rinfo("test load exchange rule: %v", len(arr) > 0)
 	allSymbols := strings.Join(arr, ",")
 	cexObj.SpotWsPublicSubscribe([]string{"ticker@" + allSymbols, "orderbook5@ETHUSDT,BTCUSDT", "orderbook5@SOLUSDT"})
-	cexObj.SpotWsPublicSetTickerPool(spotTicker24hPool)
-	cexObj.SpotWsPublicSetOrderBookPool(spotOrderBookPool)
 	go cexObj.SpotWsPublicLoop(ch)
 	ticker := time.NewTicker(time.Duration(99) * time.Millisecond)
 	defer ticker.Stop()
@@ -73,13 +52,13 @@ func spotPubWs(cexObj cex.Exchanger) {
 						orderBookN, val.Symbol, val.Bids[0], val.Asks[0])
 				}
 				orderBookN += 1
-				spotOrderBookPool.Put(val)
+				cexObj.SpotWsPublicOrderBook5PoolPut(val)
 			case *cex.Spot24hTicker:
 				if (tickerN % 10) == 0 {
 					ilog.Rinfo("#%d, %s ticker:%v", tickerN, val.Symbol, *val)
 				}
 				tickerN += 1
-				spotTicker24hPool.Put(val)
+				cexObj.SpotWsPublicTickerPoolPut(val)
 			}
 		case <-ticker.C:
 			if cexObj.SpotWsPublicIsClosed() {
@@ -118,7 +97,7 @@ func testPubRest(cexObj cex.Exchanger) {
 func testPubWs(cexObj cex.Exchanger) {
 	go spotPubWs(cexObj)
 	go func() {
-		time.Sleep(5 * time.Second)
+		time.Sleep(10 * time.Second)
 		cexObj.SpotWsPublicUnsubscribe([]string{"orderbook5@ETHUSDT,SOLUSDT"})
 		ilog.Rinfo("spot pub ws unsubscribe orderbook5@ETHUSDT,SOLUSDT")
 		time.Sleep(1 * time.Second)
@@ -139,7 +118,7 @@ func testPrivWs(cexObj cex.Exchanger) {
 	ilog.Rinfo("to palce order: price=%s qty=%s", price.String(), qty.String())
 	reqId, err := cexObj.SpotWsPlaceOrder("BTCUSDT", cltId, price, qty, "BUY", "GTC", "LIMIT")
 	if err != nil {
-		ilog.Rinfo("ws place order fail: ", err.Error())
+		ilog.Rinfo("ws place order fail: %s", err.Error())
 	} else {
 		ilog.Rinfo("ws place order ok, reqId=%s", reqId)
 	}
@@ -149,7 +128,7 @@ func testRest(cexObj cex.Exchanger) {
 	ilog.Rinfo("rest api test...")
 	allTickers, err := cexObj.SpotGetAll24hTicker()
 	if err != nil {
-		ilog.Rinfo("SpotGetAll24hTicker fail: ", err.Error())
+		ilog.Rinfo("SpotGetAll24hTicker fail: %s", err.Error())
 	} else {
 		ilog.Rinfo("test get public 24hticker: %v", allTickers["BTCUSDT"])
 	}
@@ -174,7 +153,7 @@ func testRest(cexObj cex.Exchanger) {
 		}
 		err = cexObj.SpotCancelOrder("BTCUSDT", orderId, "")
 		if err != nil {
-			ilog.Rinfo("cancel order fail: ", err.Error())
+			ilog.Rinfo("cancel order fail: %s", err.Error())
 		} else {
 			ilog.Rinfo("cancel %s ok", orderId)
 		}
