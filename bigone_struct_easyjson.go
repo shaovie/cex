@@ -240,6 +240,22 @@ func easyjson12993614DecodeCex1(in *jlexer.Lexer, out *BigoneSpotWsPrivMsg) {
 					in.AddError((out.OrderUpdate).UnmarshalJSON(data))
 				}
 			}
+		case "accountsSnapshot":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.AccountSnap).UnmarshalJSON(data))
+				}
+			}
+		case "accountUpdate":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.AccountUpdate).UnmarshalJSON(data))
+				}
+			}
 		default:
 			in.SkipRecursive()
 		}
@@ -269,6 +285,26 @@ func easyjson12993614EncodeCex1(out *jwriter.Writer, in BigoneSpotWsPrivMsg) {
 			out.RawString(prefix)
 		}
 		out.Raw((in.OrderUpdate).MarshalJSON())
+	}
+	if len(in.AccountSnap) != 0 {
+		const prefix string = ",\"accountsSnapshot\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Raw((in.AccountSnap).MarshalJSON())
+	}
+	if len(in.AccountUpdate) != 0 {
+		const prefix string = ",\"accountUpdate\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Raw((in.AccountUpdate).MarshalJSON())
 	}
 	out.RawByte('}')
 }

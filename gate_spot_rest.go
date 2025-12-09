@@ -97,6 +97,41 @@ func (gt *Gate) SpotGetAll24hTicker() (map[string]Spot24hTicker, error) {
 	}
 	return allTk, nil
 }
+func (gt *Gate) SpotGetAllAssets() (map[string]*SpotAsset, error) {
+	path := "/api/v4/spot/accounts"
+	url := gtUniEndpoint + path
+	headers := gt.buildHeaders("GET", path, "", "")
+	_, resp, err := ihttp.Get(url, gtApiDeadline, headers)
+	if err != nil {
+		return nil, errors.New(gt.Name() + " net error! " + err.Error())
+	}
+	assetL := []struct {
+		Symbol    string          `json:"currency"`
+		Available decimal.Decimal `json:"available"`
+		Locked    decimal.Decimal `json:"locked"`
+	}{}
+	err = json.Unmarshal(resp, &assetL)
+	if err != nil {
+		return nil, errors.New(gt.Name() + " unmarshal error! " + err.Error())
+	}
+	if resp[0] == '{' {
+		return nil, gt.handleExceptionResp("SpotGetAllAssets", resp)
+	}
+
+	assetsMap := make(map[string]*SpotAsset)
+	for _, v := range assetL {
+		if v.Available.IsZero() && v.Locked.IsZero() {
+			continue
+		}
+		assetsMap[v.Symbol] = &SpotAsset{
+			Symbol: v.Symbol,
+			Avail:  v.Available,
+			Locked: v.Locked,
+			Total:  v.Available.Add(v.Locked),
+		}
+	}
+	return assetsMap, nil
+}
 func (gt *Gate) SpotPlaceOrder(symbol, clientId string, price, qty decimal.Decimal,
 	side, timeInForce, orderType string) (string, error) {
 

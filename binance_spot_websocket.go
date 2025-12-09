@@ -365,6 +365,7 @@ func (bn *Binance) SpotWsPrivateLoop(ch chan<- any) {
 				bn.spotWsHandleOrder(recv, ch)
 			} else if msg.Data.Event == "balanceUpdate" { // data
 			} else if msg.Data.Event == "outboundAccountPosition" {
+				bn.spotWsHandleBalanceUpdate(recv, ch)
 			} else if msg.Data.Event == "eventStreamTerminated" { // will be closed
 			} else {
 				ilog.Error(bn.Name() + " spot.ws.priv recv unknown msg: " + string(recv))
@@ -431,6 +432,27 @@ func (bn *Binance) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
 			FeeAsset:    order.Data.FeeAsset,
 			CTime:       order.Data.CreateTime,
 			UTime:       order.Data.ExecTime,
+		}
+	}
+}
+func (bn *Binance) spotWsHandleBalanceUpdate(data json.RawMessage, ch chan<- any) {
+	msg := struct {
+		Event struct {
+			B []struct {
+				Symbol  string          `json:"a"` // symbol
+				Balance decimal.Decimal `json:"f"`
+				Locked  decimal.Decimal `json:"l"`
+			} `json:"B,omitempty"`
+		} `json:"event,omitempty"`
+	}{}
+	if err := json.Unmarshal(data, &msg); err == nil && len(msg.Event.B) > 0 {
+		for _, as := range msg.Event.B {
+			ch <- &SpotAsset{
+				Symbol: as.Symbol,
+				Avail:  as.Balance,
+				Locked: as.Locked,
+				Total:  as.Balance.Add(as.Locked),
+			}
 		}
 	}
 }

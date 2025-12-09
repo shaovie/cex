@@ -336,6 +336,20 @@ func (gt *Gate) SpotWsPrivateSubscribe(channels []string) {
 				ilog.Warning(gt.Name() + " spot.ws.priv subscribe net error! " + err.Error())
 			}
 			gt.spotWsPrivateConnMtx.Unlock()
+		} else if c == "balance" {
+			channel := "spot.balances"
+			arg.Channel = channel
+			arg.Auth = &GatePrivAuth{
+				Method: "api_key",
+				Key:    gt.apikey,
+				Sign:   gt.wsSign(channel, "subscribe", now),
+			}
+			req, _ := json.Marshal(&arg)
+			gt.spotWsPrivateConnMtx.Lock()
+			if err := gt.spotWsPrivateConn.WriteMessage(websocket.TextMessage, req); err != nil {
+				ilog.Warning(gt.Name() + " spot.ws.priv subscribe net error! " + err.Error())
+			}
+			gt.spotWsPrivateConnMtx.Unlock()
 		}
 	}
 }

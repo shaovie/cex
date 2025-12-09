@@ -368,9 +368,13 @@ func (bo *Bigone) SpotWsPrivateSubscribe(channels []string) {
 			req := fmt.Sprintf(`{"requestId": "%s", "subscribeAllViewerOrdersRequest":{}}`,
 				gutils.RandomStr(8))
 			bo.spotWsPrivateConnMtx.Lock()
-			if err := bo.spotWsPrivateConn.WriteMessage(websocket.TextMessage, []byte(req)); err != nil {
-				ilog.Warning(bo.Name() + " spot.ws.priv subscribe net error! " + err.Error())
-			}
+			bo.spotWsPrivateConn.WriteMessage(websocket.TextMessage, []byte(req))
+			bo.spotWsPrivateConnMtx.Unlock()
+		} else if c == "balance" {
+			req := fmt.Sprintf(`{"requestId": "%s", "subscribeViewerAccountsRequest":{}}`,
+				gutils.RandomStr(8))
+			bo.spotWsPrivateConnMtx.Lock()
+			bo.spotWsPrivateConn.WriteMessage(websocket.TextMessage, []byte(req))
 			bo.spotWsPrivateConnMtx.Unlock()
 		}
 	}
@@ -430,6 +434,10 @@ func (bo *Bigone) SpotWsPrivateLoop(ch chan<- any) {
 		}
 		if msg.OrderUpdate != nil {
 			bo.spotWsHandleOrder(msg.OrderUpdate, ch)
+		} else if msg.AccountUpdate != nil {
+			bo.spotWsHandleAccountUpdate(msg.AccountUpdate, ch)
+		} else if msg.AccountSnap != nil {
+			bo.spotWsHandleAccountSnap(msg.AccountSnap, ch)
 		} else if bytes.Contains(recv, []byte(`"heartbeat":`)) {
 		} else if bytes.Contains(recv, []byte(`"success":`)) {
 		} else {
@@ -484,5 +492,44 @@ func (bo *Bigone) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
 			}
 		}
 		ch <- so
+	}
+}
+func (bo *Bigone) spotWsHandleAccountSnap(data json.RawMessage, ch chan<- any) {
+	soL := struct {
+		Accounts []struct {
+			Symbol  string          `json:"asset"`
+			Balance decimal.Decimal `json:"balance"`
+			Locked  decimal.Decimal `json:"lockedBalance"`
+		} `json:"accounts,omitempty"`
+	}{}
+	if err := json.Unmarshal(data, &soL); err == nil && len(soL.Accounts) > 0 {
+		for _, v := range soL.Accounts {
+			if v.Balance.IsZero() {
+				continue
+			}
+			ch <- &SpotAsset{
+				Symbol: v.Symbol,
+				Avail:  v.Balance.Sub(v.Locked),
+				Locked: v.Locked,
+				Total:  v.Balance,
+			}
+		}
+	}
+}
+func (bo *Bigone) spotWsHandleAccountUpdate(data json.RawMessage, ch chan<- any) {
+	as := struct {
+		Account struct {
+			Symbol  string          `json:"asset"`
+			Balance decimal.Decimal `json:"balance"`
+			Locked  decimal.Decimal `json:"lockedBalance"`
+		} `json:"account,omitempty"`
+	}{}
+	if err := json.Unmarshal(data, &as); err == nil && len(as.Account.Symbol) > 0 {
+		ch <- &SpotAsset{
+			Symbol: as.Account.Symbol,
+			Avail:  as.Account.Balance.Sub(as.Account.Locked),
+			Locked: as.Account.Locked,
+			Total:  as.Account.Balance,
+		}
 	}
 }

@@ -63,7 +63,7 @@ type GateSubscribeArg struct {
 	Time    int64         `json:"time"`
 	Channel string        `json:"channel"`
 	Event   string        `json:"event"`
-	Payload []string      `json:"payload"`
+	Payload []string      `json:"payload,omitempty"`
 	Auth    *GatePrivAuth `json:"auth,omitempty"`
 }
 

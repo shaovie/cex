@@ -347,11 +347,15 @@ func (ok *Okx) SpotWsPrivateSubscribe(channels []string) {
 	type Arg struct {
 		Channel  string `json:"channel"`
 		InstType string `json:"instType,omitempty"`
+		//ExtraParams string `json:"extraParams,omitempty"`
 	}
 	for _, c := range channels {
 		var arg *Arg
 		if c == "orders" {
 			arg = &Arg{Channel: "orders", InstType: "SPOT"}
+		} else if c == "balance" {
+			//arg = &Arg{Channel: "account", ExtraParams: `{\"updateInterval\": \"0\"}`}
+			arg = &Arg{Channel: "balance_and_position"}
 		} else {
 			continue
 		}
@@ -437,6 +441,8 @@ func (ok *Okx) SpotWsPrivateLoop(ch chan<- any) {
 		if msg.Event == "" && msg.RequestId == "" {
 			if msg.Arg.Channel == "orders" {
 				ok.spotWsHandleOrder(msg.Data, ch)
+			} else if msg.Arg.Channel == "balance_and_position" {
+				ok.spotWsHandleBalanceUpdate(msg.Data, ch)
 			}
 		} else if msg.RequestId != "" {
 			if msg.Op == "order" {
@@ -524,6 +530,25 @@ func (ok *Okx) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
 			so.FilledAmt = so.FilledQty.Mul(avgPrice)
 			so.FeeQty, _ = decimal.NewFromString(order.FeeQty)
 			ch <- so
+		}
+	}
+}
+func (ok *Okx) spotWsHandleBalanceUpdate(data json.RawMessage, ch chan<- any) {
+	msg := []struct {
+		B []struct {
+			Symbol  string          `json:"ccy"` // symbol
+			Balance decimal.Decimal `json:"cashBal"`
+		} `json:"balData,omitempty"`
+	}{}
+	if err := json.Unmarshal(data, &msg); err == nil && len(msg) > 0 {
+		for _, m := range msg {
+			for _, as := range m.B {
+				ch <- &SpotAsset{
+					Symbol: as.Symbol,
+					Avail:  as.Balance,
+					Total:  as.Balance, // TODO
+				}
+			}
 		}
 	}
 }

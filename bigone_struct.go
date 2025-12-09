@@ -64,11 +64,15 @@ type BigoneSpotWsPrivMsg struct {
 		Msg  string `json:"message,omitempty"`
 	} `json:"error,omitempty"`
 
-	OrderUpdate json.RawMessage `json:"orderUpdate,omitempty"`
+	OrderUpdate   json.RawMessage `json:"orderUpdate,omitempty"`
+	AccountSnap   json.RawMessage `json:"accountsSnapshot,omitempty"`
+	AccountUpdate json.RawMessage `json:"accountUpdate,omitempty"`
 }
 
 func (v *BigoneSpotWsPrivMsg) reset() {
 	v.Err.Code = 0
 	v.Err.Msg = ""
 	v.OrderUpdate = nil
+	v.AccountSnap = nil
+	v.AccountUpdate = nil
 }

@@ -166,6 +166,58 @@ func (ok *Okx) SpotPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 
 	return ret.Data[0].OrderId, nil
 }
+func (ok *Okx) SpotGetAllAssets() (map[string]*SpotAsset, error) {
+	path := "/api/v5/account/balance"
+	url := okUniEndpoint + path
+	headers := ok.buildHeaders("GET", path, "")
+	retCode, resp, err := ihttp.Get(url, okApiDeadline, headers)
+	if err != nil {
+		return nil, errors.New(ok.Name() + " spot get assets net error! " + err.Error())
+	}
+	if retCode != 200 {
+		return nil, errors.New(ok.Name() + " http code " + fmt.Sprintf("%d", retCode))
+	}
+	ret := struct {
+		Code string `json:"code,omitempty"`
+		Msg  string `json:"msg,omitempty"`
+		Data []struct {
+			SCode  string `json:"sCode,omitempty"`
+			SMsg   string `json:"sMsg,omitempty"`
+			Detail []struct {
+				Symbol string          `json:"ccy"`
+				Total  decimal.Decimal `json:"eq"`
+				Free   decimal.Decimal `json:"cashBal"`
+				Locked decimal.Decimal `json:"frozenBal"`
+			} `json:"details,omitempty"`
+		} `json:"data,omitempty"`
+	}{}
+	err = json.Unmarshal(resp, &ret)
+	if err != nil {
+		return nil, errors.New(ok.Name() + " unmarshal fail! " + err.Error())
+	}
+	if ret.Code != "0" {
+		if len(ret.Data) > 0 {
+			ret.Code = ret.Data[0].SCode
+			ret.Msg = ret.Data[0].SMsg
+		}
+		return nil, errors.New(ok.Name() + " resp err! " + ret.Msg)
+	}
+
+	spotAssets := make(map[string]*SpotAsset)
+	for _, dt := range ret.Data {
+		for _, asset := range dt.Detail {
+			as := &SpotAsset{
+				Symbol: asset.Symbol,
+				Avail:  asset.Free,
+				Locked: asset.Locked,
+				Total:  asset.Total,
+			}
+			spotAssets[as.Symbol] = as
+		}
+	}
+
+	return spotAssets, nil
+}
 func (ok *Okx) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error) {
 	symbolS := ok.getSpotSymbol(symbol)
 	path := "/api/v5/trade/order?instId=" + symbolS + "&ordId=" + orderId

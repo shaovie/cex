@@ -68,6 +68,47 @@ func (bo *Bigone) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error
 	boSpotSymbolMapMtx.Unlock()
 	return all, nil
 }
+func (bo *Bigone) SpotGetAllAssets() (map[string]*SpotAsset, error) {
+	url := boSpotEndpoint + "/viewer/accounts"
+	jwt := "Bearer " + bo.jwt()
+	_, resp, err := ihttp.Get(url, boApiDeadline, map[string]string{"Authorization": jwt})
+	if err != nil {
+		return nil, errors.New(bo.Name() + " net error! " + err.Error())
+	}
+	type boAsset struct {
+		Symbol  string          `json:"asset_symbol"`
+		Balance decimal.Decimal `json:"balance"`
+		Locked  decimal.Decimal `json:"locked_balance"`
+	}
+	type Resp struct {
+		Code int       `json:"code,omitempty"`
+		Msg  string    `json:"message,omitempty"`
+		Data []boAsset `json:"data,omitempty"`
+	}
+	assetL := Resp{}
+	err = json.Unmarshal(resp, &assetL)
+	if err != nil {
+		return nil, errors.New(bo.Name() + " unmarshal error! " + err.Error())
+	}
+	if assetL.Code != 0 {
+		return nil, errors.New(bo.Name() + " get asset fail! " + assetL.Msg)
+	}
+
+	assetsMap := make(map[string]*SpotAsset)
+	for _, v := range assetL.Data {
+		if v.Balance.IsZero() {
+			continue
+		}
+		v.Symbol = strings.ToUpper(v.Symbol)
+		assetsMap[v.Symbol] = &SpotAsset{
+			Symbol: v.Symbol,
+			Avail:  v.Balance.Sub(v.Locked),
+			Locked: v.Locked,
+			Total:  v.Balance,
+		}
+	}
+	return assetsMap, nil
+}
 func (bo *Bigone) SpotPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 	price, qty decimal.Decimal, side, timeInForce, orderType string) (string, error) {
 

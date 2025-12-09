@@ -76,18 +76,21 @@ func spotPrivWs(cexObj cex.Exchanger) {
 		return
 	}
 	ilog.Rinfo("priv ws open ok")
-	cexObj.SpotWsPrivateSubscribe([]string{"orders"})
+	cexObj.SpotWsPrivateSubscribe([]string{"orders", "balance"})
 	ch := make(chan any, 256)
 	go cexObj.SpotWsPrivateLoop(ch)
 	for v := range ch {
-		if orderP := v.(*cex.SpotOrder); orderP != nil {
-			ilog.Rinfo("recv order: %v", *orderP)
-			if orderP.Status == "NEW" {
-				ilog.Rinfo("to cancel order:%s", orderP.OrderId)
-				if err = cexObj.SpotWsCancelOrder(orderP.Symbol, orderP.OrderId, ""); err != nil {
+		switch val := v.(type) {
+		case *cex.SpotOrder:
+			ilog.Rinfo("recv order: %v", *val)
+			if val.Status == "NEW" {
+				ilog.Rinfo("to cancel order:%s", val.OrderId)
+				if err = cexObj.SpotWsCancelOrder(val.Symbol, val.OrderId, ""); err != nil {
 					ilog.Rinfo("cancel err: " + err.Error())
 				}
 			}
+		case *cex.SpotAsset:
+			ilog.Rinfo("recv asset: %v", *val)
 		}
 	}
 	ilog.Rinfo("priv chan read nil, so ws and chan closed")
@@ -111,6 +114,14 @@ func testPrivWs(cexObj cex.Exchanger) {
 	if exRule := cex.SpotGetExPairRule(cexObj.Name(), "BTCUSDT"); exRule != nil {
 		price = exRule.AdjustPrice(price)
 		qty = exRule.AdjustQty(qty)
+	}
+	allAssets, err := cexObj.SpotGetAllAssets()
+	if err != nil {
+		ilog.Rinfo("get all asset fail: " + err.Error())
+	} else {
+		for symbol, as := range allAssets {
+			ilog.Rinfo(cexObj.Name() + " " + symbol + " avail: " + as.Avail.String())
+		}
 	}
 	go spotPrivWs(cexObj)
 	time.Sleep(2 * time.Second)

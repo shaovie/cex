@@ -113,6 +113,43 @@ func (bn *Binance) SpotGetAll24hTicker() (map[string]Spot24hTicker, error) {
 	}
 	return allTk, nil
 }
+func (bn *Binance) SpotGetAllAssets() (map[string]*SpotAsset, error) {
+	url := bnSpotEndpoint + "/api/v3/account?" + bn.httpQuerySign("")
+	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	if err != nil {
+		return nil, errors.New(bn.Name() + " net error! " + err.Error())
+	}
+	recv := struct {
+		Code     int    `json:"code,omitempty"`
+		Msg      string `json:"msg,omitempty"`
+		Balances []struct {
+			Symbol string          `json:"asset,omitempty"`
+			Free   decimal.Decimal `json:"free,omitempty"`
+			Locked decimal.Decimal `json:"locked,omitempty"`
+		} `json:"balances,omitempty"`
+	}{}
+	err = json.Unmarshal(resp, &recv)
+	if err != nil {
+		return nil, errors.New(bn.Name() + " unmarshal error! " + err.Error())
+	}
+	if recv.Code != 0 || len(recv.Msg) != 0 {
+		return nil, errors.New(bn.Name() + " api err! " + recv.Msg)
+	}
+
+	assetsMap := make(map[string]*SpotAsset, len(recv.Balances))
+	for _, v := range recv.Balances {
+		if v.Free.IsZero() && v.Locked.IsZero() {
+			continue
+		}
+		assetsMap[v.Symbol] = &SpotAsset{
+			Symbol: v.Symbol,
+			Avail:  v.Free,
+			Locked: v.Locked,
+			Total:  v.Free.Add(v.Locked),
+		}
+	}
+	return assetsMap, nil
+}
 func (bn *Binance) SpotPlaceOrder(symbol, cltId string /*BTCUSDT*/, price, qty decimal.Decimal,
 	side, timeInForce, orderType string) (string, error) {
 	params := fmt.Sprintf("&newOrderRespType=ACK&symbol=%s&side=%s&type=%s",

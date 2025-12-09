@@ -1,10 +1,29 @@
 package cex
 
 import (
-	//"strings"
+	"sync"
 
 	"github.com/shopspring/decimal"
 )
+
+var (
+	spotWsPublicTickerPool *sync.Pool
+	wsPublicOrderBook5Pool *sync.Pool
+)
+
+func init() {
+	spotWsPublicTickerPool = &sync.Pool{
+		New: func() any { return &Spot24hTicker{} },
+	}
+	wsPublicOrderBook5Pool = &sync.Pool{
+		New: func() any {
+			return &OrderBookDepth{
+				Bids: make([]Ticker, 0, 5),
+				Asks: make([]Ticker, 0, 5),
+			}
+		},
+	}
+}
 
 type SpotExchangePairRule struct {
 	Symbol        string          // BTCUSDT
@@ -61,6 +80,26 @@ func (exp *FuturesExchangePairRule) AdjustQty(v decimal.Decimal) decimal.Decimal
 		return decimal.Decimal{}
 	}
 	return v.Div(exp.QtyStep).Floor().Mul(exp.QtyStep)
+}
+
+type SpotAsset struct {
+	Symbol string          // BTC
+	Total  decimal.Decimal // 总共
+	Avail  decimal.Decimal // 可用
+	Locked decimal.Decimal
+}
+
+func (sa *SpotAsset) Val(v *SpotAsset) {
+	if v.Symbol != "" {
+		sa.Symbol = v.Symbol
+	}
+	sa.Avail = v.Avail
+	if !v.Total.Equals(decimal.NewFromInt(999999999)) {
+		sa.Total = v.Total
+	}
+	if !v.Locked.Equals(decimal.NewFromInt(999999999)) {
+		sa.Locked = v.Locked
+	}
 }
 
 type UnifiedAsset struct {

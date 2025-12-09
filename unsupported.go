@@ -18,6 +18,9 @@ func (us *Unsupported) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, 
 func (us *Unsupported) SpotGetAll24hTicker() (map[string]Spot24hTicker, error) {
 	return nil, errors.New("not support")
 }
+func (us *Unsupported) SpotGetAllAssets() (map[string]*SpotAsset, error) {
+	return nil, errors.New("not support")
+}
 func (us *Unsupported) SpotPlaceOrder(symbol, cltId string, price, qty decimal.Decimal,
 	side, timeInForce, orderType string) (string, error) {
 	return "", errors.New("not support")

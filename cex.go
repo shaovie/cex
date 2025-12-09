@@ -7,25 +7,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-var (
-	spotWsPublicTickerPool *sync.Pool
-	wsPublicOrderBook5Pool *sync.Pool
-)
-
-func init() {
-	spotWsPublicTickerPool = &sync.Pool{
-		New: func() any { return &Spot24hTicker{} },
-	}
-	wsPublicOrderBook5Pool = &sync.Pool{
-		New: func() any {
-			return &OrderBookDepth{
-				Bids: make([]Ticker, 0, 5),
-				Asks: make([]Ticker, 0, 5),
-			}
-		},
-	}
-}
-
 type Exchanger interface {
 	Init() error
 
@@ -38,6 +19,7 @@ type Exchanger interface {
 	SpotSupported() bool
 	SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error)
 	SpotGetAll24hTicker() (map[string]Spot24hTicker, error) // bigone 不支持
+	SpotGetAllAssets() (map[string]*SpotAsset, error)
 
 	// 市价BUY qty=quote amt, 市价SELL qty=base qty, 参数涵义参考 struct SpotOrder
 	SpotPlaceOrder(symbol, cltId string, price, qty decimal.Decimal,
@@ -65,6 +47,7 @@ type Exchanger interface {
 	// cex object 如果closed需要重新连接时，请不要复用，一定要创建新的obj
 	SpotWsPrivateOpen() error
 	// channels: orders
+	//           balance
 	SpotWsPrivateSubscribe(channels []string)
 	// Loop结束时会close(ch)
 	SpotWsPrivateLoop(ch chan<- any)
