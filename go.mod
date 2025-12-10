@@ -1,4 +1,4 @@
-module cex
+module github.com/shaovie/cex
 
 go 1.25.0
 
