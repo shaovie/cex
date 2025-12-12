@@ -320,3 +320,95 @@ func (gt *Gate) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error) 
 		UTime:       order.UTime,
 	}, nil
 }
+func (gt *Gate) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
+	path := "/api/v4/spot/open_orders"
+	url := gtUniEndpoint + path
+	headers := gt.buildHeaders("GET", path, "", "")
+	_, resp, err := ihttp.Get(url, gtApiDeadline, headers)
+	if err != nil {
+		return nil, errors.New(gt.Name() + " net error! " + err.Error())
+	}
+	if resp[0] != '[' {
+		return nil, gt.handleExceptionResp("SpotGetOpenOrders", resp)
+	}
+	orders := []struct {
+		L []struct {
+			Symbol       string          `json:"currency_pair,omitempty"`
+			OrderId      string          `json:"id,omitempty"`
+			ClientId     string          `json:"text,omitempty"`
+			Price        decimal.Decimal `json:"price,omitempty"`
+			Qty          decimal.Decimal `json:"amount,omitempty"`
+			ExecutedQty  decimal.Decimal `json:"filled_amount,omitempty"`
+			CummQuoteQty decimal.Decimal `json:"filled_total,omitempty"`
+			Left         decimal.Decimal `json:"left,omitempty"`
+			Status       string          `json:"status,omitempty"`
+			Type         string          `json:"type,omitempty"`
+			TimeInForce  string          `json:"time_in_force,omitempty"` // GTC/FOK/IOC
+			Side         string          `json:"side,omitempty"`
+			FeeCoin      string          `json:"fee_currency,omitempty"`
+			FeeQty       decimal.Decimal `json:"fee,omitempty"`
+			GtQty        decimal.Decimal `json:"gt_fee,omitempty"`    //
+			Event        string          `json:"event,omitempty"`     //
+			FinishAs     string          `json:"finish_as,omitempty"` //
+			Time         int64           `json:"create_time_ms,omitempty"`
+			UTime        int64           `json:"update_time_ms,omitempty"`
+		} `json:"orders,omitempty"`
+	}{}
+	err = json.Unmarshal(resp, &orders)
+	if err != nil {
+		return nil, errors.New(gt.Name() + " unmarshal fail! " + err.Error())
+	}
+
+	dl := make([]*SpotOrder, 0, len(orders))
+	for _, vl := range orders {
+		for _, order := range vl.L {
+			clientId := ""
+			idx := strings.Index(order.ClientId, "t-")
+			if idx != -1 && len(order.ClientId) > 2 {
+				clientId = order.ClientId[2:]
+			}
+			if !order.GtQty.IsZero() {
+				order.FeeCoin = "GT"
+				order.FeeQty = order.GtQty
+			}
+			if order.Left.IsPositive() && order.Qty.GreaterThan(order.Left) {
+				order.Status = "partially_filled"
+			}
+			if order.Event == "put" {
+				order.Status = "open"
+			} else if order.Event == "update" {
+				if order.FinishAs == "open" {
+					order.Status = "partially_filled"
+				}
+			} else if order.Event == "finish" {
+				if order.FinishAs == "filled" {
+					order.Status = "filled"
+				} else if order.FinishAs == "cancelled" {
+					order.Status = "cancelled"
+				}
+			}
+			if order.Status == "" {
+				ilog.Error(gt.Name() + " unknow s status" + string(resp))
+			}
+			so := SpotOrder{
+				Symbol:      strings.ReplaceAll(order.Symbol, "_", ""),
+				OrderId:     order.OrderId,
+				ClientId:    clientId,
+				Price:       order.Price,
+				Qty:         order.Qty,
+				FilledQty:   order.ExecutedQty,
+				FilledAmt:   order.CummQuoteQty,
+				Status:      gt.toStdOrderStatus(order.Status),
+				Type:        gt.toStdOrderType(order.Type),
+				TimeInForce: gt.toStdTimeInForce(order.TimeInForce),
+				Side:        gt.toStdSide(order.Side),
+				FeeQty:      order.FeeQty.Neg(),
+				FeeAsset:    order.FeeCoin,
+				CTime:       order.Time,
+				UTime:       order.UTime,
+			}
+			dl = append(dl, &so)
+		}
+	}
+	return dl, nil
+}

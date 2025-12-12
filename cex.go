@@ -29,6 +29,7 @@ type Exchanger interface {
 	SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId string) error
 	// orderId, cltId 二选一
 	SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error)
+	SpotGetOpenOrders(symbol string) ([]*SpotOrder, error)
 
 	//= ws public
 	// cex object 如果closed需要重新连接时，请不要复用，一定要创建新的obj

@@ -301,3 +301,57 @@ func (bn *Binance) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, erro
 		UTime:       order.UTime,
 	}, nil
 }
+func (bn *Binance) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
+	params := ""
+	if symbol != "" {
+		params += "&symbol=" + symbol
+	}
+	url := bnSpotEndpoint + "/api/v3/openOrders?" + bn.httpQuerySign(params)
+	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	if err != nil {
+		return nil, errors.New(bn.Name() + " net error! " + err.Error())
+	}
+	if resp[0] != '[' {
+		return nil, bn.handleExceptionResp("SpotGetOpenOrders", resp)
+	}
+	orders := []struct {
+		Symbol       string          `json:"symbol,omitempty"` // BTCUSDT
+		OrderId      int64           `json:"orderId,omitempty"`
+		ClientId     string          `json:"clientOrderId,omitempty"`
+		Price        decimal.Decimal `json:"price,omitempty"`
+		Quantity     decimal.Decimal `json:"origQty,omitempty"`             // 用户设置的原始订单数量
+		ExecutedQty  decimal.Decimal `json:"executedQty,omitempty"`         // 交易的订单数量
+		CummQuoteQty decimal.Decimal `json:"cummulativeQuoteQty,omitempty"` // 累计交易的金额
+		Status       string          `json:"status,omitempty"`
+		Type         string          `json:"type,omitempty"`        // LIMIT/MARKET
+		TimeInForce  string          `json:"timeInForce,omitempty"` // GTC/FOK/IOC
+		Side         string          `json:"side,omitempty"`
+		Time         int64           `json:"time,omitempty"`
+		UTime        int64           `json:"updateTime,omitempty"`
+	}{}
+	err = json.Unmarshal(resp, &orders)
+	if err != nil {
+		return nil, errors.New(bn.Name() + " Unmarshal err! " + err.Error())
+	}
+	dl := make([]*SpotOrder, 0, len(orders))
+	for _, order := range orders {
+		so := SpotOrder{
+			Symbol:      order.Symbol,
+			OrderId:     strconv.FormatInt(order.OrderId, 10),
+			ClientId:    order.ClientId,
+			Price:       order.Price,
+			Qty:         order.Quantity,
+			FilledQty:   order.ExecutedQty,
+			FilledAmt:   order.CummQuoteQty,
+			Status:      order.Status,
+			Type:        order.Type,
+			TimeInForce: order.TimeInForce,
+			Side:        order.Side,
+			CTime:       order.Time,
+			UTime:       order.UTime,
+		}
+		dl = append(dl, &so)
+	}
+
+	return dl, nil
+}

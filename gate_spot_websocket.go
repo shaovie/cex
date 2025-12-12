@@ -456,6 +456,10 @@ func (gt *Gate) SpotWsPrivateLoop(ch chan<- any) {
 				if msg.Event != "subscribe" {
 					gt.spotWsHandleOrder(msg.Data, ch)
 				}
+			} else if msg.Channel == "spot.balances" {
+				if msg.Event != "subscribe" {
+					gt.spotWsHandleBalanceUpdate(msg.Data, ch)
+				}
 			} else if msg.Channel == "spot.pong" {
 				gt.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
 			} else {
@@ -536,6 +540,24 @@ func (gt *Gate) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
 				FeeAsset:    order.FeeCoin,
 				CTime:       t,
 				UTime:       ut,
+			}
+		}
+	}
+}
+func (gt *Gate) spotWsHandleBalanceUpdate(data json.RawMessage, ch chan<- any) {
+	res := []struct {
+		Symbol  string          `json:"currency"` // symbol
+		Total   decimal.Decimal `json:"total"`
+		Balance decimal.Decimal `json:"available"`
+		Locked  decimal.Decimal `json:"freeze"`
+	}{}
+	if err := json.Unmarshal(data, &res); err == nil && len(res) > 0 {
+		for _, as := range res {
+			ch <- &SpotAsset{
+				Symbol: as.Symbol,
+				Avail:  as.Balance,
+				Locked: as.Locked,
+				Total:  as.Total,
 			}
 		}
 	}

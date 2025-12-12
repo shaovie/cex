@@ -32,6 +32,9 @@ func (us *Unsupported) SpotCancelOrder(symbol, orderId, cltId string) error {
 func (us *Unsupported) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error) {
 	return nil, errors.New("not support")
 }
+func (us *Unsupported) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
+	return nil, errors.New("not support")
+}
 
 func (us *Unsupported) SpotWsPublicOpen() error                   { return errors.New("not support") }
 func (us *Unsupported) SpotWsPublicSubscribe(channels []string)   {}

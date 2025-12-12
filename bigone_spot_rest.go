@@ -269,3 +269,59 @@ func (bo *Bigone) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error
 		UTime:     utime.UnixMilli(),
 	}, nil
 }
+func (bo *Bigone) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
+	symbolS := boSpotSymbolMap[symbol]
+	url := boSpotEndpoint + "/viewer/orders?limit=200&state=PENDING&asset_pair_name=" + symbolS
+	jwt := "Bearer " + bo.jwt()
+	_, resp, err := ihttp.Get(url, boApiDeadline, map[string]string{"Authorization": jwt})
+	if err != nil {
+		return nil, errors.New(bo.Name() + " error! " + err.Error())
+	}
+	ret := struct {
+		Code int    `json:"code,omitempty"`
+		Msg  string `json:"message,omitempty"`
+		L    []struct {
+			Symbol      string          `json:"asset_pair_name,omitempty"`
+			Id          int64           `json:"id,omitempty"`
+			ClientId    string          `json:"client_order_id,omitempty"`
+			Price       decimal.Decimal `json:"price,omitempty"`
+			Qty         decimal.Decimal `json:"amount,omitempty"`
+			ExecutedQty decimal.Decimal `json:"filled_amount,omitempty"`
+			AvgPrice    decimal.Decimal `json:"avg_deal_price,omitempty"`
+			Status      string          `json:"state,omitempty"`
+			Type        string          `json:"type,omitempty"`
+			Side        string          `json:"side,omitempty"`
+			Time        string          `json:"created_at,omitempty"`
+			UTime       string          `json:"updated_at,omitempty"`
+		} `json:"data,omitempty"`
+	}{}
+	err = json.Unmarshal(resp, &ret)
+	if err != nil {
+		return nil, errors.New(bo.Name() + " unmarshal fail! " + err.Error())
+	}
+	if ret.Code != 0 {
+		return nil, errors.New(bo.Name() + " openorder fail! " + ret.Msg)
+	}
+
+	dl := make([]*SpotOrder, 0, len(ret.L))
+	for _, v := range ret.L {
+		ctime, _ := time.Parse(time.RFC3339, v.Time)
+		utime, _ := time.Parse(time.RFC3339, v.UTime)
+		so := SpotOrder{
+			Symbol:    symbol,
+			OrderId:   strconv.FormatInt(v.Id, 10),
+			ClientId:  v.ClientId,
+			Price:     v.Price,
+			Qty:       v.Qty,
+			FilledQty: v.ExecutedQty,
+			FilledAmt: v.ExecutedQty.Mul(v.AvgPrice),
+			Status:    bo.toStdOrderStatus(v.Status),
+			Type:      bo.toStdOrderType(v.Type),
+			Side:      bo.toStdSide(v.Side),
+			CTime:     ctime.UnixMilli(),
+			UTime:     utime.UnixMilli(),
+		}
+		dl = append(dl, &so)
+	}
+	return dl, nil
+}

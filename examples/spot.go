@@ -168,6 +168,14 @@ func testRest(cexObj cex.Exchanger) {
 		} else {
 			ilog.Rinfo("get order: %v", *order)
 		}
+		orderL, err := cexObj.SpotGetOpenOrders("BTCUSDT")
+		if err != nil {
+			ilog.Rinfo("get open orders fail: ", err.Error())
+		} else {
+			for _, o := range orderL {
+				ilog.Rinfo("get open orders: %v", *o)
+			}
+		}
 		err = cexObj.SpotCancelOrder("BTCUSDT", orderId, "")
 		if err != nil {
 			ilog.Rinfo("cancel order fail: %s", err.Error())

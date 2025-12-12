@@ -358,3 +358,74 @@ func (ok *Okx) SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId string)
 	}
 	return nil
 }
+func (ok *Okx) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
+	symbolS := ok.getSpotSymbol(symbol)
+	path := "/api/v5/trade/orders-pending?instType=SPOT&instId=" + symbolS
+	headers := ok.buildHeaders("GET", path, "")
+	url := okUniEndpoint + path
+	retCode, resp, err := ihttp.Get(url, okApiDeadline, headers)
+	if err != nil {
+		return nil, errors.New(ok.Name() + " net error! " + err.Error())
+	}
+	if retCode != 200 {
+		return nil, errors.New(ok.Name() + " http code " + fmt.Sprintf("%d", retCode))
+	}
+	ret := struct {
+		Code string `json:"code,omitempty"`
+		Msg  string `json:"msg,omitempty"`
+		Data []struct {
+			SCode       string          `json:"sCode,omitempty"`
+			SMsg        string          `json:"sMsg,omitempty"`
+			Symbol      string          `json:"instId"`
+			OrderId     string          `json:"ordId"`
+			ClientId    string          `json:"clOrdId"`
+			AvgPrice    string          `json:"avgPx,omitempty"`
+			Price       string          `json:"px"`
+			Qty         decimal.Decimal `json:"sz"`
+			ExecutedQty string          `json:"accFillSz"`
+			Status      string          `json:"state"`
+			Type        string          `json:"ordType"`
+			Side        string          `json:"side"`
+			FeeCoin     string          `json:"feeCcy,omitempty"`
+			FeeQty      string          `json:"fee,omitempty"`
+			Time        string          `json:"cTime"`
+			UTime       string          `json:"uTime,omitempty"`
+		} `json:"data,omitempty"`
+	}{}
+	err = json.Unmarshal(resp, &ret)
+	if err != nil {
+		return nil, errors.New(ok.Name() + " unmarshal fail! " + err.Error())
+	}
+	if ret.Code != "0" || len(ret.Data) == 0 {
+		if ret.Code != "0" && len(ret.Data) > 0 {
+			ret.Code = ret.Data[0].SCode
+			ret.Msg = ret.Data[0].SMsg
+		}
+		return nil, errors.New(ok.Name() + " resp fail! " + ret.Msg)
+	}
+
+	orders := make([]*SpotOrder, 0, len(ret.Data))
+	for _, order := range ret.Data {
+		ctime, _ := strconv.ParseInt(order.Time, 10, 64)
+		utime, _ := strconv.ParseInt(order.UTime, 10, 64)
+		avgPrice, _ := decimal.NewFromString(order.AvgPrice)
+		so := &SpotOrder{
+			Symbol:   strings.ReplaceAll(order.Symbol, "-", ""),
+			OrderId:  order.OrderId,
+			ClientId: order.ClientId,
+			Qty:      order.Qty,
+			Status:   ok.toStdOrderStatus(order.Status),
+			Type:     ok.toStdOrderType(order.Type),
+			Side:     ok.toStdSide(order.Side),
+			FeeAsset: order.FeeCoin,
+			CTime:    ctime,
+			UTime:    utime,
+		}
+		so.Price, _ = decimal.NewFromString(order.Price)
+		so.FilledQty, _ = decimal.NewFromString(order.ExecutedQty)
+		so.FilledAmt = so.FilledQty.Mul(avgPrice)
+		so.FeeQty, _ = decimal.NewFromString(order.FeeQty)
+		orders = append(orders, so)
+	}
+	return orders, nil
+}
