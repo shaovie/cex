@@ -17,6 +17,7 @@ type Exchanger interface {
 	//= spot
 	// rest api
 	SpotSupported() bool
+	SpotServerTime() (int64, error)
 	SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error)
 	SpotGetAll24hTicker() (map[string]Spot24hTicker, error) // bigone 不支持
 	SpotGetAllAssets() (map[string]*SpotAsset, error)
@@ -115,6 +116,12 @@ type Exchanger interface {
 	WsUnifiedChannelLoop(ch chan<- any)
 	WsUnifiedChannelClose()
 	WsUnifiedChannelIsClosed() bool
+
+	//= wallet
+	// chain: TRX/MOB
+	Withdrawal(symbol, addr, memo, chain string, qty decimal.Decimal) (*WithdrawReturn, error)
+	CancelWithdrawal(wid string) error
+	//GetWithdrawalResult(symbol, addr, memo, chain string, qty decimal.Decimal) (*WithdrawReturn, error)
 }
 
 var (
@@ -134,6 +141,7 @@ func init() {
 	CexList["gate"] = "Gate"
 	CexList["okx"] = "Okx"
 	CexList["bigone"] = "BigONE"
+	//CexList["mexc"] = "Mexc"
 	//CexList["bybit"] 	= "Bybit"
 	//CexList["bitget"] 	= "Bitget"
 
@@ -143,6 +151,7 @@ func init() {
 	CexSXList["okx"] = "OK"
 	CexSXList["bybit"] = "BY"
 	CexSXList["bigone"] = "BO"
+	CexSXList["mexc"] = "MC"
 
 	CexFeeCoinMap = make(map[string]string)
 	CexFeeCoinMap["gate"] = "GT"

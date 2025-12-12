@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"cex"
+	"github.com/shaovie/cex"
 	"github.com/shaovie/gutils/gutils"
 	"github.com/shaovie/gutils/ilog"
 	"github.com/shopspring/decimal"
@@ -137,6 +137,12 @@ func testPrivWs(cexObj cex.Exchanger) {
 }
 func testRest(cexObj cex.Exchanger) {
 	ilog.Rinfo("rest api test...")
+	serverTime, err := cexObj.SpotServerTime()
+	if err != nil {
+		ilog.Rinfo("SpotServerTime fail: %s", err.Error())
+	} else {
+		ilog.Rinfo("local - server diff time: %d", time.Now().UnixMilli()-serverTime)
+	}
 	allTickers, err := cexObj.SpotGetAll24hTicker()
 	if err != nil {
 		ilog.Rinfo("SpotGetAll24hTicker fail: %s", err.Error())

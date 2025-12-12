@@ -17,6 +17,32 @@ import (
 func (ok *Okx) SpotSupported() bool {
 	return true
 }
+func (ok *Okx) SpotServerTime() (int64, error) {
+	url := okUniEndpoint + "/api/v5/pubic/time"
+	_, resp, err := ihttp.Get(url, okApiDeadline, nil)
+	if err != nil {
+		return 0, errors.New(ok.Name() + " net error! " + err.Error())
+	}
+	recv := struct {
+		Code string `json:"code,omitempty"`
+		Msg  string `json:"msg,omitempty"`
+		Data []struct {
+			Time string `json:"ts,omitempty"`
+		}
+	}{}
+	err = json.Unmarshal(resp, &recv)
+	if err != nil {
+		return 0, errors.New(ok.Name() + " unmarshal error! " + err.Error())
+	}
+	if recv.Code != "0" {
+		return 0, errors.New("resp error: " + recv.Msg)
+	}
+	if len(recv.Data) == 0 {
+		return 0, errors.New("resp empty")
+	}
+	ts, _ := strconv.ParseInt(recv.Data[0].Time, 10, 64)
+	return ts, nil
+}
 func (ok *Okx) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	url := okUniEndpoint + "/api/v5/public/instruments?instType=SPOT"
 	retCode, resp, err := ihttp.Get(url, okApiDeadline, nil)

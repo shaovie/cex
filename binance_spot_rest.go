@@ -14,6 +14,21 @@ import (
 func (bn *Binance) SpotSupported() bool {
 	return true
 }
+func (bn *Binance) SpotServerTime() (int64, error) {
+	url := bnSpotEndpoint + "/api/v3/time"
+	_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+	if err != nil {
+		return 0, errors.New(bn.Name() + " net error! " + err.Error())
+	}
+	recv := struct {
+		Time int64 `json:"serverTime,omitempty"`
+	}{}
+	err = json.Unmarshal(resp, &recv)
+	if err != nil {
+		return 0, errors.New(bn.Name() + " unmarshal error! " + err.Error())
+	}
+	return recv.Time, nil
+}
 func (bn *Binance) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	url := bnSpotEndpoint + "/api/v3/exchangeInfo?permissions=SPOT&symbolStatus=TRADING"
 	_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
@@ -40,7 +55,7 @@ func (bn *Binance) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, erro
 				StepSize decimal.Decimal `json:"stepSize,omitempty"`
 
 				MinNotional decimal.Decimal `json:"minNotional,omitempty"`
-			}
+			} `json:"filters,omitempty"`
 		} `json:"symbols,omitempty"`
 	}{}
 	err = json.Unmarshal(resp, &recv)

@@ -238,3 +238,14 @@ type KLine struct {
 	Volume      decimal.Decimal // 成交量
 	QuoteVolume decimal.Decimal // 成交金额
 }
+
+type WithdrawReturn struct {
+	WId    string          // USDT
+	Symbol string          // USDT
+	Qty    decimal.Decimal //
+	Status string          // PENDING/DONE/FAILED/CANCELLED
+	Txid   string
+	Addr   string
+	Chain  string
+	Memo   string
+}

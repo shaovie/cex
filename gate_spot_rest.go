@@ -15,6 +15,22 @@ import (
 func (gt *Gate) SpotSupported() bool {
 	return true
 }
+func (gt *Gate) SpotServerTime() (int64, error) {
+	path := "/api/v4/spot/time"
+	url := gtUniEndpoint + path
+	_, resp, err := ihttp.Get(url, gtApiDeadline, nil)
+	if err != nil {
+		return 0, errors.New(gt.Name() + " net error! " + err.Error())
+	}
+	recv := struct {
+		Time int64 `json:"server_time,omitempty"`
+	}{}
+	err = json.Unmarshal(resp, &recv)
+	if err != nil {
+		return 0, errors.New(gt.Name() + " unmarshal error! " + err.Error())
+	}
+	return recv.Time, nil
+}
 func (gt *Gate) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	path := "/api/v4/spot/currency_pairs"
 	url := gtUniEndpoint + path

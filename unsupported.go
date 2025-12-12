@@ -11,7 +11,8 @@ type Unsupported struct {
 }
 
 // = spot
-func (us *Unsupported) SpotSupported() bool { return false }
+func (us *Unsupported) SpotSupported() bool            { return false }
+func (us *Unsupported) SpotServerTime() (int64, error) { return 0, errors.New("not support") }
 func (us *Unsupported) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	return nil, errors.New("not support")
 }
@@ -122,3 +123,9 @@ func (us *Unsupported) WsUnifiedChannelSubscribe(channels []string) {}
 func (us *Unsupported) WsUnifiedChannelLoop(ch chan<- any)          {}
 func (us *Unsupported) WsUnifiedChannelClose()                      {}
 func (us *Unsupported) WsUnifiedChannelIsClosed() bool              { return true }
+
+// wallet
+func (us *Unsupported) Withdrawal(symbol, addr, memo, chain string, qty decimal.Decimal) (*WithdrawReturn, error) {
+	return nil, errors.New("not support")
+}
+func (us *Unsupported) CancelWithdrawal(wid string) error { return errors.New("not support") }

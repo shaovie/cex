@@ -15,6 +15,30 @@ import (
 func (bo *Bigone) SpotSupported() bool {
 	return true
 }
+func (bo *Bigone) SpotServerTime() (int64, error) {
+	url := boSpotEndpoint + "/ping"
+	_, resp, err := ihttp.Get(url, boApiDeadline, nil)
+	if err != nil {
+		return 0, errors.New(bo.Name() + " net error! " + err.Error())
+	}
+
+	recv := struct {
+		Code int    `json:"code,omitempty"`
+		Msg  string `json:"message,omitempty"`
+		Data struct {
+			Timestamp int64 `json:"Timestamp,omitempty"`
+		} `json:"data,omitempty"`
+	}{}
+
+	err = json.Unmarshal(resp, &recv)
+	if err != nil {
+		return 0, errors.New(bo.Name() + " unmarshal error! " + err.Error())
+	}
+	if recv.Code != 0 {
+		return 0, errors.New(recv.Msg)
+	}
+	return recv.Data.Timestamp / 1000000, nil
+}
 func (bo *Bigone) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	url := boSpotEndpoint + "/asset_pairs"
 	_, resp, err := ihttp.Get(url, boApiDeadline, nil)
