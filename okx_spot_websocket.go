@@ -146,7 +146,7 @@ func (ok *Okx) SpotWsPublicUnsubscribe(channels []string) {
 	}
 }
 func (ok *Okx) SpotWsPublicTickerPoolPut(v any) {
-	spotWsPublicTickerPool.Put(v)
+	wsPublicTickerPool.Put(v)
 }
 func (ok *Okx) SpotWsPublicOrderBook5PoolPut(v any) {
 	wsPublicOrderBook5Pool.Put(v)
@@ -277,7 +277,7 @@ func (ok *Okx) spotWsHandle24hTickers(data json.RawMessage, ch chan<- any) {
 				continue
 			}
 			sym := tk.Symbol[:firstDash] + tk.Symbol[firstDash+1:]
-			t := spotWsPublicTickerPool.Get().(*Spot24hTicker)
+			t := wsPublicTickerPool.Get().(*Pub24hTicker)
 			t.Symbol = sym
 			t.LastPrice = tk.Last
 			t.Volume = tk.Volume
@@ -639,14 +639,14 @@ func (ok *Okx) SpotWsPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 	}
 	return req.Id, nil
 }
-func (ok *Okx) SpotWsCancelOrder(symbol, orderId, cltId string) error {
+func (ok *Okx) SpotWsCancelOrder(symbol, orderId, cltId string) (string, error) {
 	if ok.SpotWsPrivateIsClosed() {
-		return errors.New(ok.Name() + " spot.ws.priv ws closed")
+		return "", errors.New(ok.Name() + " spot.ws.priv ws closed")
 	}
 	type Arg struct {
 		Symbol  string `json:"instId"`
 		OrderId string `json:"ordId,omitempty"`
-		CltId   string `json:"ordId,omitempty"`
+		CltId   string `json:"clOrdId,omitempty"`
 	}
 	arg := Arg{
 		Symbol:  ok.getSpotSymbol(symbol),
@@ -663,7 +663,7 @@ func (ok *Okx) SpotWsCancelOrder(symbol, orderId, cltId string) error {
 	ok.spotWsPrivateConnMtx.Lock()
 	defer ok.spotWsPrivateConnMtx.Unlock()
 	if err := ok.spotWsPrivateConn.WriteMessage(websocket.TextMessage, reqJson); err != nil {
-		return errors.New(ok.Name() + " send fail: " + err.Error())
+		return "", errors.New(ok.Name() + " send fail: " + err.Error())
 	}
-	return nil
+	return req.Id, nil
 }

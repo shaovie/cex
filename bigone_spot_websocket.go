@@ -75,8 +75,7 @@ func (bo *Bigone) SpotWsPublicSubscribe(channels []string) {
 					bo.spotWsPublicConnMtx.Unlock()
 				}
 			}
-		} else if arr[0] == "ticker" {
-			continue // 先不支持
+		} else if arr[0] == "ticker xx" { // 先不支持
 			var symbolArr []string
 			if len(arr) > 1 && len(arr[1]) > 0 {
 				symbolArr = strings.Split(arr[1], ",")
@@ -144,7 +143,7 @@ func (bo *Bigone) SpotWsPublicUnsubscribe(channels []string) {
 	}
 }
 func (bo *Bigone) SpotWsPublicTickerPoolPut(v any) {
-	spotWsPublicTickerPool.Put(v)
+	wsPublicTickerPool.Put(v)
 }
 func (bo *Bigone) SpotWsPublicOrderBook5PoolPut(v any) {
 	wsPublicOrderBook5Pool.Put(v)

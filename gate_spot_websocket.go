@@ -145,7 +145,7 @@ func (gt *Gate) SpotWsPublicUnsubscribe(channels []string) {
 	}
 }
 func (gt *Gate) SpotWsPublicTickerPoolPut(v any) {
-	spotWsPublicTickerPool.Put(v)
+	wsPublicTickerPool.Put(v)
 }
 func (gt *Gate) SpotWsPublicOrderBook5PoolPut(v any) {
 	wsPublicOrderBook5Pool.Put(v)
@@ -248,7 +248,7 @@ func (gt *Gate) spotWsHandle24hTickers(data json.RawMessage, ch chan<- any) {
 	ticker := gt.spotWsPublicTickerInnerPool.Get().(*GateSpot24hTicker)
 	defer gt.spotWsPublicTickerInnerPool.Put(ticker)
 	if err := json.Unmarshal(data, ticker); err == nil {
-		tk := spotWsPublicTickerPool.Get().(*Spot24hTicker)
+		tk := wsPublicTickerPool.Get().(*Pub24hTicker)
 		tk.Symbol = strings.ReplaceAll(ticker.Symbol, "_", "")
 		tk.LastPrice = ticker.Last
 		tk.Volume = ticker.Volume
@@ -658,9 +658,9 @@ func (gt *Gate) SpotWsPlaceOrder(symbol, cltId string, price, qty decimal.Decima
 	}
 	return req.Payload.ReqId, nil
 }
-func (gt *Gate) SpotWsCancelOrder(symbol, orderId, cltId string) error {
+func (gt *Gate) SpotWsCancelOrder(symbol, orderId, cltId string) (string, error) {
 	if gt.SpotWsPrivateIsClosed() {
-		return errors.New(gt.Name() + " spot priv ws closed")
+		return "", errors.New(gt.Name() + " spot priv ws closed")
 	}
 	if orderId == "" && cltId != "" {
 		orderId = "t-" + cltId
@@ -697,7 +697,7 @@ func (gt *Gate) SpotWsCancelOrder(symbol, orderId, cltId string) error {
 	gt.spotWsPrivateConnMtx.Lock()
 	defer gt.spotWsPrivateConnMtx.Unlock()
 	if err := gt.spotWsPrivateConn.WriteMessage(websocket.TextMessage, reqJson); err != nil {
-		return errors.New(gt.Name() + " send fail: " + err.Error())
+		return "", errors.New(gt.Name() + " send fail: " + err.Error())
 	}
-	return nil
+	return req.Payload.ReqId, nil
 }

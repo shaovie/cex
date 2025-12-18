@@ -1,11 +1,9 @@
 package cex
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,19 +17,13 @@ import (
 )
 
 var (
-	bnWsPubMsgPool  sync.Pool
-	bnWsPrivMsgPool sync.Pool
+	bnSpotWsPrivMsgPool sync.Pool
 )
 
 func init() {
-	bnWsPubMsgPool = sync.Pool{
+	bnSpotWsPrivMsgPool = sync.Pool{
 		New: func() any {
-			return &BinanceWsSpotPubMsg{}
-		},
-	}
-	bnWsPrivMsgPool = sync.Pool{
-		New: func() any {
-			return &BnWsPrivMsg{}
+			return &BnSpotWsPrivMsg{}
 		},
 	}
 }
@@ -114,7 +106,7 @@ func (bn *Binance) SpotWsPublicUnsubscribe(channels []string) {
 	}
 }
 func (bn *Binance) SpotWsPublicTickerPoolPut(v any) {
-	spotWsPublicTickerPool.Put(v)
+	wsPublicTickerPool.Put(v)
 }
 func (bn *Binance) SpotWsPublicOrderBook5PoolPut(v any) {
 	wsPublicOrderBook5Pool.Put(v)
@@ -152,7 +144,7 @@ func (bn *Binance) SpotWsPublicLoop(ch chan<- any) {
 			}
 			break
 		}
-		msg := bnWsPubMsgPool.Get().(*BinanceWsSpotPubMsg)
+		msg := bnWsPubMsgPool.Get().(*BinanceWsPubMsg)
 		msg.reset()
 		if err = easyjson.Unmarshal(recv, msg); err != nil {
 			ilog.Error(bn.Name() + " spot.ws.public invalid msg:" + string(recv))
@@ -221,7 +213,7 @@ func (bn *Binance) spotWsHandle24hTickers(data json.RawMessage, ch chan<- any) {
 	ticker := bn.spotWsPublicTickerInnerPool.Get().(*BinanceSpot24hTicker)
 	defer bn.spotWsPublicTickerInnerPool.Put(ticker)
 	if err := json.Unmarshal(data, ticker); err == nil {
-		tk := spotWsPublicTickerPool.Get().(*Spot24hTicker)
+		tk := wsPublicTickerPool.Get().(*Pub24hTicker)
 		tk.Symbol = ticker.Symbol
 		tk.LastPrice = ticker.Last
 		tk.Volume = ticker.Volume
@@ -297,7 +289,7 @@ func (bn *Binance) SpotWsPrivateClose() {
 	bn.spotWsPrivateConn.Close()
 }
 
-type BnWsPrivMsg struct {
+type BnSpotWsPrivMsg struct {
 	Id     string `json:"id,omitempty"`
 	Status int    `json:"status,omitempty"`
 	Err    struct {
@@ -312,7 +304,7 @@ type BnWsPrivMsg struct {
 	} `json:"event,omitempty"`
 }
 
-func (v *BnWsPrivMsg) reset() {
+func (v *BnSpotWsPrivMsg) reset() {
 	v.Id = ""
 	v.Status = 0
 	v.Err.Code = 0
@@ -354,7 +346,7 @@ func (bn *Binance) SpotWsPrivateLoop(ch chan<- any) {
 			break
 		}
 		ilog.Rinfo("spot.ws.priv " + string(recv))
-		msg := bnWsPrivMsgPool.Get().(*BnWsPrivMsg)
+		msg := bnSpotWsPrivMsgPool.Get().(*BnSpotWsPrivMsg)
 		msg.reset()
 		if err = json.Unmarshal(recv, msg); err != nil {
 			ilog.Error(bn.Name() + " spot.ws.priv recv invalid msg:" + string(recv))
@@ -380,7 +372,7 @@ func (bn *Binance) SpotWsPrivateLoop(ch chan<- any) {
 			}
 		}
 	END:
-		bnWsPrivMsgPool.Put(msg)
+		bnSpotWsPrivMsgPool.Put(msg)
 	}
 }
 func (bn *Binance) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
@@ -516,7 +508,7 @@ func (bn *Binance) SpotWsPlaceOrder(symbol, cltId string, price, qty decimal.Dec
 			params["quantity"] = qty.String()
 		}
 	}
-	params["signature"] = bn.spotWsSign(params)
+	params["signature"] = bn.wsSign(params)
 	req := BnWsApiArg{Id: "sord-" + gutils.RandomStr(16), Method: "order.place", Params: params}
 	reqJson, _ := json.Marshal(req)
 
@@ -527,9 +519,9 @@ func (bn *Binance) SpotWsPlaceOrder(symbol, cltId string, price, qty decimal.Dec
 	}
 	return req.Id, nil
 }
-func (bn *Binance) SpotWsCancelOrder(symbol, orderId, cltId string) error {
+func (bn *Binance) SpotWsCancelOrder(symbol, orderId, cltId string) (string, error) {
 	if bn.SpotWsPrivateIsClosed() {
-		return errors.New(bn.Name() + " spot.ws.priv closed")
+		return "", errors.New(bn.Name() + " spot.ws.priv closed")
 	}
 	params := map[string]any{
 		"apiKey":     bn.apikey,
@@ -544,45 +536,16 @@ func (bn *Binance) SpotWsCancelOrder(symbol, orderId, cltId string) error {
 	} else if cltId != "" {
 		params["origClientOrderId"] = cltId
 	} else {
-		return errors.New("orderId or clientId is empty")
+		return "", errors.New("orderId or clientId is empty")
 	}
-	params["signature"] = bn.spotWsSign(params)
+	params["signature"] = bn.wsSign(params)
 	req := BnWsApiArg{Id: "scle-" + gutils.RandomStr(16), Method: "order.cancel", Params: params}
 	reqJson, _ := json.Marshal(req)
 
 	bn.spotWsPrivateConnMtx.Lock()
 	defer bn.spotWsPrivateConnMtx.Unlock()
 	if err := bn.spotWsPrivateConn.WriteMessage(websocket.TextMessage, reqJson); err != nil {
-		return errors.New(bn.Name() + " spot.ws.priv send fail: " + err.Error())
+		return "", errors.New(bn.Name() + " spot.ws.priv send fail: " + err.Error())
 	}
-	return nil
-}
-func (bn *Binance) spotWsSign(kv map[string]any) string {
-	keys := make([]string, 0, len(kv))
-	for k := range kv {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	var buf bytes.Buffer
-	for i, key := range keys {
-		val := kv[key]
-		valStr := ""
-		switch v := val.(type) {
-		case string:
-			valStr = v
-		case int:
-			valStr = strconv.FormatInt(int64(v), 10)
-		case int64:
-			valStr = strconv.FormatInt(v, 10)
-		default:
-			ilog.Error(bn.Name() + " spotWsSign unsupported type")
-		}
-		if i > 0 {
-			buf.WriteByte('&')
-		}
-		buf.WriteString(key)
-		buf.WriteByte('=')
-		buf.WriteString(valStr)
-	}
-	return bn.sign(buf.String())
+	return req.Id, nil
 }

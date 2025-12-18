@@ -83,7 +83,7 @@ func (gt *Gate) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) 
 	gtSpotSymbolMapMtx.Unlock()
 	return all, nil
 }
-func (gt *Gate) SpotGetAll24hTicker() (map[string]Spot24hTicker, error) {
+func (gt *Gate) SpotGetAll24hTicker() (map[string]Pub24hTicker, error) {
 	path := "/api/v4/spot/tickers"
 	url := gtUniEndpoint + path
 	_, resp, err := ihttp.Get(url, gtApiDeadline, nil)
@@ -101,9 +101,9 @@ func (gt *Gate) SpotGetAll24hTicker() (map[string]Spot24hTicker, error) {
 	if len(tickers) == 0 {
 		return nil, errors.New(gt.Name() + " resp empty")
 	}
-	allTk := make(map[string]Spot24hTicker, len(tickers))
+	allTk := make(map[string]Pub24hTicker, len(tickers))
 	for _, tk := range tickers {
-		v := Spot24hTicker{
+		v := Pub24hTicker{
 			Symbol:      strings.ReplaceAll(tk.Symbol, "_", ""),
 			LastPrice:   tk.Last,
 			Volume:      tk.Volume,

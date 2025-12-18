@@ -7,13 +7,13 @@ import (
 )
 
 var (
-	spotWsPublicTickerPool *sync.Pool
+	wsPublicTickerPool     *sync.Pool
 	wsPublicOrderBook5Pool *sync.Pool
 )
 
 func init() {
-	spotWsPublicTickerPool = &sync.Pool{
-		New: func() any { return &Spot24hTicker{} },
+	wsPublicTickerPool = &sync.Pool{
+		New: func() any { return &Pub24hTicker{} },
 	}
 	wsPublicOrderBook5Pool = &sync.Pool{
 		New: func() any {
@@ -46,14 +46,19 @@ func (exp *SpotExchangePairRule) AdjustPrice(v decimal.Decimal) decimal.Decimal 
 	}
 	return v.Div(exp.PriceTickSize).Floor().Mul(exp.PriceTickSize)
 }
-func (exp *SpotExchangePairRule) AdjustQty(v decimal.Decimal) decimal.Decimal {
+func (exp *SpotExchangePairRule) AdjustQty(price, v decimal.Decimal) decimal.Decimal {
 	if v.LessThan(exp.MinOrderQty) || v.GreaterThan(exp.MaxOrderQty) {
 		return decimal.Decimal{}
+	}
+	if price.IsPositive() && exp.MinNotional.IsPositive() &&
+		price.Mul(v).LessThan(exp.MinNotional) {
+		return decimal.Zero
 	}
 	return v.Div(exp.QtyStep).Floor().Mul(exp.QtyStep)
 }
 
 type FuturesExchangePairRule struct {
+	Typ                string // UM / CM
 	Symbol             string // BTCUSDT
 	Base               string
 	Quote              string
@@ -71,13 +76,20 @@ type FuturesExchangePairRule struct {
 
 func (exp *FuturesExchangePairRule) AdjustPrice(v decimal.Decimal) decimal.Decimal {
 	if v.LessThan(exp.MinPrice) || v.GreaterThan(exp.MaxPrice) {
-		return decimal.Decimal{}
+		return decimal.Zero
 	}
 	return v.Div(exp.PriceTickSize).Floor().Mul(exp.PriceTickSize)
 }
-func (exp *FuturesExchangePairRule) AdjustQty(v decimal.Decimal) decimal.Decimal {
+func (exp *FuturesExchangePairRule) AdjustQty(price, v decimal.Decimal) decimal.Decimal {
 	if v.LessThan(exp.MinOrderQty) || v.GreaterThan(exp.MaxOrderQty) {
-		return decimal.Decimal{}
+		return decimal.Zero
+	}
+	if price.IsPositive() && exp.MinNotional.IsPositive() &&
+		price.Mul(v).LessThan(exp.MinNotional) {
+		return decimal.Zero
+	}
+	if exp.Typ == "CM" { // 币本位是张数
+		return v
 	}
 	return v.Div(exp.QtyStep).Floor().Mul(exp.QtyStep)
 }
@@ -161,19 +173,13 @@ type OrderBookDepth struct {
 	Bids   []Ticker
 	Asks   []Ticker
 }
-type Spot24hTicker struct {
+type Pub24hTicker struct {
 	Cex         string          // for internel
 	Symbol      string          // BTCUSDT
 	LastPrice   decimal.Decimal // 最近成交价
 	Volume      decimal.Decimal
-	QuoteVolume decimal.Decimal
-}
-type Futures24hTicker struct {
-	Cex         string          // for internel
-	Symbol      string          // BTCUSDT
-	LastPrice   decimal.Decimal // 最近成交价
-	Volume      decimal.Decimal
-	QuoteVolume decimal.Decimal
+	BaseVolume  decimal.Decimal // futures-CM 24小时成交额(标的数量)
+	QuoteVolume decimal.Decimal // futures-UM 24小时成交额
 }
 
 type FuturesOrder struct {

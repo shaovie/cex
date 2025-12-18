@@ -2,7 +2,6 @@ package cex
 
 import (
 	"errors"
-	"sync"
 
 	"github.com/shopspring/decimal"
 )
@@ -16,7 +15,7 @@ func (us *Unsupported) SpotServerTime() (int64, error) { return 0, errors.New("n
 func (us *Unsupported) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	return nil, errors.New("not support")
 }
-func (us *Unsupported) SpotGetAll24hTicker() (map[string]Spot24hTicker, error) {
+func (us *Unsupported) SpotGetAll24hTicker() (map[string]Pub24hTicker, error) {
 	return nil, errors.New("not support")
 }
 func (us *Unsupported) SpotGetAllAssets() (map[string]*SpotAsset, error) {
@@ -53,14 +52,19 @@ func (us *Unsupported) SpotWsPlaceOrder(symbol, cltId string, price, qty decimal
 	side, timeInForce, orderType string) (string, error) {
 	return "", errors.New("not support")
 }
-func (us *Unsupported) SpotWsCancelOrder(s, o, c string) error { return errors.New("not support") }
+func (us *Unsupported) SpotWsCancelOrder(s, o, c string) (string, error) {
+	return "", errors.New("not support")
+}
 
 // = contract
 func (us *Unsupported) FuturesSupported(typ string) bool { return false }
+func (us *Unsupported) FuturesServerTime(typ string) (int64, error) {
+	return 0, errors.New("not support")
+}
 func (us *Unsupported) FuturesLoadAllPairRule(typ string) (map[string]*FuturesExchangePairRule, error) {
 	return nil, errors.New("not support")
 }
-func (us *Unsupported) FuturesGetAll24hTicker(typ string) (map[string]Futures24hTicker, error) {
+func (us *Unsupported) FuturesGetAll24hTicker(typ string) (map[string]Pub24hTicker, error) {
 	return nil, errors.New("not support")
 }
 func (us *Unsupported) FuturesGetAllFundingRate(typ string) (map[string]FundingRate, error) {
@@ -89,32 +93,35 @@ func (us *Unsupported) FuturesCancelOrder(typ, symbol, orderId, cltId string) er
 func (us *Unsupported) FuturesGetOrder(typ, symbol, orderId, cltId string) (*FuturesOrder, error) {
 	return nil, errors.New("not support")
 }
+func (us *Unsupported) FuturesGetOpenOrders(typ, symbol string) ([]*FuturesOrder, error) {
+	return nil, errors.New("not support")
+}
 func (us *Unsupported) FuturesSwitchPositionMode(typ string, mode int) error {
 	return errors.New("not support")
 }
 func (us *Unsupported) FuturesSwitchTradeMode(typ, symbol string, mode, lver int) error {
 	return errors.New("not support")
 }
-func (us *Unsupported) WsContractPubChannelOpen() error                   { return errors.New("not support") }
-func (us *Unsupported) WsContractPubChannelSubscribe(channels []string)   {}
-func (us *Unsupported) WsContractPubChannelUnsubscribe(channels []string) {}
-func (us *Unsupported) WsContractPubChannelSetTickerPool(p *sync.Pool)    {}
-func (us *Unsupported) WsContractPubChannelSetOrderBookPool(p *sync.Pool) {}
-func (us *Unsupported) WsContractPubChannelLoop(ch chan<- any)            {}
-func (us *Unsupported) WsContractPubChannelClose()                        {}
-func (us *Unsupported) WsContractPubChannelIsClosed() bool                { return true }
-func (us *Unsupported) WsContractPrivChannelOpen() error                  { return errors.New("not support") }
-func (us *Unsupported) WsContractPrivChannelSubscribe(channels []string)  {}
-func (us *Unsupported) WsContractPrivChannelLoop(ch chan<- any)           {}
-func (us *Unsupported) WsContractPrivChannelClose()                       {}
-func (us *Unsupported) WsContractPrivChannelIsClosed() bool               { return true }
-func (us *Unsupported) WsContractPlaceOrder(category, symbol, clientId, reqId string, /*BTCUSDT*/
+func (us *Unsupported) FuturesWsPublicOpen(typ string) error         { return errors.New("not support") }
+func (us *Unsupported) FuturesWsPublicSubscribe(channels []string)   {}
+func (us *Unsupported) FuturesWsPublicUnsubscribe(channels []string) {}
+func (us *Unsupported) FuturesWsPublicTickerPoolPut(v any)           {}
+func (us *Unsupported) FuturesWsPublicOrderBook5PoolPut(v any)       {}
+func (us *Unsupported) FuturesWsPublicLoop(ch chan<- any)            {}
+func (us *Unsupported) FuturesWsPublicClose()                        {}
+func (us *Unsupported) FuturesWsPublicIsClosed() bool                { return true }
+func (us *Unsupported) FuturesWsPrivateOpen(typ string) error        { return errors.New("not support") }
+func (us *Unsupported) FuturesWsPrivateSubscribe(channels []string)  {}
+func (us *Unsupported) FuturesWsPrivateLoop(ch chan<- any)           {}
+func (us *Unsupported) FuturesWsPrivateClose()                       {}
+func (us *Unsupported) FuturesWsPrivateIsClosed() bool               { return true }
+func (us *Unsupported) FuturesWsPlaceOrder(symbol, cltId string,
 	price, qty decimal.Decimal, side, orderType, timeInForce string,
-	positionMode /*0单仓,1双仓*/, tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) error {
-	return errors.New("not support")
+	positionMode /*0单仓,1双仓*/, tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error) {
+	return "", errors.New("not support")
 }
-func (us *Unsupported) WsContractCancelOrder(c, sm, od, rq string) error {
-	return errors.New("not support")
+func (us *Unsupported) FuturesWsCancelOrder(symbol, orderId, cltId string) (string, error) {
+	return "", errors.New("not support")
 }
 
 // unified

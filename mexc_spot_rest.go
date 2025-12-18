@@ -72,7 +72,7 @@ func (mc *Mexc) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) 
 	}
 	return all, nil
 }
-func (mc *Mexc) SpotGetAll24hTicker() (map[string]Spot24hTicker, error) {
+func (mc *Mexc) SpotGetAll24hTicker() (map[string]Pub24hTicker, error) {
 	url := mcUniEndpoint + "/api/v3/ticker/24hr"
 	_, resp, err := ihttp.Get(url, mcApiDeadline, nil)
 	if err != nil {
@@ -93,9 +93,9 @@ func (mc *Mexc) SpotGetAll24hTicker() (map[string]Spot24hTicker, error) {
 	if len(tickers) == 0 {
 		return nil, errors.New(mc.Name() + " resp empty")
 	}
-	allTk := make(map[string]Spot24hTicker, len(tickers))
+	allTk := make(map[string]Pub24hTicker, len(tickers))
 	for _, tk := range tickers {
-		v := Spot24hTicker{
+		v := Pub24hTicker{
 			Symbol:      tk.Symbol,
 			LastPrice:   tk.Last,
 			Volume:      tk.Volume,

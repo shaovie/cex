@@ -1,16 +1,19 @@
 package cex
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/shaovie/gutils/ilog"
 	"github.com/shopspring/decimal"
 )
 
@@ -35,24 +38,24 @@ type Binance struct {
 	spotWsPrivateClosedMtx sync.RWMutex
 
 	// contract websocket
-	wsContractPubCon              *websocket.Conn
-	wsContractPubConMtx           sync.Mutex
-	wsContractPubChannelClosed    bool
-	wsContractPubChannelClosedMtx sync.RWMutex
-	wsContractPubTickerPool       *sync.Pool
-	wsContractPubOrderBookPool    *sync.Pool
+	futuresWsPublicTyp                string
+	futuresWsPublicConn               *websocket.Conn
+	futuresWsPublicConnMtx            sync.Mutex
+	futuresWsPublicClosed             bool
+	futuresWsPublicClosedMtx          sync.RWMutex
+	futuresWsPublicTickerInnerPool    *sync.Pool
+	futuresWsPublicOrderBookInnerPool *sync.Pool
 
-	wsContractPrivCon              *websocket.Conn // for user data stream
-	wsContractPrivConMtx           sync.Mutex
-	wsContractPrivChannelClosed    bool
-	wsContractPrivChannelClosedMtx sync.RWMutex
-	wsContractPrivChannelListenKey string
+	futuresWsPrivateTyp       string
+	futuresWsPrivateConn      *websocket.Conn // for user data stream
+	futuresWsPrivateConnMtx   sync.Mutex
+	futuresWsPrivateClosed    bool
+	futuresWsPrivateClosedMtx sync.RWMutex
 
-	wsContractPrivApiCon              *websocket.Conn // for api
-	wsContractPrivApiConMtx           sync.Mutex
-	wsContractPrivApiChannelClosed    bool
-	wsContractPrivApiChannelLogout    bool
-	wsContractPrivApiChannelClosedMtx sync.RWMutex
+	futuresWsPrivateApiConn      *websocket.Conn // for api
+	futuresWsPrivateApiConnMtx   sync.Mutex
+	futuresWsPrivateApiClosed    bool
+	futuresWsPrivateApiClosedMtx sync.RWMutex
 
 	wsUnifiedContractCon          *websocket.Conn
 	wsUnifiedContractListenKey    string
@@ -72,11 +75,22 @@ type BnWsApiArg struct {
 	Params any    `json:"params,omitempty"`
 }
 
+var (
+	bnWsPubMsgPool sync.Pool
+)
+
 const bnSpotEndpoint = "https://api2.binance.com"
 const bnUMFuturesEndpoint = "https://fapi.binance.com"
 const bnCMFuturesEndpoint = "https://dapi.binance.com"
 const bnApiDeadline = 1200 * time.Millisecond
 
+func init() {
+	bnWsPubMsgPool = sync.Pool{
+		New: func() any {
+			return &BinanceWsPubMsg{}
+		},
+	}
+}
 func (bn *Binance) Name() string {
 	return bn.name
 }
@@ -90,10 +104,11 @@ func (bn *Binance) Init() error {
 	bn.spotWsPublicClosed = true
 	bn.spotWsPrivateClosed = true
 
-	bn.wsContractPubChannelClosed = true
-	bn.wsContractPrivChannelClosed = true
-	bn.wsContractPrivApiChannelLogout = true
-	bn.wsContractPrivApiChannelClosed = true
+	bn.futuresWsPublicTyp = ""
+	bn.futuresWsPublicClosed = true
+	bn.futuresWsPrivateTyp = ""
+	bn.futuresWsPrivateClosed = true
+	bn.futuresWsPrivateApiClosed = true
 
 	bn.wsUnifiedContractConClosed = true
 
@@ -110,6 +125,19 @@ func (bn *Binance) Init() error {
 			}
 		},
 	}
+	bn.futuresWsPublicTickerInnerPool = &sync.Pool{
+		New: func() any {
+			return &BinanceFutures24hTicker{}
+		},
+	}
+	bn.futuresWsPublicOrderBookInnerPool = &sync.Pool{
+		New: func() any {
+			return &BinanceFuturesOrderBook{
+				Bids: make([][2]decimal.Decimal, 0, 5),
+				Asks: make([][2]decimal.Decimal, 0, 5),
+			}
+		},
+	}
 	return nil
 }
 func (bn *Binance) httpQuerySign(query string) string {
@@ -121,6 +149,37 @@ func (bn *Binance) sign(params string) string {
 	h := hmac.New(sha256.New, []byte(bn.secretkey))
 	h.Write([]byte(params))
 	return hex.EncodeToString(h.Sum(nil))
+}
+func (bn *Binance) wsSign(kv map[string]any) string {
+	keys := make([]string, 0, len(kv))
+	for k := range kv {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var buf bytes.Buffer
+	for i, key := range keys {
+		val := kv[key]
+		valStr := ""
+		switch v := val.(type) {
+		case bool:
+			valStr = strconv.FormatBool(v)
+		case string:
+			valStr = v
+		case int:
+			valStr = strconv.FormatInt(int64(v), 10)
+		case int64:
+			valStr = strconv.FormatInt(v, 10)
+		default:
+			ilog.Error(bn.Name() + " wsSign unsupported type")
+		}
+		if i > 0 {
+			buf.WriteByte('&')
+		}
+		buf.WriteString(key)
+		buf.WriteByte('=')
+		buf.WriteString(valStr)
+	}
+	return bn.sign(buf.String())
 }
 func (bn *Binance) handleExceptionResp(api string, resp []byte) error {
 	ret := struct {

@@ -95,7 +95,7 @@ func (bn *Binance) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, erro
 	}
 	return all, nil
 }
-func (bn *Binance) SpotGetAll24hTicker() (map[string]Spot24hTicker, error) {
+func (bn *Binance) SpotGetAll24hTicker() (map[string]Pub24hTicker, error) {
 	url := bnSpotEndpoint + "/api/v3/ticker/24hr"
 	_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
 	if err != nil {
@@ -116,9 +116,9 @@ func (bn *Binance) SpotGetAll24hTicker() (map[string]Spot24hTicker, error) {
 	if len(tickers) == 0 {
 		return nil, errors.New(bn.Name() + " resp empty")
 	}
-	allTk := make(map[string]Spot24hTicker, len(tickers))
+	allTk := make(map[string]Pub24hTicker, len(tickers))
 	for _, tk := range tickers {
-		v := Spot24hTicker{
+		v := Pub24hTicker{
 			Symbol:      tk.Symbol,
 			LastPrice:   tk.Last,
 			Volume:      tk.Volume,

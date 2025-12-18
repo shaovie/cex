@@ -30,7 +30,7 @@ func ruleInit() {
 	}()
 	go func() {
 		defer wg.Done()
-		contractUpdateExPairRule()
+		futuresUpdateExPairRule()
 	}()
 	wg.Wait()
 
@@ -43,7 +43,7 @@ func ruleInit() {
 	go func() {
 		rSleep := 122 + rand.Int63()%10
 		for range time.Tick(time.Duration(rSleep) * time.Second) { // go 1.23+
-			contractUpdateExPairRule()
+			futuresUpdateExPairRule()
 		}
 	}()
 }
@@ -128,7 +128,7 @@ func FuturesSymbolValid(cex, symbol /*btcusdt*/ string) bool {
 	}
 	return false
 }
-func contractUpdateExPairRule() {
+func futuresUpdateExPairRule() {
 	var wg sync.WaitGroup
 	for k, _ := range CexList {
 		wg.Add(1)
@@ -138,10 +138,35 @@ func contractUpdateExPairRule() {
 				if co.FuturesSupported("UM") {
 					if ret, err := co.FuturesLoadAllPairRule("UM"); ret != nil {
 						futuresExchangePairRuleMtx.Lock()
-						futuresExchangePairRule[cexName] = ret
+						ol := futuresExchangePairRule[cexName]
+						if ol == nil {
+							ol = ret
+						} else {
+							for sym, epr := range ret {
+								ol[sym] = epr
+							}
+						}
+						futuresExchangePairRule[cexName] = ol
 						futuresExchangePairRuleMtx.Unlock()
 					} else if err != nil {
 						ilog.Warning("cex.rule.FuturesUpdateExPairRule:UM " + err.Error())
+					}
+				}
+				if co.FuturesSupported("CM") {
+					if ret, err := co.FuturesLoadAllPairRule("CM"); ret != nil {
+						futuresExchangePairRuleMtx.Lock()
+						ol := futuresExchangePairRule[cexName]
+						if ol == nil {
+							ol = ret
+						} else {
+							for sym, epr := range ret {
+								ol[sym] = epr
+							}
+						}
+						futuresExchangePairRule[cexName] = ol
+						futuresExchangePairRuleMtx.Unlock()
+					} else if err != nil {
+						ilog.Warning("cex.rule.FuturesUpdateExPairRule:CM " + err.Error())
 					}
 				}
 			}

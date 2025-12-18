@@ -55,8 +55,8 @@ type BigoneSpotOrderBookDepth struct {
 }
 type BigoneSpotOrderBook struct {
 	Depth    BigoneSpotOrderBookDepth `json:"depth,omitempty"`
-	ChangeId string                   `json:changeId,omitempty`
-	PrevId   string                   `json:prevId,omitempty`
+	ChangeId string                   `json:"changeId,omitempty"`
+	PrevId   string                   `json:"prevId,omitempty"`
 }
 type BigoneSpotWsPrivMsg struct {
 	Err struct {

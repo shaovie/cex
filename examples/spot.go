@@ -53,7 +53,7 @@ func spotPubWs(cexObj cex.Exchanger) {
 				}
 				orderBookN += 1
 				cexObj.SpotWsPublicOrderBook5PoolPut(val)
-			case *cex.Spot24hTicker:
+			case *cex.Pub24hTicker:
 				if (tickerN % 10) == 0 {
 					ilog.Rinfo("#%d, %s ticker:%v", tickerN, val.Symbol, *val)
 				}
@@ -85,7 +85,7 @@ func spotPrivWs(cexObj cex.Exchanger) {
 			ilog.Rinfo("recv order: %v", *val)
 			if val.Status == "NEW" {
 				ilog.Rinfo("to cancel order:%s", val.OrderId)
-				if err = cexObj.SpotWsCancelOrder(val.Symbol, val.OrderId, ""); err != nil {
+				if _, err = cexObj.SpotWsCancelOrder(val.Symbol, val.OrderId, ""); err != nil {
 					ilog.Rinfo("cancel err: " + err.Error())
 				}
 			}
@@ -113,7 +113,7 @@ func testPrivWs(cexObj cex.Exchanger) {
 	qty := decimal.NewFromFloat(0.00032486)
 	if exRule := cex.SpotGetExPairRule(cexObj.Name(), "BTCUSDT"); exRule != nil {
 		price = exRule.AdjustPrice(price)
-		qty = exRule.AdjustQty(qty)
+		qty = exRule.AdjustQty(price, qty)
 	}
 	allAssets, err := cexObj.SpotGetAllAssets()
 	if err != nil {
@@ -153,7 +153,7 @@ func testRest(cexObj cex.Exchanger) {
 	qty := decimal.NewFromFloat(0.00032486)
 	if exRule := cex.SpotGetExPairRule(cexObj.Name(), "BTCUSDT"); exRule != nil {
 		price = exRule.AdjustPrice(price)
-		qty = exRule.AdjustQty(qty)
+		qty = exRule.AdjustQty(price, qty)
 		ilog.Rinfo("to palce order: price=%s qty=%s", price.String(), qty.String())
 	}
 	cltId := gutils.RandomStr(24)

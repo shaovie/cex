@@ -102,7 +102,7 @@ func (ok *Okx) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	okxSpotSymbolMapMtx.Unlock()
 	return all, nil
 }
-func (ok *Okx) SpotGetAll24hTicker() (map[string]Spot24hTicker, error) {
+func (ok *Okx) SpotGetAll24hTicker() (map[string]Pub24hTicker, error) {
 	path := "/api/v5/market/tickers"
 	url := okUniEndpoint + path + "?instType=SPOT"
 	retCode, resp, err := ihttp.Get(url, okApiDeadline, nil)
@@ -120,14 +120,14 @@ func (ok *Okx) SpotGetAll24hTicker() (map[string]Spot24hTicker, error) {
 	if len(tickers.Data) == 0 {
 		return nil, errors.New(ok.Name() + " resp empty")
 	}
-	allTk := make(map[string]Spot24hTicker, len(tickers.Data))
+	allTk := make(map[string]Pub24hTicker, len(tickers.Data))
 	for _, tk := range tickers.Data {
 		firstDash := strings.Index(tk.Symbol, "-")
 		if firstDash == -1 {
 			continue
 		}
 		sym := tk.Symbol[:firstDash] + tk.Symbol[firstDash+1:]
-		v := Spot24hTicker{
+		v := Pub24hTicker{
 			Symbol:      sym,
 			LastPrice:   tk.Last,
 			Volume:      tk.Volume,
