@@ -129,6 +129,8 @@ type Exchanger interface {
 	Withdrawal(symbol, addr, memo, chain string, qty decimal.Decimal) (*WithdrawReturn, error)
 	CancelWithdrawal(wid string) error
 	//GetWithdrawalResult(symbol, addr, memo, chain string, qty decimal.Decimal) (*WithdrawReturn, error)
+	// from,to:FUNDING,SPOT,UM_FUTURE,CM_FUTURE
+	Transfer(symbol, from, to string, qty decimal.Decimal) error
 }
 
 var (

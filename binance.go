@@ -82,6 +82,7 @@ var (
 const bnSpotEndpoint = "https://api2.binance.com"
 const bnUMFuturesEndpoint = "https://fapi.binance.com"
 const bnCMFuturesEndpoint = "https://dapi.binance.com"
+const bnWalletEndpoint = "https://api2.binance.com"
 const bnApiDeadline = 1200 * time.Millisecond
 
 func init() {

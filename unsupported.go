@@ -139,3 +139,6 @@ func (us *Unsupported) Withdrawal(symbol, addr, memo, chain string, qty decimal.
 	return nil, errors.New("not support")
 }
 func (us *Unsupported) CancelWithdrawal(wid string) error { return errors.New("not support") }
+func (us *Unsupported) Transfer(symbol, from, to string, qty decimal.Decimal) error {
+	return errors.New("not support")
+}
