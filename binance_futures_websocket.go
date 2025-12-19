@@ -17,13 +17,34 @@ import (
 )
 
 var (
-	bnFuturesWsPrivMsgPool sync.Pool
+	bnFuturesWsPrivMsgPool              sync.Pool
+	bnFuturesWsPublicOrderBookInnerPool sync.Pool
+	bnFuturesWsPublicTickerInnerPool    sync.Pool
+	bnFuturesWsPublicBBOInnerPool       sync.Pool
 )
 
 func init() {
 	bnFuturesWsPrivMsgPool = sync.Pool{
 		New: func() any {
 			return &BnFuturesWsPrivMsg{}
+		},
+	}
+	bnFuturesWsPublicOrderBookInnerPool = sync.Pool{
+		New: func() any {
+			return &BinanceFuturesOrderBook{
+				Bids: make([][2]decimal.Decimal, 0, 5),
+				Asks: make([][2]decimal.Decimal, 0, 5),
+			}
+		},
+	}
+	bnFuturesWsPublicTickerInnerPool = sync.Pool{
+		New: func() any {
+			return &BinanceFutures24hTicker{}
+		},
+	}
+	bnFuturesWsPublicBBOInnerPool = sync.Pool{
+		New: func() any {
+			return &BinanceFuturesBBO{}
 		},
 	}
 }
@@ -66,6 +87,16 @@ func (bn *Binance) FuturesWsPublicSubscribe(channels []string) {
 					arg.Params = append(arg.Params, strings.ToLower(sym)+"@depth5@100ms")
 				}
 			}
+		} else if arr[0] == "bbo" {
+			if len(arr) > 1 && len(arr[1]) > 0 {
+				symbolArr := strings.Split(arr[1], ",")
+				for _, sym := range symbolArr {
+					if bn.futuresWsPublicTyp == "CM" {
+						sym += "_PERP"
+					}
+					arg.Params = append(arg.Params, strings.ToLower(sym)+"@bookTicker")
+				}
+			}
 		} else if arr[0] == "ticker" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
 				symbolArr := strings.Split(arr[1], ",")
@@ -103,6 +134,16 @@ func (bn *Binance) FuturesWsPublicUnsubscribe(channels []string) {
 					arg.Params = append(arg.Params, strings.ToLower(sym)+"@depth5@100ms")
 				}
 			}
+		} else if arr[0] == "bbo" {
+			if len(arr) > 1 && len(arr[1]) > 0 {
+				symbolArr := strings.Split(arr[1], ",")
+				for _, sym := range symbolArr {
+					if bn.futuresWsPublicTyp == "CM" {
+						sym += "_PERP"
+					}
+					arg.Params = append(arg.Params, strings.ToLower(sym)+"@bookTicker")
+				}
+			}
 		} else if arr[0] == "ticker" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
 				symbolArr := strings.Split(arr[1], ",")
@@ -127,6 +168,9 @@ func (bn *Binance) FuturesWsPublicTickerPoolPut(v any) {
 }
 func (bn *Binance) FuturesWsPublicOrderBook5PoolPut(v any) {
 	wsPublicOrderBook5Pool.Put(v)
+}
+func (bn *Binance) FuturesWsPublicBBOPoolPut(v any) {
+	wsPublicBBOPool.Put(v)
 }
 func (bn *Binance) FuturesWsPublicLoop(ch chan<- any) {
 	defer bn.FuturesWsPublicClose()
@@ -174,6 +218,8 @@ func (bn *Binance) FuturesWsPublicLoop(ch chan<- any) {
 		l = len(msg.Stream)
 		if l > 13 && msg.Stream[l-13:l] == "@depth5@100ms" {
 			bn.futuresWsHandleOrderBook5(msg.Data, ch)
+		} else if l > 11 && msg.Stream[l-11:l] == "@bookTicker" {
+			bn.futuresWsHandleBBO(msg.Data, ch)
 		} else if l > 11 && msg.Stream[l-11:l] == "@miniTicker" {
 			bn.futuresWsHandle24hTickers(msg.Data, ch)
 		} else {
@@ -200,8 +246,8 @@ func (bn *Binance) FuturesWsPublicClose() {
 	bn.futuresWsPublicConn.Close()
 }
 func (bn *Binance) futuresWsHandleOrderBook5(data json.RawMessage, ch chan<- any) {
-	depth := bn.futuresWsPublicOrderBookInnerPool.Get().(*BinanceFuturesOrderBook)
-	defer bn.futuresWsPublicOrderBookInnerPool.Put(depth)
+	depth := bnFuturesWsPublicOrderBookInnerPool.Get().(*BinanceFuturesOrderBook)
+	defer bnFuturesWsPublicOrderBookInnerPool.Put(depth)
 	depth.Bids = depth.Bids[:0]
 	depth.Asks = depth.Asks[:0]
 	if err := easyjson.Unmarshal(data, depth); err == nil {
@@ -230,9 +276,27 @@ func (bn *Binance) futuresWsHandleOrderBook5(data json.RawMessage, ch chan<- any
 		ch <- obd
 	}
 }
+func (bn *Binance) futuresWsHandleBBO(data json.RawMessage, ch chan<- any) {
+	bbo := bnFuturesWsPublicBBOInnerPool.Get().(*BinanceFuturesBBO)
+	defer bnFuturesWsPublicBBOInnerPool.Put(bbo)
+	if err := easyjson.Unmarshal(data, bbo); err == nil {
+		obd := wsPublicBBOPool.Get().(*BestBidAsk)
+		if bn.futuresWsPublicTyp == "CM" {
+			obd.Symbol = strings.ReplaceAll(bbo.Symbol, "_PERP", "")
+		} else {
+			obd.Symbol = bbo.Symbol
+		}
+		obd.Time = bbo.Time
+		obd.BidPrice = bbo.BidPrice
+		obd.BidQty = bbo.BidQty
+		obd.AskPrice = bbo.AskPrice
+		obd.AskQty = bbo.AskQty
+		ch <- obd
+	}
+}
 func (bn *Binance) futuresWsHandle24hTickers(data json.RawMessage, ch chan<- any) {
-	ticker := bn.futuresWsPublicTickerInnerPool.Get().(*BinanceFutures24hTicker)
-	defer bn.futuresWsPublicTickerInnerPool.Put(ticker)
+	ticker := bnFuturesWsPublicTickerInnerPool.Get().(*BinanceFutures24hTicker)
+	defer bnFuturesWsPublicTickerInnerPool.Put(ticker)
 	if err := json.Unmarshal(data, ticker); err == nil {
 		tk := wsPublicTickerPool.Get().(*Pub24hTicker)
 		if bn.futuresWsPublicTyp == "CM" {

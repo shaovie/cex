@@ -9,6 +9,7 @@ import (
 var (
 	wsPublicTickerPool     *sync.Pool
 	wsPublicOrderBook5Pool *sync.Pool
+	wsPublicBBOPool        *sync.Pool
 )
 
 func init() {
@@ -21,6 +22,11 @@ func init() {
 				Bids: make([]Ticker, 0, 5),
 				Asks: make([]Ticker, 0, 5),
 			}
+		},
+	}
+	wsPublicBBOPool = &sync.Pool{
+		New: func() any {
+			return &BestBidAsk{}
 		},
 	}
 }
@@ -172,6 +178,14 @@ type OrderBookDepth struct {
 	Time   int64  // msec  0  表示交易所不提供
 	Bids   []Ticker
 	Asks   []Ticker
+}
+type BestBidAsk struct {
+	Symbol   string // BTCUSDT
+	Time     int64  // msec  0  表示交易所不提供
+	BidPrice decimal.Decimal
+	BidQty   decimal.Decimal
+	AskPrice decimal.Decimal
+	AskQty   decimal.Decimal
 }
 type Pub24hTicker struct {
 	Cex         string          // for internel

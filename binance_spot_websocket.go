@@ -17,13 +17,34 @@ import (
 )
 
 var (
-	bnSpotWsPrivMsgPool sync.Pool
+	bnSpotWsPrivMsgPool              sync.Pool
+	bnSpotWsPublicOrderBookInnerPool sync.Pool
+	bnSpotWsPublicBBOInnerPool       sync.Pool
+	bnSpotWsPublicTickerInnerPool    sync.Pool
 )
 
 func init() {
 	bnSpotWsPrivMsgPool = sync.Pool{
 		New: func() any {
 			return &BnSpotWsPrivMsg{}
+		},
+	}
+	bnSpotWsPublicOrderBookInnerPool = sync.Pool{
+		New: func() any {
+			return &BinanceSpotOrderBook{
+				Bids: make([][2]decimal.Decimal, 0, 5),
+				Asks: make([][2]decimal.Decimal, 0, 5),
+			}
+		},
+	}
+	bnSpotWsPublicBBOInnerPool = sync.Pool{
+		New: func() any {
+			return &BinanceSpotBBO{}
+		},
+	}
+	bnSpotWsPublicTickerInnerPool = sync.Pool{
+		New: func() any {
+			return &BinanceSpot24hTicker{}
 		},
 	}
 }
@@ -58,6 +79,13 @@ func (bn *Binance) SpotWsPublicSubscribe(channels []string) {
 					arg.Params = append(arg.Params, strings.ToLower(sym)+"@depth5@100ms")
 				}
 			}
+		} else if arr[0] == "bbo" {
+			if len(arr) > 1 && len(arr[1]) > 0 {
+				symbolArr := strings.Split(arr[1], ",")
+				for _, sym := range symbolArr {
+					arg.Params = append(arg.Params, strings.ToLower(sym)+"@bookTicker")
+				}
+			}
 		} else if arr[0] == "ticker" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
 				symbolArr := strings.Split(arr[1], ",")
@@ -89,6 +117,13 @@ func (bn *Binance) SpotWsPublicUnsubscribe(channels []string) {
 					arg.Params = append(arg.Params, strings.ToLower(sym)+"@depth5@100ms")
 				}
 			}
+		} else if arr[0] == "bbo" {
+			if len(arr) > 1 && len(arr[1]) > 0 {
+				symbolArr := strings.Split(arr[1], ",")
+				for _, sym := range symbolArr {
+					arg.Params = append(arg.Params, strings.ToLower(sym)+"@bookTicker")
+				}
+			}
 		} else if arr[0] == "ticker" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
 				symbolArr := strings.Split(arr[1], ",")
@@ -110,6 +145,9 @@ func (bn *Binance) SpotWsPublicTickerPoolPut(v any) {
 }
 func (bn *Binance) SpotWsPublicOrderBook5PoolPut(v any) {
 	wsPublicOrderBook5Pool.Put(v)
+}
+func (bn *Binance) SpotWsPublicBBOPoolPut(v any) {
+	wsPublicBBOPool.Put(v)
 }
 func (bn *Binance) SpotWsPublicLoop(ch chan<- any) {
 	defer bn.SpotWsPublicClose()
@@ -157,6 +195,8 @@ func (bn *Binance) SpotWsPublicLoop(ch chan<- any) {
 		l = len(msg.Stream)
 		if l > 13 && msg.Stream[l-13:l] == "@depth5@100ms" {
 			bn.spotWsHandleOrderBook5(strings.ToUpper(msg.Stream[0:l-13]), msg.Data, ch)
+		} else if l > 11 && msg.Stream[l-11:l] == "@bookTicker" {
+			bn.spotWsHandleBBO(msg.Data, ch)
 		} else if l > 11 && msg.Stream[l-11:l] == "@miniTicker" {
 			bn.spotWsHandle24hTickers(msg.Data, ch)
 		} else {
@@ -183,8 +223,8 @@ func (bn *Binance) SpotWsPublicClose() {
 	bn.spotWsPublicConn.Close()
 }
 func (bn *Binance) spotWsHandleOrderBook5(symbol string, data json.RawMessage, ch chan<- any) {
-	depth := bn.spotWsPublicOrderBookInnerPool.Get().(*BinanceSpotOrderBook)
-	defer bn.spotWsPublicOrderBookInnerPool.Put(depth)
+	depth := bnSpotWsPublicOrderBookInnerPool.Get().(*BinanceSpotOrderBook)
+	defer bnSpotWsPublicOrderBookInnerPool.Put(depth)
 	depth.Bids = depth.Bids[:0]
 	depth.Asks = depth.Asks[:0]
 	if err := easyjson.Unmarshal(data, depth); err == nil {
@@ -209,9 +249,23 @@ func (bn *Binance) spotWsHandleOrderBook5(symbol string, data json.RawMessage, c
 		ch <- obd
 	}
 }
+func (bn *Binance) spotWsHandleBBO(data json.RawMessage, ch chan<- any) {
+	bbo := bnSpotWsPublicBBOInnerPool.Get().(*BinanceSpotBBO)
+	defer bnSpotWsPublicBBOInnerPool.Put(bbo)
+	if err := easyjson.Unmarshal(data, bbo); err == nil {
+		obd := wsPublicBBOPool.Get().(*BestBidAsk)
+		obd.Symbol = bbo.Symbol
+		obd.Time = 0 // 币安不提供
+		obd.BidPrice = bbo.BidPrice
+		obd.BidQty = bbo.BidQty
+		obd.AskPrice = bbo.AskPrice
+		obd.AskQty = bbo.AskQty
+		ch <- obd
+	}
+}
 func (bn *Binance) spotWsHandle24hTickers(data json.RawMessage, ch chan<- any) {
-	ticker := bn.spotWsPublicTickerInnerPool.Get().(*BinanceSpot24hTicker)
-	defer bn.spotWsPublicTickerInnerPool.Put(ticker)
+	ticker := bnSpotWsPublicTickerInnerPool.Get().(*BinanceSpot24hTicker)
+	defer bnSpotWsPublicTickerInnerPool.Put(ticker)
 	if err := json.Unmarshal(data, ticker); err == nil {
 		tk := wsPublicTickerPool.Get().(*Pub24hTicker)
 		tk.Symbol = ticker.Symbol

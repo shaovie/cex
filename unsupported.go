@@ -40,6 +40,7 @@ func (us *Unsupported) SpotWsPublicSubscribe(channels []string)   {}
 func (us *Unsupported) SpotWsPublicUnsubscribe(channels []string) {}
 func (us *Unsupported) SpotWsPublicTickerPoolPut(v any)           {}
 func (us *Unsupported) SpotWsPublicOrderBook5PoolPut(v any)       {}
+func (us *Unsupported) SpotWsPublicBBOPoolPut(v any)              {}
 func (us *Unsupported) SpotWsPublicLoop(ch chan<- any)            {}
 func (us *Unsupported) SpotWsPublicClose()                        {}
 func (us *Unsupported) SpotWsPublicIsClosed() bool                { return true }
@@ -107,6 +108,7 @@ func (us *Unsupported) FuturesWsPublicSubscribe(channels []string)   {}
 func (us *Unsupported) FuturesWsPublicUnsubscribe(channels []string) {}
 func (us *Unsupported) FuturesWsPublicTickerPoolPut(v any)           {}
 func (us *Unsupported) FuturesWsPublicOrderBook5PoolPut(v any)       {}
+func (us *Unsupported) FuturesWsPublicBBOPoolPut(v any)              {}
 func (us *Unsupported) FuturesWsPublicLoop(ch chan<- any)            {}
 func (us *Unsupported) FuturesWsPublicClose()                        {}
 func (us *Unsupported) FuturesWsPublicIsClosed() bool                { return true }

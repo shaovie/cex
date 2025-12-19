@@ -33,12 +33,14 @@ type Exchanger interface {
 	//= ws public
 	// cex object 如果closed需要重新连接时，请不要复用，一定要创建新的obj
 	SpotWsPublicOpen() error
-	// channels: orderbook5@symbolA,symbolB
+	// channels: orderbook5@symbolA,symbolB (5档)
+	//           bbo@symbolA,symbolB     // 最优买卖价 只binance实现
 	//           ticker@symbolA,symbolB     // bigone不支持
 	SpotWsPublicSubscribe(channels []string)
 	SpotWsPublicUnsubscribe(channels []string)
 	SpotWsPublicTickerPoolPut(v any)
 	SpotWsPublicOrderBook5PoolPut(v any)
+	SpotWsPublicBBOPoolPut(v any)
 	// Loop结束时会close(ch)
 	SpotWsPublicLoop(ch chan<- any)
 	SpotWsPublicClose()
@@ -86,12 +88,14 @@ type Exchanger interface {
 
 	// ws
 	// channels: orderbook5@symbolA,symbolB
+	//           bbo@symbolA,symbolB     // 最优买卖价 只binance实现
 	//           ticker@symbol,symbol2
 	FuturesWsPublicOpen(typ string) error
 	FuturesWsPublicSubscribe(channels []string)
 	FuturesWsPublicUnsubscribe(channels []string)
 	FuturesWsPublicTickerPoolPut(v any)
 	FuturesWsPublicOrderBook5PoolPut(v any)
+	FuturesWsPublicBBOPoolPut(v any)
 	// Loop结束时会close(ch)
 	FuturesWsPublicLoop(ch chan<- any)
 	FuturesWsPublicClose()

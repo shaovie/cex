@@ -14,7 +14,6 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/shaovie/gutils/ilog"
-	"github.com/shopspring/decimal"
 )
 
 type Binance struct {
@@ -25,12 +24,10 @@ type Binance struct {
 	secretkey string
 
 	// spot websocket
-	spotWsPublicConn               *websocket.Conn
-	spotWsPublicConnMtx            sync.Mutex
-	spotWsPublicClosed             bool
-	spotWsPublicClosedMtx          sync.RWMutex
-	spotWsPublicTickerInnerPool    *sync.Pool
-	spotWsPublicOrderBookInnerPool *sync.Pool
+	spotWsPublicConn      *websocket.Conn
+	spotWsPublicConnMtx   sync.Mutex
+	spotWsPublicClosed    bool
+	spotWsPublicClosedMtx sync.RWMutex
 
 	spotWsPrivateConn      *websocket.Conn
 	spotWsPrivateConnMtx   sync.Mutex
@@ -38,13 +35,11 @@ type Binance struct {
 	spotWsPrivateClosedMtx sync.RWMutex
 
 	// contract websocket
-	futuresWsPublicTyp                string
-	futuresWsPublicConn               *websocket.Conn
-	futuresWsPublicConnMtx            sync.Mutex
-	futuresWsPublicClosed             bool
-	futuresWsPublicClosedMtx          sync.RWMutex
-	futuresWsPublicTickerInnerPool    *sync.Pool
-	futuresWsPublicOrderBookInnerPool *sync.Pool
+	futuresWsPublicTyp       string
+	futuresWsPublicConn      *websocket.Conn
+	futuresWsPublicConnMtx   sync.Mutex
+	futuresWsPublicClosed    bool
+	futuresWsPublicClosedMtx sync.RWMutex
 
 	futuresWsPrivateTyp       string
 	futuresWsPrivateConn      *websocket.Conn // for user data stream
@@ -113,32 +108,6 @@ func (bn *Binance) Init() error {
 
 	bn.wsUnifiedContractConClosed = true
 
-	bn.spotWsPublicTickerInnerPool = &sync.Pool{
-		New: func() any {
-			return &BinanceSpot24hTicker{}
-		},
-	}
-	bn.spotWsPublicOrderBookInnerPool = &sync.Pool{
-		New: func() any {
-			return &BinanceSpotOrderBook{
-				Bids: make([][2]decimal.Decimal, 0, 5),
-				Asks: make([][2]decimal.Decimal, 0, 5),
-			}
-		},
-	}
-	bn.futuresWsPublicTickerInnerPool = &sync.Pool{
-		New: func() any {
-			return &BinanceFutures24hTicker{}
-		},
-	}
-	bn.futuresWsPublicOrderBookInnerPool = &sync.Pool{
-		New: func() any {
-			return &BinanceFuturesOrderBook{
-				Bids: make([][2]decimal.Decimal, 0, 5),
-				Asks: make([][2]decimal.Decimal, 0, 5),
-			}
-		},
-	}
 	return nil
 }
 func (bn *Binance) httpQuerySign(query string) string {
