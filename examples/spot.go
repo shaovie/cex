@@ -140,7 +140,8 @@ func testPrivWs(cexObj cex.Exchanger) {
 	go spotPrivWs(cexObj)
 	time.Sleep(2 * time.Second)
 	cltId := gutils.RandomStr(24)
-	ilog.Rinfo("to palce order: price=%s qty=%s", price.String(), qty.String())
+	placeTime := time.Now().UnixMilli()
+	ilog.Rinfo("to palce order: price=%s qty=%s at %d", price.String(), qty.String(), placeTime)
 	reqId, err := cexObj.SpotWsPlaceOrder("BTCUSDT", cltId, price, qty, "BUY", "GTC", "LIMIT")
 	if err != nil {
 		ilog.Rinfo("ws place order fail: %s", err.Error())
@@ -163,6 +164,21 @@ func testRest(cexObj cex.Exchanger) {
 	} else {
 		ilog.Rinfo("test get public 24hticker: %v", allTickers["BTCUSDT"])
 	}
+	transferQty := decimal.NewFromFloat(10.233444)
+	err = cexObj.Transfer("USDT", "SPOT", "UNIFIED", transferQty)
+	if err == nil {
+		ilog.Rinfo("transfer ok")
+		time.Sleep(time.Second)
+		err = cexObj.Transfer("USDT", "UNIFIED", "SPOT", transferQty)
+		if err == nil {
+			ilog.Rinfo("transfer back ok")
+		} else {
+			ilog.Rinfo("transfer back fail: " + err.Error())
+		}
+	} else {
+		ilog.Rinfo("transfer fail: " + err.Error())
+	}
+
 	price := decimal.NewFromFloat(80990.238)
 	qty := decimal.NewFromFloat(0.00032486)
 	if exRule := cex.SpotGetExPairRule(cexObj.Name(), "BTCUSDT"); exRule != nil {
@@ -171,11 +187,12 @@ func testRest(cexObj cex.Exchanger) {
 		ilog.Rinfo("to palce order: price=%s qty=%s", price.String(), qty.String())
 	}
 	cltId := gutils.RandomStr(24)
+	placeTime := time.Now().UnixMilli()
 	orderId, err := cexObj.SpotPlaceOrder("BTCUSDT", cltId, price, qty, "BUY", "GTC", "LIMIT")
 	if err != nil {
 		ilog.Rinfo("place order fail: %s", err.Error())
 	} else {
-		ilog.Rinfo("place order ok, new order:%s", orderId)
+		ilog.Rinfo("place order ok, new order:%s at %d", orderId, placeTime)
 		order, err := cexObj.SpotGetOrder("BTCUSDT", orderId, "")
 		if err != nil {
 			ilog.Rinfo("get order fail: ", err.Error())

@@ -19,6 +19,7 @@ type Exchanger interface {
 	SpotServerTime() (int64, error)
 	SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error)
 	SpotGetAll24hTicker() (map[string]Pub24hTicker, error) // bigone 不支持
+	SpotGetBBO(symbol string) (BestBidAsk, error)
 	SpotGetAllAssets() (map[string]*SpotAsset, error)
 
 	// 市价BUY qty=quote amt, 市价SELL qty=base qty, 参数涵义参考 struct SpotOrder
@@ -68,7 +69,9 @@ type Exchanger interface {
 	FuturesLoadAllPairRule(typ string) (map[string]*FuturesExchangePairRule, error)
 	FuturesSizeToQty(typ, symbol string, size decimal.Decimal) decimal.Decimal
 	FuturesGetAll24hTicker(typ string) (map[string]Pub24hTicker, error)
+	FuturesGetBBO(typ, symbol string) (BestBidAsk, error)
 	FuturesGetAllFundingRate(typ string) (map[string]FundingRate, error)
+	FuturesGetAllAssets(typ string) (map[string]*FuturesAsset, error)
 	// interval 1m,5m,30m,1h,6h,12h,1d startTime/endTime is second
 	// 返回顺序[11:15:00,11:16:00,11:17:00]
 	FuturesGetKLine(typ, symbol, interval string, startTime, endTime, lmt int64) ([]KLine, error)
@@ -84,7 +87,9 @@ type Exchanger interface {
 	//  单仓:0/双仓:1 切换
 	FuturesSwitchPositionMode(typ string, mode int) error
 	//  全仓:0/逐仓:1 切换
-	FuturesSwitchTradeMode(typ string, symbol string /*BTCUSDT*/, mode, leverage int) error
+	FuturesSwitchTradeMode(typ, symbol string /*BTCUSDT*/, mode, leverage int) error
+	// 获取交易对的杠杆分层标准 For binance
+	FuturesMaintMargin(typ, symbol string) ([]*FuturesLeverageBracket, error)
 
 	// ws
 	// channels: orderbook5@symbolA,symbolB
@@ -104,7 +109,7 @@ type Exchanger interface {
 	// priv
 	FuturesWsPrivateOpen(typ string) error
 	// channels: orders
-	// 		     positions
+	//           positions
 	FuturesWsPrivateSubscribe(channels []string)
 	FuturesWsPrivateLoop(ch chan<- any)
 	FuturesWsPrivateClose()
@@ -121,19 +126,19 @@ type Exchanger interface {
 	UnifiedGetAssets() (map[string]*UnifiedAsset, error)
 
 	// ws
-	WsUnifiedChannelOpen() error
+	UnifiedWsOpen() error
 	// channels: balance@symbol1,symbol2,symbol3
-	WsUnifiedChannelSubscribe(channels []string)
-	WsUnifiedChannelLoop(ch chan<- any)
-	WsUnifiedChannelClose()
-	WsUnifiedChannelIsClosed() bool
+	UnifiedWsSubscribe(channels []string)
+	UnifiedWsLoop(ch chan<- any)
+	UnifiedWsClose()
+	UnifiedWsIsClosed() bool
 
 	//= wallet
 	// chain: TRX/MOB
 	Withdrawal(symbol, addr, memo, chain string, qty decimal.Decimal) (*WithdrawReturn, error)
 	CancelWithdrawal(wid string) error
 	//GetWithdrawalResult(symbol, addr, memo, chain string, qty decimal.Decimal) (*WithdrawReturn, error)
-	// from,to:FUNDING,SPOT,UM_FUTURE,CM_FUTURE
+	// from,to:FUNDING,SPOT,UM_FUTURE,CM_FUTURE,UNIFIED
 	Transfer(symbol, from, to string, qty decimal.Decimal) error
 }
 

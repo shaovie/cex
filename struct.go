@@ -120,6 +120,26 @@ func (sa *SpotAsset) Val(v *SpotAsset) {
 	}
 }
 
+type FuturesAsset struct {
+	Symbol string          // BTC
+	Total  decimal.Decimal // 总共
+	Avail  decimal.Decimal // 可用
+	Locked decimal.Decimal
+}
+
+func (sa *FuturesAsset) Val(v *FuturesAsset) {
+	if v.Symbol != "" {
+		sa.Symbol = v.Symbol
+	}
+	sa.Avail = v.Avail
+	if !v.Total.Equals(decimal.NewFromInt(999999999)) {
+		sa.Total = v.Total
+	}
+	if !v.Locked.Equals(decimal.NewFromInt(999999999)) {
+		sa.Locked = v.Locked
+	}
+}
+
 type UnifiedAsset struct {
 	Symbol string          // BTC
 	Total  decimal.Decimal // 总共
@@ -209,7 +229,8 @@ type FuturesOrder struct {
 	Qty       decimal.Decimal // 下单数量 (不是size)
 	Status    string          // NEW/PARTIALLY_FILLED/FILLED/CANCELED/REJECTED
 	FilledQty decimal.Decimal // 累计成交数量
-	FilledAmt decimal.Decimal // 累计交易的金额
+	FilledAmt decimal.Decimal // 累计交易的金额  在CM中为标的数量
+	AvgPrice  decimal.Decimal // 仅在CM中有效
 
 	FeeAsset string          // 交易费资产类型
 	FeeQty   decimal.Decimal // 手续费金额 一般是指usdt金额
@@ -219,7 +240,7 @@ type FuturesOrder struct {
 type FuturesPosition struct {
 	Symbol      string // BTCUSDT
 	Side        string
-	PositionQty decimal.Decimal // 持仓数量  正数
+	PositionQty decimal.Decimal // 持仓数量  正数, 在CM中为张数
 	EntryPrice  decimal.Decimal // 开仓均价
 	// 以上必须
 	Leverage decimal.Decimal // 杠杆  币安推送不带个值
@@ -235,7 +256,7 @@ func (cp *FuturesPosition) Val(v *FuturesPosition) {
 	}
 	cp.PositionQty = v.PositionQty
 	cp.EntryPrice = v.EntryPrice
-	if !v.Leverage.Equals(decimal.NewFromInt(999999999)) {
+	if v.Leverage.IsPositive() {
 		cp.Leverage = v.Leverage
 	}
 	if v.UTime > 0 {
@@ -268,4 +289,14 @@ type WithdrawReturn struct {
 	Addr   string
 	Chain  string
 	Memo   string
+}
+type FuturesLeverageBracket struct {
+	Bracket          int64           // 层级
+	InitialLeverage  int64           // 该层允许的最高初始杠杆倍数
+	NotionalCap      decimal.Decimal // 该层对应的名义价值上限  For UM
+	NotionalFloor    decimal.Decimal // 该层对应的名义价值下限  For UM
+	QtyCap           decimal.Decimal // 该层对应的数量上限 For CM
+	QtyFloor         decimal.Decimal // 该层对应的数量下限  For CM
+	MaintMarginRatio decimal.Decimal // 该层对应的维持保证金率
+	Cum              decimal.Decimal // 速算数
 }

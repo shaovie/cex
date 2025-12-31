@@ -18,6 +18,9 @@ func (us *Unsupported) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, 
 func (us *Unsupported) SpotGetAll24hTicker() (map[string]Pub24hTicker, error) {
 	return nil, errors.New("not support")
 }
+func (us *Unsupported) SpotGetBBO(symbol string) (BestBidAsk, error) {
+	return BestBidAsk{}, errors.New("not support")
+}
 func (us *Unsupported) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 	return nil, errors.New("not support")
 }
@@ -68,7 +71,13 @@ func (us *Unsupported) FuturesLoadAllPairRule(typ string) (map[string]*FuturesEx
 func (us *Unsupported) FuturesGetAll24hTicker(typ string) (map[string]Pub24hTicker, error) {
 	return nil, errors.New("not support")
 }
+func (us *Unsupported) FuturesGetBBO(typ, symbol string) (BestBidAsk, error) {
+	return BestBidAsk{}, errors.New("not support")
+}
 func (us *Unsupported) FuturesGetAllFundingRate(typ string) (map[string]FundingRate, error) {
+	return nil, errors.New("not support")
+}
+func (us *Unsupported) FuturesGetAllAssets(typ string) (map[string]*FuturesAsset, error) {
 	return nil, errors.New("not support")
 }
 func (us *Unsupported) FuturesGetKLine(typ, symbol, interval string, startTime, endTime, lmt int64) ([]KLine, error) {
@@ -103,6 +112,9 @@ func (us *Unsupported) FuturesSwitchPositionMode(typ string, mode int) error {
 func (us *Unsupported) FuturesSwitchTradeMode(typ, symbol string, mode, lver int) error {
 	return errors.New("not support")
 }
+func (us *Unsupported) FuturesMaintMargin(typ, symbol string) ([]*FuturesLeverageBracket, error) {
+	return nil, errors.New("not support")
+}
 func (us *Unsupported) FuturesWsPublicOpen(typ string) error         { return errors.New("not support") }
 func (us *Unsupported) FuturesWsPublicSubscribe(channels []string)   {}
 func (us *Unsupported) FuturesWsPublicUnsubscribe(channels []string) {}
@@ -130,11 +142,11 @@ func (us *Unsupported) FuturesWsCancelOrder(symbol, orderId, cltId string) (stri
 func (us *Unsupported) UnifiedGetAssets() (map[string]*UnifiedAsset, error) {
 	return nil, errors.New("not support")
 }
-func (us *Unsupported) WsUnifiedChannelOpen() error                 { return errors.New("not support") }
-func (us *Unsupported) WsUnifiedChannelSubscribe(channels []string) {}
-func (us *Unsupported) WsUnifiedChannelLoop(ch chan<- any)          {}
-func (us *Unsupported) WsUnifiedChannelClose()                      {}
-func (us *Unsupported) WsUnifiedChannelIsClosed() bool              { return true }
+func (us *Unsupported) UnifiedWsOpen() error                 { return errors.New("not support") }
+func (us *Unsupported) UnifiedWsSubscribe(channels []string) {}
+func (us *Unsupported) UnifiedWsLoop(ch chan<- any)          {}
+func (us *Unsupported) UnifiedWsClose()                      {}
+func (us *Unsupported) UnifiedWsIsClosed() bool              { return true }
 
 // wallet
 func (us *Unsupported) Withdrawal(symbol, addr, memo, chain string, qty decimal.Decimal) (*WithdrawReturn, error) {

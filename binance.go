@@ -22,6 +22,7 @@ type Binance struct {
 	account   string
 	apikey    string
 	secretkey string
+	isUnified bool // 是否统一账户
 
 	// spot websocket
 	spotWsPublicConn      *websocket.Conn
@@ -52,11 +53,10 @@ type Binance struct {
 	futuresWsPrivateApiClosed    bool
 	futuresWsPrivateApiClosedMtx sync.RWMutex
 
-	wsUnifiedContractCon          *websocket.Conn
-	wsUnifiedContractListenKey    string
-	wsUnifiedContractConMtx       sync.Mutex
-	wsUnifiedContractConClosed    bool
-	wsUnifiedContractConClosedMtx sync.RWMutex
+	unifiedWsConn          *websocket.Conn
+	unifiedWsConnMtx       sync.Mutex
+	unifiedWsConnClosed    bool
+	unifiedWsConnClosedMtx sync.RWMutex
 }
 
 type BnSubscribeArg struct {
@@ -77,6 +77,7 @@ var (
 const bnSpotEndpoint = "https://api2.binance.com"
 const bnUMFuturesEndpoint = "https://fapi.binance.com"
 const bnCMFuturesEndpoint = "https://dapi.binance.com"
+const bnUnifiedEndpoint = "https://papi.binance.com"
 const bnWalletEndpoint = "https://api2.binance.com"
 const bnApiDeadline = 1200 * time.Millisecond
 
@@ -102,11 +103,12 @@ func (bn *Binance) Init() error {
 
 	bn.futuresWsPublicTyp = ""
 	bn.futuresWsPublicClosed = true
+
 	bn.futuresWsPrivateTyp = ""
 	bn.futuresWsPrivateClosed = true
 	bn.futuresWsPrivateApiClosed = true
 
-	bn.wsUnifiedContractConClosed = true
+	bn.unifiedWsConnClosed = true
 
 	return nil
 }

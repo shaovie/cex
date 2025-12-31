@@ -17,6 +17,8 @@ func (bn *Binance) Transfer(symbol, from, to string, qty decimal.Decimal) error 
 		t = "MAIN_CMFUTURE"
 	} else if from == "SPOT" && to == "FUNDING" {
 		t = "MAIN_FUNDING"
+	} else if from == "SPOT" && to == "UNIFIED" {
+		t = "MAIN_PORTFOLIO_MARGIN"
 	} else if from == "UM_FUTURE" && to == "SPOT" {
 		t = "UMFUTURE_MAIN"
 	} else if from == "UM_FUTURE" && to == "FUNDING" {
@@ -31,6 +33,8 @@ func (bn *Binance) Transfer(symbol, from, to string, qty decimal.Decimal) error 
 		t = "FUNDING_UMFUTURE"
 	} else if from == "FUNDING" && to == "CM_FUTURE" {
 		t = "FUNDING_CMFUTURE"
+	} else if from == "UNIFIED" && to == "SPOT" {
+		t = "PORTFOLIO_MARGIN_MAIN"
 	} else {
 		return errors.New("not support")
 	}

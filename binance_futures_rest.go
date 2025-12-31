@@ -11,7 +11,6 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/shaovie/gutils/ihttp"
-	"github.com/shaovie/gutils/ilog"
 )
 
 func (bn *Binance) FuturesSupported(typ string) bool {
@@ -162,6 +161,64 @@ func (bn *Binance) FuturesGetAll24hTicker(typ string) (map[string]Pub24hTicker, 
 	}
 	return allTk, nil
 }
+func (bn *Binance) FuturesGetBBO(typ, symbol string) (BestBidAsk, error) {
+	if typ == "UM" {
+		url := bnUMFuturesEndpoint + "/fapi/v1/ticker/bookTicker?symbol=" + symbol
+		_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+		if err != nil {
+			return BestBidAsk{}, errors.New(bn.Name() + " net error! " + err.Error())
+		}
+		bbo := struct {
+			Symbol   string          `json:"symbol,omitempty"`
+			BidPrice decimal.Decimal `json:"bidPrice,omitempty"`
+			BidQty   decimal.Decimal `json:"bidQty,omitempty"`
+			AskPrice decimal.Decimal `json:"askPrice,omitempty"`
+			AskQty   decimal.Decimal `json:"askQty,omitempty"`
+		}{}
+		if err = json.Unmarshal(resp, &bbo); err != nil {
+			return BestBidAsk{}, errors.New(bn.Name() + " Unmarshal err! " + err.Error())
+		}
+		return BestBidAsk{
+			Symbol:   bbo.Symbol,
+			BidPrice: bbo.BidPrice,
+			BidQty:   bbo.BidQty,
+			AskPrice: bbo.AskPrice,
+			AskQty:   bbo.AskQty,
+		}, nil
+	}
+	if typ == "CM" {
+		if strings.Index(symbol, "_") == -1 {
+			symbol += "_PERP"
+		}
+		url := bnCMFuturesEndpoint + "/dapi/v1/ticker/bookTicker?symbol=" + symbol
+		_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+		if err != nil {
+			return BestBidAsk{}, errors.New(bn.Name() + " net error! " + err.Error())
+		}
+		bboL := []struct {
+			Symbol   string          `json:"symbol,omitempty"`
+			BidPrice decimal.Decimal `json:"bidPrice,omitempty"`
+			BidQty   decimal.Decimal `json:"bidQty,omitempty"`
+			AskPrice decimal.Decimal `json:"askPrice,omitempty"`
+			AskQty   decimal.Decimal `json:"askQty,omitempty"`
+		}{}
+		if err = json.Unmarshal(resp, &bboL); err != nil {
+			return BestBidAsk{}, errors.New(bn.Name() + " Unmarshal err! " + err.Error())
+		}
+		if len(bboL) == 0 {
+			return BestBidAsk{}, errors.New(bn.Name() + " resp empty!")
+		}
+		bbo := bboL[0]
+		return BestBidAsk{
+			Symbol:   bbo.Symbol,
+			BidPrice: bbo.BidPrice,
+			BidQty:   bbo.BidQty,
+			AskPrice: bbo.AskPrice,
+			AskQty:   bbo.AskQty,
+		}, nil
+	}
+	return BestBidAsk{}, errors.New("not support")
+}
 func (bn *Binance) FuturesGetAllFundingRate(typ string) (map[string]FundingRate, error) {
 	url := bnUMFuturesEndpoint + "/fapi/v1/premiumIndex"
 	if typ == "CM" {
@@ -200,6 +257,40 @@ func (bn *Binance) FuturesGetAllFundingRate(typ string) (map[string]FundingRate,
 		all[v.Symbol] = v
 	}
 	return all, nil
+}
+func (bn *Binance) FuturesGetAllAssets(typ string) (map[string]*FuturesAsset, error) {
+	url := bnUMFuturesEndpoint + "/fapi/v3/balance"
+	if typ == "CM" {
+		url = bnCMFuturesEndpoint + "/dapi/v1/balance"
+	}
+	url += "?" + bn.httpQuerySign("")
+	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	if err != nil {
+		return nil, errors.New(bn.Name() + " net error! " + err.Error())
+	}
+	alls := []struct {
+		Symbol       string          `json:"asset,omitempty"`
+		Total        decimal.Decimal `json:"balance,omitempty"`
+		AvailBalance decimal.Decimal `json:"availableBalance,omitempty"` // 可用下单余额
+	}{}
+	err = json.Unmarshal(resp, &alls)
+	if err != nil {
+		return nil, errors.New(bn.Name() + " unmarshal error! " + err.Error())
+	}
+
+	assetsMap := make(map[string]*FuturesAsset, len(alls))
+	for _, v := range alls {
+		if v.Total.IsZero() && v.AvailBalance.IsZero() {
+			continue
+		}
+		assetsMap[v.Symbol] = &FuturesAsset{
+			Symbol: v.Symbol,
+			Avail:  v.AvailBalance,
+			Locked: v.Total.Sub(v.AvailBalance),
+			Total:  v.Total,
+		}
+	}
+	return assetsMap, nil
 }
 func (bn *Binance) FuturesGetKLine(typ, symbol, interval string,
 	startTime, endTime, limit int64) ([]KLine, error) {
@@ -269,6 +360,12 @@ func (bn *Binance) FuturesPlaceOrder(typ, symbol, clientId string, /*BTCUSDT*/
 	if typ == "CM" {
 		link = bnCMFuturesEndpoint + "/dapi/v1/order?" + bn.httpQuerySign(query)
 	}
+	if bn.isUnified {
+		link = bnUnifiedEndpoint + "/papi/v1/um/order?" + bn.httpQuerySign(query)
+		if typ == "CM" {
+			link = bnUnifiedEndpoint + "/papi/v1/cm/order?" + bn.httpQuerySign(query)
+		}
+	}
 	_, resp, err := ihttp.Post(link, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return "", errors.New(bn.Name() + " net error! " + err.Error())
@@ -291,9 +388,16 @@ func (bn *Binance) FuturesGetOrder(typ, symbol, orderId, cltId string) (*Futures
 	url := bnUMFuturesEndpoint + "/fapi/v1/order"
 	if typ == "CM" {
 		url = bnCMFuturesEndpoint + "/dapi/v1/order"
-		if strings.Index(symbol, "_") == -1 {
-			symbol += "_PERP"
+	}
+	if bn.isUnified {
+		url = bnUnifiedEndpoint + "/papi/v1/um/order"
+		if typ == "CM" {
+			url = bnUnifiedEndpoint + "/papi/v1/cm/order"
 		}
+	}
+
+	if typ == "CM" && strings.Index(symbol, "_") == -1 {
+		symbol += "_PERP"
 	}
 	params := fmt.Sprintf("&symbol=%s&orderId=%s", symbol, orderId)
 	if orderId == "" && cltId != "" {
@@ -316,6 +420,7 @@ func (bn *Binance) FuturesGetOrder(typ, symbol, orderId, cltId string) (*Futures
 		ExecutedQty  decimal.Decimal `json:"executedQty,omitempty"` // 交易的订单数量
 		CummQuoteQty decimal.Decimal `json:"cumQuote,omitempty"`    // 累计交易的金额 for UM
 		CummBaseQty  decimal.Decimal `json:"cumBase,omitempty"`     // 累计交易的金额(标地数量) for CM
+		AvgPrice     decimal.Decimal `json:"avgPrice,omitempty"`    // for CM
 		Status       string          `json:"status,omitempty"`
 		Type         string          `json:"type,omitempty"`        // LIMIT/MARKET
 		TimeInForce  string          `json:"timeInForce,omitempty"` // GTC/FOK/IOC
@@ -346,6 +451,7 @@ func (bn *Binance) FuturesGetOrder(typ, symbol, orderId, cltId string) (*Futures
 	}
 	if typ == "CM" {
 		fo.FilledAmt = order.CummBaseQty
+		fo.AvgPrice = order.AvgPrice
 	}
 	return fo, nil
 }
@@ -353,9 +459,13 @@ func (bn *Binance) FuturesGetOpenOrders(typ, symbol string) ([]*FuturesOrder, er
 	url := bnUMFuturesEndpoint + "/fapi/v1/openOrders"
 	if typ == "CM" {
 		url = bnCMFuturesEndpoint + "/dapi/v1/openOrders"
-		if strings.Index(symbol, "_") == -1 {
-			symbol += "_PERP"
-		}
+	}
+	url = bnUnifiedEndpoint + "/papi/v1/um/openOrders"
+	if typ == "CM" {
+		url = bnUnifiedEndpoint + "/papi/v1/cm/openOrders"
+	}
+	if typ == "CM" && strings.Index(symbol, "_") == -1 {
+		symbol += "_PERP"
 	}
 	params := fmt.Sprintf("&symbol=%s", symbol)
 	url += "?" + bn.httpQuerySign(params)
@@ -415,9 +525,15 @@ func (bn *Binance) FuturesCancelOrder(typ, symbol, orderId, cltId string) error 
 	url := bnUMFuturesEndpoint + "/fapi/v1/order"
 	if typ == "CM" {
 		url = bnCMFuturesEndpoint + "/dapi/v1/order"
-		if strings.Index(symbol, "_") == -1 {
-			symbol += "_PERP"
+	}
+	if bn.isUnified {
+		url = bnUnifiedEndpoint + "/papi/v1/um/order"
+		if typ == "CM" {
+			url = bnUnifiedEndpoint + "/papi/v1/cm/order"
 		}
+	}
+	if typ == "CM" && strings.Index(symbol, "_") == -1 {
+		symbol += "_PERP"
 	}
 	params := "&symbol=" + symbol + "&orderId=" + orderId
 	if orderId == "" && cltId != "" {
@@ -460,6 +576,12 @@ func (bn *Binance) FuturesSwitchPositionMode(typ string /*BTCUSDT*/, mode int) e
 	if typ == "CM" {
 		link = bnCMFuturesEndpoint + "/dapi/v1/positionSide/dual"
 	}
+	if bn.isUnified {
+		link = bnUnifiedEndpoint + "/papi/v1/um/positionSide/dual"
+		if typ == "CM" {
+			link = bnUnifiedEndpoint + "/papi/v1/cm/positionSide/dual"
+		}
+	}
 	params := "&dualSidePosition=" + m
 	link += "?" + bn.httpQuerySign(params)
 	_, resp, err := ihttp.Post(link, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
@@ -485,6 +607,9 @@ func (bn *Binance) FuturesSwitchTradeMode(typ, symbol string, mode, leverage int
 	return nil
 }
 func (bn *Binance) futuresSwitchTradeMode(typ, symbol string /*BTCUSDT*/, mode int) error {
+	if bn.isUnified { // 统一账户模式下不支持
+		return nil
+	}
 	m := ""
 	if mode == 1 {
 		m = "ISOLATED"
@@ -529,9 +654,15 @@ func (bn *Binance) futuresSetLeverage(typ, symbol string /*BTCUSDT*/, leverage i
 	link := bnUMFuturesEndpoint + "/fapi/v1/leverage"
 	if typ == "CM" {
 		link = bnCMFuturesEndpoint + "/dapi/v1/leverage"
-		if strings.Index(symbol, "_") == -1 {
-			symbol += "_PERP"
+	}
+	if bn.isUnified {
+		link = bnUnifiedEndpoint + "/papi/v1/um/leverage"
+		if typ == "CM" {
+			link = bnUnifiedEndpoint + "/papi/v1/cm/leverage"
 		}
+	}
+	if typ == "CM" && strings.Index(symbol, "_") == -1 {
+		symbol += "_PERP"
 	}
 	ls := strconv.FormatInt(int64(leverage), 10)
 	params := "&leverage=" + ls + "&symbol=" + symbol
@@ -553,10 +684,74 @@ func (bn *Binance) futuresSetLeverage(typ, symbol string /*BTCUSDT*/, leverage i
 	}
 	return nil
 }
+func (bn *Binance) FuturesMaintMargin(typ, symbol string) ([]*FuturesLeverageBracket, error) {
+	url := bnUMFuturesEndpoint + "/fapi/v1/leverageBracket"
+	if typ == "CM" {
+		url = bnCMFuturesEndpoint + "/dapi/v2/leverageBracket"
+	}
+	if bn.isUnified {
+		url = bnUnifiedEndpoint + "/papi/v1/um/leverageBracket"
+		if typ == "CM" {
+			url = bnUnifiedEndpoint + "/papi/v1/cm/leverageBracket"
+		}
+	}
+	if typ == "CM" && strings.Index(symbol, "_") == -1 {
+		symbol += "_PERP"
+	}
+	url = url + "?" + bn.httpQuerySign("&symbol="+symbol)
+	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	if err != nil {
+		return nil, errors.New(bn.Name() + " net error! " + err.Error())
+	}
+	if resp[0] != '[' {
+		return nil, bn.handleExceptionResp("FuturesMaintMargin", resp)
+	}
+	type Bracket struct {
+		Bracket          int64           `json:"bracket,omitempty"`
+		InitialLeverage  int64           `json:"initialLeverage,omitempty"`
+		QtyCap           decimal.Decimal `json:"qtyCap,omitempty"`        // 该层对应的数量上限
+		QtyFloor         decimal.Decimal `json:"qtyFloor,omitempty"`      // 该层对应的数量下限
+		NotionalCap      decimal.Decimal `json:"notionalCap,omitempty"`   // 该层对应的数量上限
+		NotionalFloor    decimal.Decimal `json:"notionalFloor,omitempty"` // 该层对应的数量下限
+		MaintMarginRatio decimal.Decimal `json:"maintMarginRatio,omitempty"`
+		Cum              decimal.Decimal `json:"cum,omitempty"`
+	}
+	ret := []struct {
+		Symbol   string    `json:"symbol,omitempty"`
+		Brackets []Bracket `json:"brackets,omitempty"`
+	}{}
+	err = json.Unmarshal(resp, &ret)
+	if err != nil {
+		return nil, errors.New(bn.Name() + " unmarshal fail! " + err.Error())
+	}
+	if len(ret) == 0 {
+		return nil, errors.New(bn.Name() + " resp empty")
+	}
+	lbs := make([]*FuturesLeverageBracket, 0, len(ret[0].Brackets))
+	for _, v := range ret[0].Brackets {
+		lbs = append(lbs, &FuturesLeverageBracket{
+			Bracket:          v.Bracket,
+			InitialLeverage:  v.InitialLeverage,
+			QtyCap:           v.QtyCap,
+			QtyFloor:         v.QtyFloor,
+			NotionalCap:      v.NotionalCap,
+			NotionalFloor:    v.NotionalFloor,
+			MaintMarginRatio: v.MaintMarginRatio,
+			Cum:              v.Cum,
+		})
+	}
+	return lbs, nil
+}
 func (bn *Binance) FuturesGetAllPositionList(typ string) (map[string]*FuturesPosition, error) {
 	url := bnUMFuturesEndpoint + "/fapi/v2/positionRisk?" + bn.httpQuerySign("")
 	if typ == "CM" {
 		url = bnCMFuturesEndpoint + "/dapi/v1/positionRisk?" + bn.httpQuerySign("")
+	}
+	if bn.isUnified {
+		url = bnUnifiedEndpoint + "/papi/v1/um/positionRisk?" + bn.httpQuerySign("")
+		if typ == "CM" {
+			url = bnUnifiedEndpoint + "/papi/v1/cm/positionRisk?" + bn.httpQuerySign("")
+		}
 	}
 	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
@@ -567,16 +762,15 @@ func (bn *Binance) FuturesGetAllPositionList(typ string) (map[string]*FuturesPos
 		return nil, bn.handleExceptionResp("FuturesGetAllPositionList", resp)
 	}
 	recv := []struct {
-		Symbol         string          `json:"symbol"`
-		EntryPrice     decimal.Decimal `json:"entryPrice,omitempty"`
-		TradeMode      string          `json:"marginType,omitempty"`     // isolated/cross
-		PositionMargin decimal.Decimal `json:"isolatedMargin,omitempty"` // 逐仓保证金(包含未结盈亏)
-		Leverage       decimal.Decimal `json:"leverage,omitempty"`
-		LiqPrice       decimal.Decimal `json:"liquidationPrice,omitempty"`
+		Symbol     string          `json:"symbol"`
+		EntryPrice decimal.Decimal `json:"entryPrice,omitempty"`
+		Leverage   decimal.Decimal `json:"leverage,omitempty"`
+		LiqPrice   decimal.Decimal `json:"liquidationPrice,omitempty"`
 		//MarkPrice decimal.Decimal `json:"markPrice,omitempty"`
 		// 符号代表多空方向, 正数为多，负数为空
 		PositionQty   decimal.Decimal `json:"positionAmt,omitempty"`
-		NotionalVal   decimal.Decimal `json:"notionalValue,omitempty"`
+		NotionalVal   decimal.Decimal `json:"notionalValue,omitempty"` // for CM
+		Notional      decimal.Decimal `json:"notional,omitempty"`      // for UM
 		UnrealisedPnl decimal.Decimal `json:"unRealizedProfit,omitempty"`
 		Side          string          `json:"positionSide,omitempty"` // BOTH/SELL/BUY
 
@@ -597,11 +791,6 @@ func (bn *Binance) FuturesGetAllPositionList(typ string) (map[string]*FuturesPos
 			v.PositionQty = v.PositionQty.Abs()
 		} else {
 			continue // 只支持单仓模式
-		}
-		tm := bn.toStdTradeMode(v.TradeMode)
-		if tm == -1 {
-			ilog.Error(bn.Name() + " " + typ + " FuturesPosition unknonwn trade mode: " + v.TradeMode)
-			continue
 		}
 		cp := FuturesPosition{
 			Symbol:      strings.ReplaceAll(v.Symbol, "_PERP", ""), // BTCUSDT

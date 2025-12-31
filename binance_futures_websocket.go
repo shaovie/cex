@@ -316,6 +316,8 @@ func (bn *Binance) getListenKey(typ string) (string, error) {
 	link := bnUMFuturesEndpoint + "/fapi/v1/listenKey"
 	if typ == "CM" {
 		link = bnCMFuturesEndpoint + "/dapi/v1/listenKey"
+	} else if typ == "UNIFIED" {
+		link = bnUnifiedEndpoint + "/papi/v1/listenKey"
 	}
 	_, resp, err := ihttp.Post(link, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
@@ -523,7 +525,7 @@ func (bn *Binance) futuresWsHandleOrder(data json.RawMessage, ch chan<- any) {
 		AvgPrice      decimal.Decimal `json:"ap,omitempty"` // 订单平均价格
 		ExecQty       decimal.Decimal `json:"l,omitempty"`  // 末次成交数量
 		ExecPrice     decimal.Decimal `json:"L,omitempty"`  // 末次成交价格
-		ExecutedQty   decimal.Decimal `json:"z,omitempty"`  // 订单累计已成交量
+		ExecutedQty   decimal.Decimal `json:"z,omitempty"`  // 订单累计已成交量  在CM中还不确定含义
 		CummQuoteQty  decimal.Decimal `json:"Z,omitempty"`  // 订单累计已成交金额 文档不存在
 		FeeQty        decimal.Decimal `json:"n,omitempty"`  // 手续费数量
 		FeeAsset      string          `json:"N,omitempty"`  // 手续费类型
@@ -535,10 +537,7 @@ func (bn *Binance) futuresWsHandleOrder(data json.RawMessage, ch chan<- any) {
 		if order.Status == "NEW" {
 			ctime = order.ExecTime
 		}
-		if bn.futuresWsPrivateTyp == "CM" {
-			order.Symbol = strings.ReplaceAll(order.Symbol, "_PERP", "")
-		}
-		ch <- &FuturesOrder{
+		fo := &FuturesOrder{
 			Symbol:    order.Symbol,
 			OrderId:   strconv.FormatInt(order.OrderId, 10),
 			ClientId:  order.ClientId,
@@ -554,6 +553,12 @@ func (bn *Binance) futuresWsHandleOrder(data json.RawMessage, ch chan<- any) {
 			CTime:     ctime,
 			UTime:     order.ExecTime,
 		}
+		if bn.futuresWsPrivateTyp == "CM" {
+			fo.Symbol = strings.ReplaceAll(fo.Symbol, "_PERP", "")
+			fo.AvgPrice = order.AvgPrice
+			fo.FilledAmt = decimal.Zero
+		}
+		ch <- fo
 	}
 }
 func (bn *Binance) futuresWsHandlePosition(data json.RawMessage, ch chan<- any, t int64) {

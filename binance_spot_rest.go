@@ -128,6 +128,30 @@ func (bn *Binance) SpotGetAll24hTicker() (map[string]Pub24hTicker, error) {
 	}
 	return allTk, nil
 }
+func (bn *Binance) SpotGetBBO(symbol string) (BestBidAsk, error) {
+	url := bnSpotEndpoint + "/api/v3/ticker/bookTicker?symbol=" + symbol
+	_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+	if err != nil {
+		return BestBidAsk{}, errors.New(bn.Name() + " net error! " + err.Error())
+	}
+	bbo := struct {
+		Symbol   string          `json:"symbol,omitempty"`
+		BidPrice decimal.Decimal `json:"bidPrice,omitempty"`
+		BidQty   decimal.Decimal `json:"bidQty,omitempty"`
+		AskPrice decimal.Decimal `json:"askPrice,omitempty"`
+		AskQty   decimal.Decimal `json:"askQty,omitempty"`
+	}{}
+	if err = json.Unmarshal(resp, &bbo); err != nil {
+		return BestBidAsk{}, errors.New(bn.Name() + " Unmarshal err! " + err.Error())
+	}
+	return BestBidAsk{
+		Symbol:   bbo.Symbol,
+		BidPrice: bbo.BidPrice,
+		BidQty:   bbo.BidQty,
+		AskPrice: bbo.AskPrice,
+		AskQty:   bbo.AskQty,
+	}, nil
+}
 func (bn *Binance) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 	url := bnSpotEndpoint + "/api/v3/account?" + bn.httpQuerySign("")
 	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
