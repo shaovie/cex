@@ -272,9 +272,14 @@ func (cp *FuturesPosition) Val(v *FuturesPosition) {
 
 type FundingRate struct {
 	Symbol   string          // BTCUSDT
-	Val      decimal.Decimal // 当前资金费率
+	Val      decimal.Decimal // 下次资金费率
 	NextTime int64           // 下次结算时间second
 	UTime    int64           // second
+}
+type FundingRateMarkPrice struct {
+	MarkPrice   decimal.Decimal
+	FundingRate decimal.Decimal // 下次资金费率
+	NextTime    int64           // 下次结算时间 msec
 }
 type KLine struct {
 	OpenTime    int64 // sec

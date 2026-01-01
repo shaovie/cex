@@ -77,6 +77,9 @@ func (us *Unsupported) FuturesGetBBO(typ, symbol string) (BestBidAsk, error) {
 func (us *Unsupported) FuturesGetAllFundingRate(typ string) (map[string]FundingRate, error) {
 	return nil, errors.New("not support")
 }
+func (us *Unsupported) FuturesGetFundingRateMarkPrice(typ, symbol string) (FundingRateMarkPrice, error) {
+	return FundingRateMarkPrice{}, errors.New("not support")
+}
 func (us *Unsupported) FuturesGetAllAssets(typ string) (map[string]*FuturesAsset, error) {
 	return nil, errors.New("not support")
 }

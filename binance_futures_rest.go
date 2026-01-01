@@ -258,6 +258,58 @@ func (bn *Binance) FuturesGetAllFundingRate(typ string) (map[string]FundingRate,
 	}
 	return all, nil
 }
+func (bn *Binance) FuturesGetFundingRateMarkPrice(typ, symbol string) (FundingRateMarkPrice, error) {
+	if typ == "UM" {
+		url := bnUMFuturesEndpoint + "/fapi/v1/premiumIndex?symbol=" + symbol
+		_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+		if err != nil {
+			return FundingRateMarkPrice{}, errors.New(bn.Name() + " net error! " + err.Error())
+		}
+
+		fr := struct {
+			MarkPrice decimal.Decimal `json:"markPrice"`
+			Fr        decimal.Decimal `json:"lastFundingRate"`
+			NextTime  int64           `json:"nextFundingTime"` // msec
+		}{}
+
+		if err = json.Unmarshal(resp, &fr); err != nil {
+			return FundingRateMarkPrice{}, errors.New(bn.Name() + " unmarshal error! " + err.Error())
+		}
+		return FundingRateMarkPrice{
+			MarkPrice:   fr.MarkPrice,
+			FundingRate: fr.Fr,
+			NextTime:    fr.NextTime,
+		}, nil
+	} else if typ == "CM" {
+		url := bnCMFuturesEndpoint + "/dapi/v1/premiumIndex"
+		_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+		if err != nil {
+			return FundingRateMarkPrice{}, errors.New(bn.Name() + " net error! " + err.Error())
+		}
+		if resp[0] != '[' {
+			return FundingRateMarkPrice{}, bn.handleExceptionResp("FuturesGetFundingRateMarkPrice", resp)
+		}
+
+		frs := []struct {
+			MarkPrice decimal.Decimal `json:"markPrice"`
+			Fr        decimal.Decimal `json:"lastFundingRate"`
+			NextTime  int64           `json:"nextFundingTime"` // msec
+		}{}
+
+		if err = json.Unmarshal(resp, &frs); err != nil {
+			return FundingRateMarkPrice{}, errors.New(bn.Name() + " unmarshal error! " + err.Error())
+		}
+		if len(frs) == 0 {
+			return FundingRateMarkPrice{}, errors.New(bn.Name() + " resp empty")
+		}
+		return FundingRateMarkPrice{
+			MarkPrice:   frs[0].MarkPrice,
+			FundingRate: frs[0].Fr,
+			NextTime:    frs[0].NextTime,
+		}, nil
+	}
+	return FundingRateMarkPrice{}, errors.New("not support")
+}
 func (bn *Binance) FuturesGetAllAssets(typ string) (map[string]*FuturesAsset, error) {
 	url := bnUMFuturesEndpoint + "/fapi/v3/balance"
 	if typ == "CM" {

@@ -71,6 +71,8 @@ type Exchanger interface {
 	FuturesGetAll24hTicker(typ string) (map[string]Pub24hTicker, error)
 	FuturesGetBBO(typ, symbol string) (BestBidAsk, error)
 	FuturesGetAllFundingRate(typ string) (map[string]FundingRate, error)
+	// for binance
+	FuturesGetFundingRateMarkPrice(typ, symbol string) (FundingRateMarkPrice, error)
 	FuturesGetAllAssets(typ string) (map[string]*FuturesAsset, error)
 	// interval 1m,5m,30m,1h,6h,12h,1d startTime/endTime is second
 	// 返回顺序[11:15:00,11:16:00,11:17:00]
