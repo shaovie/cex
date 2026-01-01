@@ -793,12 +793,14 @@ func (bn *Binance) FuturesGetAllPositionList(typ string) (map[string]*FuturesPos
 			continue // 只支持单仓模式
 		}
 		cp := FuturesPosition{
-			Symbol:      strings.ReplaceAll(v.Symbol, "_PERP", ""), // BTCUSDT
-			Side:        side,
-			PositionQty: v.PositionQty,
-			EntryPrice:  v.EntryPrice,
-			Leverage:    v.Leverage,
-			UTime:       v.Time,
+			Symbol:           strings.ReplaceAll(v.Symbol, "_PERP", ""), // BTCUSDT
+			Side:             side,
+			PositionQty:      v.PositionQty,
+			EntryPrice:       v.EntryPrice,
+			UnRealizedProfit: v.UnrealisedPnl,
+			LiqPrice:         v.LiqPrice,
+			Leverage:         v.Leverage,
+			UTime:            v.Time,
 		}
 		positionM[cp.Symbol] = &cp
 	}

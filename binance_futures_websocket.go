@@ -565,11 +565,12 @@ func (bn *Binance) futuresWsHandlePosition(data json.RawMessage, ch chan<- any, 
 	pl := struct {
 		Event string `json:"m,omitempty"`
 		Pos   []struct {
-			Symbol       string          `json:"s,omitempty"`
-			EntryPrice   decimal.Decimal `json:"ep,omitempty"`
-			Qty          decimal.Decimal `json:"pa,omitempty"`
-			PositionMode string          `json:"ps,omitempty"`
-			UTime        int64           `json:"time_ms,omitempty"`
+			Symbol           string          `json:"s,omitempty"`
+			EntryPrice       decimal.Decimal `json:"ep,omitempty"`
+			UnRealizedProfit decimal.Decimal `json:"up,omitempty"`
+			Qty              decimal.Decimal `json:"pa,omitempty"`
+			PositionMode     string          `json:"ps,omitempty"`
+			UTime            int64           `json:"time_ms,omitempty"`
 		} `json:"P,omitempty"`
 	}{}
 	if err := json.Unmarshal(data, &pl); err == nil && len(pl.Pos) > 0 {
@@ -585,11 +586,13 @@ func (bn *Binance) futuresWsHandlePosition(data json.RawMessage, ch chan<- any, 
 				p.Symbol = strings.ReplaceAll(p.Symbol, "_PERP", "")
 			}
 			cp := FuturesPosition{
-				Symbol:      p.Symbol,
-				Side:        side,
-				PositionQty: p.Qty.Abs(),
-				EntryPrice:  p.EntryPrice,
-				UTime:       t,
+				Symbol:           p.Symbol,
+				Side:             side,
+				PositionQty:      p.Qty.Abs(),
+				EntryPrice:       p.EntryPrice,
+				UnRealizedProfit: p.UnRealizedProfit,
+				LiqPrice:         decimal.NewFromFloat(-1), // 不支持
+				UTime:            t,
 			}
 			ch <- &cp
 		}

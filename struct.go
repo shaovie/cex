@@ -243,8 +243,10 @@ type FuturesPosition struct {
 	PositionQty decimal.Decimal // 持仓数量  正数, 在CM中为张数
 	EntryPrice  decimal.Decimal // 开仓均价
 	// 以上必须
-	Leverage decimal.Decimal // 杠杆  币安推送不带个值
-	UTime    int64           // mill second
+	LiqPrice         decimal.Decimal // 强平价格
+	UnRealizedProfit decimal.Decimal // 未结盈亏
+	Leverage         decimal.Decimal // 杠杆  币安推送不带个值
+	UTime            int64           // mill second
 }
 
 func (cp *FuturesPosition) Val(v *FuturesPosition) {
@@ -256,6 +258,10 @@ func (cp *FuturesPosition) Val(v *FuturesPosition) {
 	}
 	cp.PositionQty = v.PositionQty
 	cp.EntryPrice = v.EntryPrice
+	cp.UnRealizedProfit = v.UnRealizedProfit
+	if !v.LiqPrice.IsNegative() {
+		cp.LiqPrice = v.LiqPrice
+	}
 	if v.Leverage.IsPositive() {
 		cp.Leverage = v.Leverage
 	}
