@@ -281,7 +281,10 @@ func (bn *Binance) FuturesGetFundingRateMarkPrice(typ, symbol string) (FundingRa
 			NextTime:    fr.NextTime,
 		}, nil
 	} else if typ == "CM" {
-		url := bnCMFuturesEndpoint + "/dapi/v1/premiumIndex"
+		if strings.Index(symbol, "_") == -1 {
+			symbol += "_PERP"
+		}
+		url := bnCMFuturesEndpoint + "/dapi/v1/premiumIndex?symbol=" + symbol
 		_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
 		if err != nil {
 			return FundingRateMarkPrice{}, errors.New(bn.Name() + " net error! " + err.Error())
