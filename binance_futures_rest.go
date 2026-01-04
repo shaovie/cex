@@ -11,6 +11,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/shaovie/gutils/ihttp"
+	"github.com/shaovie/gutils/ilog"
 )
 
 func (bn *Binance) FuturesSupported(typ string) bool {
@@ -31,8 +32,7 @@ func (bn *Binance) FuturesServerTime(typ string) (int64, error) {
 	recv := struct {
 		Time int64 `json:"serverTime,omitempty"`
 	}{}
-	err = json.Unmarshal(resp, &recv)
-	if err != nil {
+	if err = json.Unmarshal(resp, &recv); err != nil {
 		return 0, errors.New(bn.Name() + " unmarshal error! " + err.Error())
 	}
 	return recv.Time, nil
@@ -77,8 +77,7 @@ func (bn *Binance) FuturesLoadAllPairRule(typ string) (map[string]*FuturesExchan
 			}
 		} `json:"symbols"`
 	}{}
-	err = json.Unmarshal(resp, &recv)
-	if err != nil {
+	if err = json.Unmarshal(resp, &recv); err != nil {
 		return nil, errors.New(bn.Name() + " unmarshal fail! " + err.Error())
 	}
 	if recv.Code != 0 {
@@ -141,8 +140,7 @@ func (bn *Binance) FuturesGetAll24hTicker(typ string) (map[string]Pub24hTicker, 
 		BaseVolume  decimal.Decimal `json:"baseVolume,omitempty"`
 	}{}
 
-	err = json.Unmarshal(resp, &tks)
-	if err != nil {
+	if err = json.Unmarshal(resp, &tks); err != nil {
 		return nil, errors.New(bn.Name() + " unmarshal error! " + err.Error())
 	}
 	allTk := make(map[string]Pub24hTicker, len(tks))
@@ -238,8 +236,7 @@ func (bn *Binance) FuturesGetAllFundingRate(typ string) (map[string]FundingRate,
 		NextTime int64           `json:"nextFundingTime"` // msec
 	}{}
 
-	err = json.Unmarshal(resp, &frs)
-	if err != nil {
+	if err = json.Unmarshal(resp, &frs); err != nil {
 		return nil, errors.New(bn.Name() + " unmarshal error! " + err.Error())
 	}
 	all := make(map[string]FundingRate, len(frs))
@@ -257,6 +254,43 @@ func (bn *Binance) FuturesGetAllFundingRate(typ string) (map[string]FundingRate,
 		all[v.Symbol] = v
 	}
 	return all, nil
+}
+func (bn *Binance) FuturesGetFundingRateHistory(typ, symbol string,
+	startTime, endTime int64) ([]FundingRateHistory, error) {
+	url := bnUMFuturesEndpoint + "/fapi/v1/fundingRate"
+	if typ == "CM" {
+		url = bnCMFuturesEndpoint + "/dapi/v1/fundingRate"
+		if strings.Index(symbol, "_") == -1 {
+			symbol += "_PERP"
+		}
+	}
+	params := fmt.Sprintf("&symbol=%s&startTime=%d&endTime=%d&limit=1000",
+		symbol, startTime, endTime)
+	url = url + "?" + params
+	_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+	if err != nil {
+		return nil, errors.New(bn.Name() + " net error! " + err.Error())
+	}
+	if resp[0] != '[' {
+		return nil, bn.handleExceptionResp("FuturesGetFundingRateHistory", resp)
+	}
+	ret := []struct {
+		FundingRate decimal.Decimal `json:"fundingRate,omitempty"`
+		MarkPrice   decimal.Decimal `json:"markPrice,omitempty"`
+		Time        int64           `json:"fundingTime,omitempty"`
+	}{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return nil, errors.New(bn.Name() + " unmarshal fail! " + err.Error())
+	}
+	frh := make([]FundingRateHistory, 0, len(ret))
+	for _, v := range ret {
+		frh = append(frh, FundingRateHistory{
+			FundingRate: v.FundingRate,
+			MarkPrice:   v.MarkPrice,
+			Time:        v.Time,
+		})
+	}
+	return frh, nil
 }
 func (bn *Binance) FuturesGetFundingRateMarkPrice(typ, symbol string) (FundingRateMarkPrice, error) {
 	if typ == "UM" {
@@ -328,8 +362,7 @@ func (bn *Binance) FuturesGetAllAssets(typ string) (map[string]*FuturesAsset, er
 		Total        decimal.Decimal `json:"balance,omitempty"`
 		AvailBalance decimal.Decimal `json:"availableBalance,omitempty"` // 可用下单余额
 	}{}
-	err = json.Unmarshal(resp, &alls)
-	if err != nil {
+	if err = json.Unmarshal(resp, &alls); err != nil {
 		return nil, errors.New(bn.Name() + " unmarshal error! " + err.Error())
 	}
 
@@ -341,7 +374,6 @@ func (bn *Binance) FuturesGetAllAssets(typ string) (map[string]*FuturesAsset, er
 		assetsMap[v.Symbol] = &FuturesAsset{
 			Symbol: v.Symbol,
 			Avail:  v.AvailBalance,
-			Locked: v.Total.Sub(v.AvailBalance),
 			Total:  v.Total,
 		}
 	}
@@ -367,8 +399,7 @@ func (bn *Binance) FuturesGetKLine(typ, symbol, interval string,
 	}
 
 	var klines [][]any
-	err = json.Unmarshal(resp, &klines)
-	if err != nil {
+	if err = json.Unmarshal(resp, &klines); err != nil {
 		return nil, errors.New(bn.Name() + " unmarshal error! " + err.Error())
 	}
 	all := make([]KLine, 0, len(klines))
@@ -430,8 +461,7 @@ func (bn *Binance) FuturesPlaceOrder(typ, symbol, clientId string, /*BTCUSDT*/
 		Msg     string `json:"msg,omitempty"`
 		OrderId int64  `json:"orderId,omitempty"` //
 	}{}
-	err = json.Unmarshal(resp, &ret)
-	if err != nil {
+	if err = json.Unmarshal(resp, &ret); err != nil {
 		return "", errors.New(bn.Name() + " unmarshal fail! " + err.Error())
 	}
 	if ret.Code != 0 {
@@ -483,8 +513,7 @@ func (bn *Binance) FuturesGetOrder(typ, symbol, orderId, cltId string) (*Futures
 		Time         int64           `json:"time,omitempty"`
 		UTime        int64           `json:"updateTime,omitempty"`
 	}{}
-	err = json.Unmarshal(resp, &order)
-	if err != nil {
+	if err = json.Unmarshal(resp, &order); err != nil {
 		return nil, errors.New(bn.Name() + " unmarshal fail! " + err.Error())
 	}
 	if order.Code != 0 {
@@ -545,8 +574,7 @@ func (bn *Binance) FuturesGetOpenOrders(typ, symbol string) ([]*FuturesOrder, er
 		Time         int64           `json:"time,omitempty"`
 		UTime        int64           `json:"updateTime,omitempty"`
 	}{}
-	err = json.Unmarshal(resp, &orders)
-	if err != nil {
+	if err = json.Unmarshal(resp, &orders); err != nil {
 		return nil, errors.New(bn.Name() + " unmarshal fail! " + err.Error())
 	}
 	if resp[0] == '{' {
@@ -604,8 +632,7 @@ func (bn *Binance) FuturesCancelOrder(typ, symbol, orderId, cltId string) error 
 		Msg    string `json:"msg,omitempty"`
 		Status string `json:"status,omitempty"`
 	}{}
-	err = json.Unmarshal(resp, &ret)
-	if err != nil {
+	if err = json.Unmarshal(resp, &ret); err != nil {
 		return errors.New(bn.Name() + " unmarshal fail! " + err.Error())
 	}
 	if ret.Code != 0 {
@@ -647,8 +674,7 @@ func (bn *Binance) FuturesSwitchPositionMode(typ string /*BTCUSDT*/, mode int) e
 		Code int    `json:"code,omitempty"`
 		Msg  string `json:"msg,omitempty"`
 	}{}
-	err = json.Unmarshal(resp, &ret)
-	if err != nil {
+	if err = json.Unmarshal(resp, &ret); err != nil {
 		return errors.New(bn.Name() + " unmarshal fail! " + err.Error())
 	}
 	if ret.Code != 200 && ret.Code != -4059 {
@@ -692,8 +718,7 @@ func (bn *Binance) futuresSwitchTradeMode(typ, symbol string /*BTCUSDT*/, mode i
 		Code int    `json:"code,omitempty"`
 		Msg  string `json:"msg,omitempty"`
 	}{}
-	err = json.Unmarshal(resp, &ret)
-	if err != nil {
+	if err = json.Unmarshal(resp, &ret); err != nil {
 		return errors.New(bn.Name() + " unmarshal fail! " + err.Error())
 	}
 	if ret.Code != 200 && ret.Code != -4046 {
@@ -726,12 +751,12 @@ func (bn *Binance) futuresSetLeverage(typ, symbol string /*BTCUSDT*/, leverage i
 	if err != nil {
 		return errors.New(bn.Name() + " net error! " + err.Error())
 	}
+	ilog.Rinfo(string(resp))
 	ret := struct {
 		Code int    `json:"code,omitempty"`
 		Msg  string `json:"msg,omitempty"`
 	}{}
-	err = json.Unmarshal(resp, &ret)
-	if err != nil {
+	if err = json.Unmarshal(resp, &ret); err != nil {
 		return errors.New(bn.Name() + " unmarshal fail! " + err.Error())
 	}
 	if ret.Code != 200 {
@@ -775,8 +800,7 @@ func (bn *Binance) FuturesMaintMargin(typ, symbol string) ([]*FuturesLeverageBra
 		Symbol   string    `json:"symbol,omitempty"`
 		Brackets []Bracket `json:"brackets,omitempty"`
 	}{}
-	err = json.Unmarshal(resp, &ret)
-	if err != nil {
+	if err = json.Unmarshal(resp, &ret); err != nil {
 		return nil, errors.New(bn.Name() + " unmarshal fail! " + err.Error())
 	}
 	if len(ret) == 0 {
@@ -831,8 +855,7 @@ func (bn *Binance) FuturesGetAllPositionList(typ string) (map[string]*FuturesPos
 
 		Time int64 `json:"updateTime,omitempty"` // msec
 	}{}
-	err = json.Unmarshal(resp, &recv)
-	if err != nil {
+	if err = json.Unmarshal(resp, &recv); err != nil {
 		return nil, errors.New(bn.Name() + " unmarshal fail! " + err.Error())
 	}
 	positionM := make(map[string]*FuturesPosition)
@@ -861,4 +884,50 @@ func (bn *Binance) FuturesGetAllPositionList(typ string) (map[string]*FuturesPos
 	}
 
 	return positionM, nil
+}
+func (bn *Binance) FuturesGetProfitLossHistory(typ, symbol, plType string,
+	startTime, endTime int64) ([]FuturesProfitLossHistory, error) {
+	url := bnUMFuturesEndpoint + "/fapi/v1/income"
+	if typ == "CM" {
+		url = bnCMFuturesEndpoint + "/dapi/v1/income"
+	}
+	if bn.isUnified {
+		url = bnUnifiedEndpoint + "/papi/v1/um/income"
+		if typ == "CM" {
+			url = bnUnifiedEndpoint + "/papi/v1/cm/income"
+		}
+	}
+	if typ == "CM" && strings.Index(symbol, "_") == -1 {
+		symbol += "_PERP"
+	}
+	params := fmt.Sprintf("&symbol=%s&incomeType=%s&startTime=%d&endTime=%d&limit=1000",
+		symbol, plType, startTime, endTime)
+	url = url + "?" + bn.httpQuerySign(params)
+	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	if err != nil {
+		return nil, errors.New(bn.Name() + " net error! " + err.Error())
+	}
+	if resp[0] != '[' {
+		return nil, bn.handleExceptionResp("FuturesGetProfitLossHistory", resp)
+	}
+	ret := []struct {
+		//Symbol          string           `json:"symbol,omitempty"`
+		IncomeType string          `json:"incomeType,omitempty"`
+		Asset      string          `json:"asset,omitempty"`
+		Income     decimal.Decimal `json:"income,omitempty"`
+		Time       int64           `json:"time,omitempty"`
+	}{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return nil, errors.New(bn.Name() + " unmarshal fail! " + err.Error())
+	}
+	plh := make([]FuturesProfitLossHistory, 0, len(ret))
+	for _, v := range ret {
+		plh = append(plh, FuturesProfitLossHistory{
+			Income: v.Income,
+			Asset:  v.Asset,
+			Typ:    v.IncomeType,
+			Time:   v.Time,
+		})
+	}
+	return plh, nil
 }

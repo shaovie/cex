@@ -77,6 +77,9 @@ func (us *Unsupported) FuturesGetBBO(typ, symbol string) (BestBidAsk, error) {
 func (us *Unsupported) FuturesGetAllFundingRate(typ string) (map[string]FundingRate, error) {
 	return nil, errors.New("not support")
 }
+func (us *Unsupported) FuturesGetFundingRateHistory(typ, symbol string, startTime, endTime int64) ([]FundingRateHistory, error) {
+	return nil, errors.New("not support")
+}
 func (us *Unsupported) FuturesGetFundingRateMarkPrice(typ, symbol string) (FundingRateMarkPrice, error) {
 	return FundingRateMarkPrice{}, errors.New("not support")
 }
@@ -116,6 +119,10 @@ func (us *Unsupported) FuturesSwitchTradeMode(typ, symbol string, mode, lver int
 	return errors.New("not support")
 }
 func (us *Unsupported) FuturesMaintMargin(typ, symbol string) ([]*FuturesLeverageBracket, error) {
+	return nil, errors.New("not support")
+}
+func (us *Unsupported) FuturesGetProfitLossHistory(typ, symbol, plType string,
+	startTime, endTime int64) ([]FuturesProfitLossHistory, error) {
 	return nil, errors.New("not support")
 }
 func (us *Unsupported) FuturesWsPublicOpen(typ string) error         { return errors.New("not support") }

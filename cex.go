@@ -12,6 +12,7 @@ type Exchanger interface {
 	Name() string
 	ApiKey() string
 	Account() string
+	Debug(v bool)
 
 	//= spot
 	// rest api
@@ -71,6 +72,7 @@ type Exchanger interface {
 	FuturesGetAll24hTicker(typ string) (map[string]Pub24hTicker, error)
 	FuturesGetBBO(typ, symbol string) (BestBidAsk, error)
 	FuturesGetAllFundingRate(typ string) (map[string]FundingRate, error)
+	FuturesGetFundingRateHistory(typ, symbol string, startTime, endTime int64) ([]FundingRateHistory, error)
 	// for binance
 	FuturesGetFundingRateMarkPrice(typ, symbol string) (FundingRateMarkPrice, error)
 	FuturesGetAllAssets(typ string) (map[string]*FuturesAsset, error)
@@ -92,6 +94,9 @@ type Exchanger interface {
 	FuturesSwitchTradeMode(typ, symbol string /*BTCUSDT*/, mode, leverage int) error
 	// 获取交易对的杠杆分层标准 For binance
 	FuturesMaintMargin(typ, symbol string) ([]*FuturesLeverageBracket, error)
+	// 获取账户损益资金流水 For binance, plType: FUNDING_FEE
+	FuturesGetProfitLossHistory(typ, symbol, plType string, startTime, endTime int64) (
+		[]FuturesProfitLossHistory, error)
 
 	// ws
 	// channels: orderbook5@symbolA,symbolB

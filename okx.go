@@ -17,6 +17,7 @@ type Okx struct {
 	apikey    string
 	passwd    string
 	secretkey string
+	debug     bool
 
 	// spot websocket
 	spotWsPublicConn            *websocket.Conn
@@ -75,6 +76,9 @@ func (ok *Okx) Account() string {
 }
 func (ok *Okx) ApiKey() string {
 	return ok.apikey
+}
+func (ok *Okx) Debug(v bool) {
+	ok.debug = v
 }
 func (ok *Okx) Init() error {
 	ok.spotWsPublicClosed = true

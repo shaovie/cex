@@ -23,8 +23,7 @@ func (bn *Binance) SpotServerTime() (int64, error) {
 	recv := struct {
 		Time int64 `json:"serverTime,omitempty"`
 	}{}
-	err = json.Unmarshal(resp, &recv)
-	if err != nil {
+	if err = json.Unmarshal(resp, &recv); err != nil {
 		return 0, errors.New(bn.Name() + " unmarshal error! " + err.Error())
 	}
 	return recv.Time, nil
@@ -58,8 +57,7 @@ func (bn *Binance) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, erro
 			} `json:"filters,omitempty"`
 		} `json:"symbols,omitempty"`
 	}{}
-	err = json.Unmarshal(resp, &recv)
-	if err != nil {
+	if err = json.Unmarshal(resp, &recv); err != nil {
 		return nil, errors.New(bn.Name() + " unmarshal fail! " + err.Error())
 	}
 	if recv.Code != 0 {
@@ -167,8 +165,7 @@ func (bn *Binance) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 			Locked decimal.Decimal `json:"locked,omitempty"`
 		} `json:"balances,omitempty"`
 	}{}
-	err = json.Unmarshal(resp, &recv)
-	if err != nil {
+	if err = json.Unmarshal(resp, &recv); err != nil {
 		return nil, errors.New(bn.Name() + " unmarshal error! " + err.Error())
 	}
 	if recv.Code != 0 || len(recv.Msg) != 0 {
@@ -224,8 +221,7 @@ func (bn *Binance) SpotPlaceOrder(symbol, cltId string /*BTCUSDT*/, price, qty d
 		ClientId string `json:"clientOrderId,omitempty"`
 		Time     int64  `json:"transactTime,omitempty"`
 	}{}
-	err = json.Unmarshal(resp, &ret)
-	if err != nil {
+	if err = json.Unmarshal(resp, &ret); err != nil {
 		return "", errors.New(bn.Name() + " unmarshal fail! " + err.Error())
 	}
 	if ret.Code != 0 {
@@ -256,8 +252,7 @@ func (bn *Binance) SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId str
 
 		Status string `json:"status,omitempty"`
 	}{}
-	err = json.Unmarshal(resp, &ret)
-	if err != nil {
+	if err = json.Unmarshal(resp, &ret); err != nil {
 		return errors.New(bn.Name() + " unmarshal fail! " + err.Error())
 	}
 	if ret.Code != 0 {
@@ -302,8 +297,7 @@ func (bn *Binance) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, erro
 		Time         int64           `json:"time,omitempty"`
 		UTime        int64           `json:"updateTime,omitempty"`
 	}{}
-	err = json.Unmarshal(resp, &order)
-	if err != nil {
+	if err = json.Unmarshal(resp, &order); err != nil {
 		return nil, errors.New(bn.Name() + " unmarshal fail! " + err.Error())
 	}
 	if order.Code != 0 {
@@ -353,8 +347,7 @@ func (bn *Binance) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 		Time         int64           `json:"time,omitempty"`
 		UTime        int64           `json:"updateTime,omitempty"`
 	}{}
-	err = json.Unmarshal(resp, &orders)
-	if err != nil {
+	if err = json.Unmarshal(resp, &orders); err != nil {
 		return nil, errors.New(bn.Name() + " Unmarshal err! " + err.Error())
 	}
 	dl := make([]*SpotOrder, 0, len(orders))

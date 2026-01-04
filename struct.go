@@ -122,9 +122,8 @@ func (sa *SpotAsset) Val(v *SpotAsset) {
 
 type FuturesAsset struct {
 	Symbol string          // BTC
-	Total  decimal.Decimal // 总共
-	Avail  decimal.Decimal // 可用
-	Locked decimal.Decimal
+	Total  decimal.Decimal // 账户余额/钱包余额
+	Avail  decimal.Decimal // 可用下单余额
 }
 
 func (sa *FuturesAsset) Val(v *FuturesAsset) {
@@ -134,9 +133,6 @@ func (sa *FuturesAsset) Val(v *FuturesAsset) {
 	sa.Avail = v.Avail
 	if !v.Total.Equals(decimal.NewFromInt(999999999)) {
 		sa.Total = v.Total
-	}
-	if !v.Locked.Equals(decimal.NewFromInt(999999999)) {
-		sa.Locked = v.Locked
 	}
 }
 
@@ -276,6 +272,11 @@ type FundingRate struct {
 	NextTime int64           // 下次结算时间second
 	UTime    int64           // second
 }
+type FundingRateHistory struct {
+	FundingRate decimal.Decimal // 结算资金费率
+	MarkPrice   decimal.Decimal // 资金费对应标记价格
+	Time        int64           // 结算时间second
+}
 type FundingRateMarkPrice struct {
 	MarkPrice   decimal.Decimal
 	FundingRate decimal.Decimal // 下次资金费率
@@ -310,4 +311,10 @@ type FuturesLeverageBracket struct {
 	QtyFloor         decimal.Decimal // 该层对应的数量下限  For CM
 	MaintMarginRatio decimal.Decimal // 该层对应的维持保证金率
 	Cum              decimal.Decimal // 速算数
+}
+type FuturesProfitLossHistory struct {
+	Income decimal.Decimal
+	Asset  string //
+	Typ    string // FUNDING_FEE
+	Time   int64  // msec
 }

@@ -23,6 +23,7 @@ type Binance struct {
 	apikey    string
 	secretkey string
 	isUnified bool // 是否统一账户
+	debug     bool
 
 	// spot websocket
 	spotWsPublicConn      *websocket.Conn
@@ -96,6 +97,9 @@ func (bn *Binance) Account() string {
 }
 func (bn *Binance) ApiKey() string {
 	return bn.apikey
+}
+func (bn *Binance) Debug(v bool) {
+	bn.debug = v
 }
 func (bn *Binance) Init() error {
 	bn.spotWsPublicClosed = true

@@ -489,7 +489,9 @@ func (bn *Binance) futuresWsPrivateLoop(ch chan<- any, wg *sync.WaitGroup) {
 			}
 			break
 		}
-		ilog.Rinfo("futures.ws.priv: " + string(recv))
+		if bn.debug {
+			ilog.Rinfo(bn.Name() + " futures.ws.priv: " + string(recv))
+		}
 		msg := bnFuturesWsPrivMsgPool.Get().(*BnFuturesWsPrivMsg)
 		msg.reset()
 		if err = json.Unmarshal(recv, msg); err != nil {
@@ -727,7 +729,9 @@ func (bn *Binance) FuturesWsPlaceOrder(symbol, cltId string,
 	params["signature"] = bn.wsSign(params)
 	req := BnWsApiArg{Id: "ford-" + gutils.RandomStr(14), Method: "order.place", Params: &params}
 	reqJson, _ := json.Marshal(req)
-	ilog.Rinfo(bn.Name() + " post c order:" + string(reqJson))
+	if bn.debug {
+		ilog.Rinfo(bn.Name() + " ws post future order:" + string(reqJson))
+	}
 
 	bn.futuresWsPrivateApiConnMtx.Lock()
 	defer bn.futuresWsPrivateApiConnMtx.Unlock()

@@ -429,7 +429,9 @@ func (gt *Gate) SpotWsPrivateLoop(ch chan<- any) {
 			}
 			break
 		}
-		ilog.Rinfo(gt.Name() + " spot priv ws: " + string(recv))
+		if gt.debug {
+			ilog.Rinfo(gt.Name() + " spot priv ws: " + string(recv))
+		}
 		msg := gtWsPrivMsgPool.Get().(*GtWsPrivMsg)
 		msg.reset()
 		if err = json.Unmarshal(recv, msg); err != nil {

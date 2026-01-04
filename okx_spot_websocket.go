@@ -427,7 +427,9 @@ func (ok *Okx) SpotWsPrivateLoop(ch chan<- any) {
 			}
 			break
 		}
-		ilog.Rinfo(ok.Name() + " spot priv ws: " + string(recv))
+		if ok.debug {
+			ilog.Rinfo(ok.Name() + " spot priv ws: " + string(recv))
+		}
 		if len(recv) == 4 && bytes.Equal(recv, []byte("pong")) {
 			ok.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
 			continue

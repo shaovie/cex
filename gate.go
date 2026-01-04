@@ -21,6 +21,7 @@ type Gate struct {
 	account   string
 	apikey    string
 	secretkey string
+	debug     bool
 
 	// spot websocket
 	spotWsPublicConn               *websocket.Conn
@@ -90,6 +91,9 @@ func (gt *Gate) Account() string {
 }
 func (gt *Gate) ApiKey() string {
 	return gt.apikey
+}
+func (gt *Gate) Debug(v bool) {
+	gt.debug = v
 }
 func (gt *Gate) Init() error {
 	gt.spotWsPublicClosed = true

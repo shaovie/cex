@@ -236,6 +236,14 @@ func main() {
 			ilog.Rinfo("%s FuturesMaintMargin %v", "ETHUSD", *v)
 		}
 	}
+	now := time.Now().UnixMilli()
+	if plh, err := cexObj.FuturesGetProfitLossHistory(typ, "ETHUSD", "FUNDING_FEE", now-86400000, now); err != nil {
+		ilog.Rinfo("get ProfitLossHistory fail: " + err.Error())
+	} else {
+		for i, _ := range plh {
+			ilog.Rinfo("%s ProfitLossHistory %v %s", "ETHUSD", plh[i], time.UnixMilli(plh[i].Time).Format("2006-01-02 15:04:05"))
+		}
+	}
 	testRest(cexObj, typ)
 	testPrivWs(cexObj, typ)
 	go testPubWs(cexObj, typ)

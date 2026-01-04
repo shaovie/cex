@@ -19,6 +19,7 @@ type Bigone struct {
 	account   string
 	apikey    string
 	secretkey string
+	debug     bool
 
 	// spot websocket
 	spotWsPublicConn               *websocket.Conn
@@ -60,6 +61,9 @@ func (bo *Bigone) Account() string {
 }
 func (bo *Bigone) ApiKey() string {
 	return bo.apikey
+}
+func (bo *Bigone) Debug(v bool) {
+	bo.debug = v
 }
 func (bo *Bigone) Init() error {
 	bo.spotWsPublicClosed = true

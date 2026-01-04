@@ -399,7 +399,9 @@ func (bn *Binance) SpotWsPrivateLoop(ch chan<- any) {
 			}
 			break
 		}
-		ilog.Rinfo("spot.ws.priv " + string(recv))
+		if bn.debug {
+			ilog.Rinfo(bn.Name() + " spot.ws.priv " + string(recv))
+		}
 		msg := bnSpotWsPrivMsgPool.Get().(*BnSpotWsPrivMsg)
 		msg.reset()
 		if err = json.Unmarshal(recv, msg); err != nil {
@@ -565,6 +567,9 @@ func (bn *Binance) SpotWsPlaceOrder(symbol, cltId string, price, qty decimal.Dec
 	params["signature"] = bn.wsSign(params)
 	req := BnWsApiArg{Id: "sord-" + gutils.RandomStr(16), Method: "order.place", Params: params}
 	reqJson, _ := json.Marshal(req)
+	if bn.debug {
+		ilog.Rinfo(bn.Name() + " ws post spot order:" + string(reqJson))
+	}
 
 	bn.spotWsPrivateConnMtx.Lock()
 	defer bn.spotWsPrivateConnMtx.Unlock()

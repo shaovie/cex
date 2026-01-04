@@ -424,7 +424,9 @@ func (bo *Bigone) SpotWsPrivateLoop(ch chan<- any) {
 			}
 			break
 		}
-		ilog.Rinfo(bo.Name() + " spot priv ws: " + string(recv))
+		if bo.debug {
+			ilog.Rinfo(bo.Name() + " spot priv ws: " + string(recv))
+		}
 		msg := boSpotWsPrivMsgPool.Get().(*BigoneSpotWsPrivMsg)
 		msg.reset()
 		if err = easyjson.Unmarshal(recv, msg); err != nil {
