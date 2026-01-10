@@ -23,7 +23,7 @@ func testPubWs(cexObj cex.Exchanger, typ string) {
 	ch := make(chan any, 256)
 	allSpotSymbols := cex.FuturesGetAllExPairRule(cexObj.Name())
 	arr := make([]string, 0, len(allSpotSymbols))
-	arr = append(arr, "BTCUSD")
+	arr = append(arr, "BTCUSDT")
 	for k, _ := range allSpotSymbols {
 		arr = append(arr, k)
 		if len(arr) > 4 {
@@ -33,11 +33,11 @@ func testPubWs(cexObj cex.Exchanger, typ string) {
 	ilog.Rinfo("test load exchange rule: %v", len(arr) > 0)
 	allSymbols := strings.Join(arr, ",")
 	cexObj.FuturesWsPublicSubscribe([]string{"ticker@" + allSymbols,
-		"orderbook5@ETHUSD,BTCUSD", "orderbook5@SOLUSD", "bbo@BTCUSD"})
+		"orderbook5@ETHUSDT,BTCUSDT", "orderbook5@SOLUSDT", "bbo@BTCUSDT"})
 	go cexObj.FuturesWsPublicLoop(ch)
 	go func() {
 		time.Sleep(3 * time.Second)
-		cexObj.FuturesWsPublicUnsubscribe([]string{"orderbook5@BTCUSD", "bbo@BTCUSD"})
+		cexObj.FuturesWsPublicUnsubscribe([]string{"orderbook5@BTCUSDT", "bbo@BTCUSDT"})
 	}()
 	ticker := time.NewTicker(time.Duration(99) * time.Millisecond)
 	defer ticker.Stop()
@@ -94,7 +94,7 @@ func testRest(cexObj cex.Exchanger, typ string) {
 	if err != nil {
 		ilog.Rinfo("GetAll24hTicker fail: %s", err.Error())
 	} else {
-		ilog.Rinfo("test get public 24hticker: %v", allTickers["BTCUSD"])
+		ilog.Rinfo("test get public 24hticker: %v", allTickers["BTCUSDT"])
 	}
 	posL, err := cexObj.FuturesGetAllPositionList(typ)
 	if err != nil {
@@ -108,7 +108,8 @@ func testRest(cexObj cex.Exchanger, typ string) {
 	}
 	price := decimal.NewFromFloat(80990.238)
 	qty := decimal.NewFromFloat(0.0022486)
-	if exRule := cex.FuturesGetExPairRule(cexObj.Name(), "BTCUSD"); exRule != nil {
+	if exRule := cex.FuturesGetExPairRule(cexObj.Name(), "BTCUSDT"); exRule != nil {
+		ilog.Rinfo("fexrule %v", *exRule)
 		price = exRule.AdjustPrice(price)
 		if typ == "CM" {
 			qty = decimal.NewFromInt(1) // exRule.ContractSize
@@ -117,23 +118,23 @@ func testRest(cexObj cex.Exchanger, typ string) {
 		ilog.Rinfo("to palce order: price=%s qty=%s", price.String(), qty.String())
 	}
 	cltId := gutils.RandomStr(24)
-	err = cexObj.FuturesSwitchTradeMode(typ, "BTCUSD", 0, 2)
+	err = cexObj.FuturesSwitchTradeMode(typ, "BTCUSDT", 0, 2)
 	if err != nil {
 		ilog.Rinfo("switch trade mode fail: %s", err.Error())
 	}
-	orderId, err := cexObj.FuturesPlaceOrder(typ, "BTCUSD", cltId,
+	orderId, err := cexObj.FuturesPlaceOrder(typ, "BTCUSDT", cltId,
 		price, qty, "BUY", "LIMIT", "GTC", 0, 0, 0)
 	if err != nil {
 		ilog.Rinfo("place order fail: %s", err.Error())
 	} else {
 		ilog.Rinfo("place order ok, new order:%s", orderId)
-		order, err := cexObj.FuturesGetOrder(typ, "BTCUSD", orderId, "")
+		order, err := cexObj.FuturesGetOrder(typ, "BTCUSDT", orderId, "")
 		if err != nil {
 			ilog.Rinfo("get order fail: %s", err.Error())
 		} else {
 			ilog.Rinfo("get order: %v", *order)
 		}
-		orderL, err := cexObj.FuturesGetOpenOrders(typ, "BTCUSD")
+		orderL, err := cexObj.FuturesGetOpenOrders(typ, "BTCUSDT")
 		if err != nil {
 			ilog.Rinfo("get open orders fail: %s", err.Error())
 		} else {
@@ -141,7 +142,7 @@ func testRest(cexObj cex.Exchanger, typ string) {
 				ilog.Rinfo("get open orders: %v", *o)
 			}
 		}
-		err = cexObj.FuturesCancelOrder(typ, "BTCUSD", orderId, "")
+		err = cexObj.FuturesCancelOrder(typ, "BTCUSDT", orderId, "")
 		if err != nil {
 			ilog.Rinfo("cancel order fail: %s", err.Error())
 		} else {
@@ -182,7 +183,7 @@ func futuresPrivWs(cexObj cex.Exchanger, typ string) {
 func testPrivWs(cexObj cex.Exchanger, typ string) {
 	price := decimal.NewFromFloat(80990.238)
 	qty := decimal.NewFromFloat(0.00232486)
-	if exRule := cex.FuturesGetExPairRule(cexObj.Name(), "BTCUSD"); exRule != nil {
+	if exRule := cex.FuturesGetExPairRule(cexObj.Name(), "BTCUSDT"); exRule != nil {
 		price = exRule.AdjustPrice(price)
 		if typ == "CM" {
 			qty = decimal.NewFromInt(1) // exRule.ContractSize
@@ -202,7 +203,7 @@ func testPrivWs(cexObj cex.Exchanger, typ string) {
 	time.Sleep(2 * time.Second)
 	cltId := gutils.RandomStr(24)
 	ilog.Rinfo("to palce order: price=%s qty=%s", price.String(), qty.String())
-	reqId, err := cexObj.FuturesWsPlaceOrder("BTCUSD", cltId,
+	reqId, err := cexObj.FuturesWsPlaceOrder("BTCUSDT", cltId,
 		price, qty, "BUY", "LIMIT", "GTC", 0, 0, 0)
 	if err != nil {
 		ilog.Rinfo("ws place order fail: %s", err.Error())
@@ -229,19 +230,19 @@ func main() {
 	ilog.Rinfo("cex=%s typ=%s", cexName, typ)
 	// ok,gate,bybit,binance
 	cexObj, _ := cex.New(cexName, "", apiKey, secretKey, passphrase)
-	if lbs, err := cexObj.FuturesMaintMargin(typ, "ETHUSD"); err != nil {
+	if lbs, err := cexObj.FuturesMaintMargin(typ, "ETHUSDT"); err != nil {
 		ilog.Rinfo("get FuturesMaintMargin fail: " + err.Error())
 	} else {
 		for _, v := range lbs {
-			ilog.Rinfo("%s FuturesMaintMargin %v", "ETHUSD", *v)
+			ilog.Rinfo("%s FuturesMaintMargin %v", "ETHUSDT", *v)
 		}
 	}
 	now := time.Now().UnixMilli()
-	if plh, err := cexObj.FuturesGetProfitLossHistory(typ, "ETHUSD", "FUNDING_FEE", now-86400000, now); err != nil {
+	if plh, err := cexObj.FuturesGetProfitLossHistory(typ, "ETHUSDT", "FUNDING_FEE", now-86400000, now); err != nil {
 		ilog.Rinfo("get ProfitLossHistory fail: " + err.Error())
 	} else {
 		for i, _ := range plh {
-			ilog.Rinfo("%s ProfitLossHistory %v %s", "ETHUSD", plh[i], time.UnixMilli(plh[i].Time).Format("2006-01-02 15:04:05"))
+			ilog.Rinfo("%s ProfitLossHistory %v %s", "ETHUSDT", plh[i], time.UnixMilli(plh[i].Time).Format("2006-01-02 15:04:05"))
 		}
 	}
 	if err = cexObj.Transfer("BTC", "CM_FUTURE", "SPOT", decimal.NewFromFloat(0.33)); err != nil {

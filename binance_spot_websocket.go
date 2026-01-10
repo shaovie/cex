@@ -277,6 +277,9 @@ func (bn *Binance) spotWsHandle24hTickers(data json.RawMessage, ch chan<- any) {
 }
 
 // = priv channel
+func (bn *Binance) SpotWsPrivateSupported() bool {
+	return true
+}
 func (bn *Binance) SpotWsPrivateOpen() error {
 	url := "wss://ws-api.binance.com:443/ws-api/v3?returnRateLimits=false"
 	var err error

@@ -47,6 +47,7 @@ func (us *Unsupported) SpotWsPublicBBOPoolPut(v any)              {}
 func (us *Unsupported) SpotWsPublicLoop(ch chan<- any)            {}
 func (us *Unsupported) SpotWsPublicClose()                        {}
 func (us *Unsupported) SpotWsPublicIsClosed() bool                { return true }
+func (us *Unsupported) SpotWsPrivateSupported() bool                  { return false }
 func (us *Unsupported) SpotWsPrivateOpen() error                  { return errors.New("not support") }
 func (us *Unsupported) SpotWsPrivateSubscribe(channels []string)  {}
 func (us *Unsupported) SpotWsPrivateLoop(ch chan<- any)           {}
@@ -134,6 +135,7 @@ func (us *Unsupported) FuturesWsPublicBBOPoolPut(v any)              {}
 func (us *Unsupported) FuturesWsPublicLoop(ch chan<- any)            {}
 func (us *Unsupported) FuturesWsPublicClose()                        {}
 func (us *Unsupported) FuturesWsPublicIsClosed() bool                { return true }
+func (us *Unsupported) FuturesWsPrivateSupported(typ string) bool                  { return false }
 func (us *Unsupported) FuturesWsPrivateOpen(typ string) error        { return errors.New("not support") }
 func (us *Unsupported) FuturesWsPrivateSubscribe(channels []string)  {}
 func (us *Unsupported) FuturesWsPrivateLoop(ch chan<- any)           {}
@@ -152,6 +154,7 @@ func (us *Unsupported) FuturesWsCancelOrder(symbol, orderId, cltId string) (stri
 func (us *Unsupported) UnifiedGetAssets() (map[string]*UnifiedAsset, error) {
 	return nil, errors.New("not support")
 }
+func (us *Unsupported) UnifiedWsSupported()bool                 { return false }
 func (us *Unsupported) UnifiedWsOpen() error                 { return errors.New("not support") }
 func (us *Unsupported) UnifiedWsSubscribe(channels []string) {}
 func (us *Unsupported) UnifiedWsLoop(ch chan<- any)          {}

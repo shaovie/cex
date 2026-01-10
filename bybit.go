@@ -112,3 +112,9 @@ func (bb *Bybit) toStdOrderStatus(status string) string {
 	}
 	return ""
 }
+func (bb *Bybit) fromStdCategory(v string) string {
+	if v == "CM" {
+		return "inverse"
+	}
+	return "linear"
+}

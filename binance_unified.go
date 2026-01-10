@@ -46,6 +46,9 @@ func (bn *Binance) UnifiedGetAssets() (map[string]*UnifiedAsset, error) {
 
 	return uniAssets, nil
 }
+func (bn *Binance) UnifiedWsSupported() bool {
+	return true
+}
 func (bn *Binance) UnifiedWsOpen() error {
 	listenKey, err := bn.getListenKey("UNIFIED")
 	if err != nil {

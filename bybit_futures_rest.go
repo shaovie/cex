@@ -2,39 +2,34 @@ package cex
 
 import (
 	"encoding/json"
-	"strconv"
 	"errors"
+	"fmt"
+	"strconv"
 	"time"
 
-	"github.com/shaovie/gutils/ihttp"
 	"github.com/shopspring/decimal"
+
+	"github.com/shaovie/gutils/ihttp"
 )
 
-func (bb *Bybit) SpotSupported() bool {
-	return true
+func (bb *Bybit) FuturesSupported(typ string) bool {
+	if typ == "UM" || typ == "CM" {
+		return true
+	}
+	return false
 }
-func (bb *Bybit) SpotServerTime() (int64, error) {
+func (bb *Bybit) FuturesServerTime(typ string) (int64, error) {
 	return bb.serverTime()
 }
-func (bb *Bybit) serverTime() (int64, error) {
-	url := bbUniEndpoint + "/v5/market/time"
-	_, resp, err := ihttp.Get(url, bbApiDeadline, nil)
-	if err != nil {
-		return 0, errors.New(bb.Name() + " net error! " + err.Error())
-	}
-	recv := struct {
-		Result struct {
-			Time string `json:"timeNano,omitempty"`
-		} `json:"result,omitempty"`
-	}{}
-	if err = json.Unmarshal(resp, &recv); err != nil {
-		return 0, errors.New(bb.Name() + " unmarshal error! " + err.Error())
-	}
-	t, _ := strconv.ParseInt(recv.Result.Time, 10, 64)
-	return t / 1000000, nil
+func (bb *Bybit) FuturesSizeToQty(typ, symbol string, size decimal.Decimal) decimal.Decimal {
+	return size
 }
-func (bb *Bybit) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
-	url := bbUniEndpoint + "/v5/market/instruments-info?category=spot"
+func (bb *Bybit) FuturesQtyToSize(typ, symbol string, qty decimal.Decimal) decimal.Decimal {
+	return qty
+}
+func (bb *Bybit) FuturesLoadAllPairRule(typ string) (map[string]*FuturesExchangePairRule, error) {
+	typ = bb.fromStdCategory(typ)
+	url := bbUniEndpoint + "/v5/market/instruments-info?category=" + typ
 	_, resp, err := ihttp.Get(url, bbApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(bb.Name() + " net error! " + err.Error())
@@ -52,13 +47,13 @@ func (bb *Bybit) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error)
 				LotSizeFilter struct {
 					MaxQty      decimal.Decimal `json:"maxOrderQty,omitempty"`
 					MinQty      decimal.Decimal `json:"minOrderQty,omitempty"`
-					MinAmt      decimal.Decimal `json:"minOrderAmt,omitempty"`
-					MaxAmt      decimal.Decimal `json:"maxOrderAmt,omitempty"`
-					StepSize    decimal.Decimal `json:"basePrecision,omitempty"`
-					AmtStepSize decimal.Decimal `json:"quotePrecision,omitempty"`
+					StepSize    decimal.Decimal `json:"qtyStep,omitempty"`
+					MinNotional decimal.Decimal `json:"minNotionalValue,omitempty"`
 				} `json:"lotSizeFilter,omitempty"`
 				PriceFilter struct {
 					TickSize decimal.Decimal `json:"tickSize,omitempty"`
+					MinPrice      decimal.Decimal `json:"minPrice,omitempty"`
+					MaxPrice      decimal.Decimal `json:"maxPrice,omitempty"`
 				} `json:"priceFilter,omitempty"`
 			} `json:"list,omitempty"`
 		} `json:"result,omitempty"`
@@ -69,32 +64,33 @@ func (bb *Bybit) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error)
 	if recv.Code != 0 {
 		return nil, errors.New(bb.Name() + " api err! " + recv.Msg)
 	}
-	all := make(map[string]*SpotExchangePairRule)
+	all := make(map[string]*FuturesExchangePairRule)
 	now := time.Now().Unix()
 	for _, pair := range recv.Result.List {
 		if pair.Status != "Trading" {
 			continue
 		}
 
-		ep := &SpotExchangePairRule{
+		ep := &FuturesExchangePairRule{
 			Symbol:        pair.Symbol,
 			Base:          pair.Base,
 			Quote:         pair.Quote,
 			PriceTickSize: pair.PriceFilter.TickSize,
 			MaxOrderQty:   pair.LotSizeFilter.MaxQty,
 			MinOrderQty:   pair.LotSizeFilter.MinQty,
-			MinPrice:      pair.PriceFilter.TickSize,
-			MaxPrice:      decimal.NewFromFloat(9999999999999999.99),
+			MinPrice:      pair.PriceFilter.MinPrice,
+			MaxPrice:      pair.PriceFilter.MaxPrice,
 			QtyStep:       pair.LotSizeFilter.StepSize,
-			MinNotional:   pair.LotSizeFilter.MinAmt,
+			MinNotional:   pair.LotSizeFilter.MinNotional,
 			Time:          now,
 		}
 		all[ep.Symbol] = ep
 	}
 	return all, nil
 }
-func (bb *Bybit) SpotGetBBO(symbol string) (BestBidAsk, error) {
-	url := bbUniEndpoint + "/v5/market/tickers?category=spot&symbol=" + symbol
+func (bb *Bybit) FuturesGetBBO(typ, symbol string) (BestBidAsk, error) {
+	typ = bb.fromStdCategory(typ)
+	url := bbUniEndpoint + "/v5/market/tickers?category="+typ+"&symbol=" + symbol
 	_, resp, err := ihttp.Get(url, bbApiDeadline, nil)
 	if err != nil {
 		return BestBidAsk{}, errors.New(bb.Name() + " net error! " + err.Error())
@@ -127,8 +123,11 @@ func (bb *Bybit) SpotGetBBO(symbol string) (BestBidAsk, error) {
 		AskQty:   bbo.AskQty,
 	}, nil
 }
-func (bb *Bybit) SpotGetAllAssets() (map[string]*SpotAsset, error) {
+func (bb *Bybit) FuturesGetAllAssets(typ string) (map[string]*FuturesAsset, error) {
 	query := "accountType=UNIFIED"
+	if typ == "UM" {
+		query += "&coin=USDT"
+	}
 	url := bbUniEndpoint + "/v5/account/wallet-balance?" + query
 	_, resp, err := ihttp.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
 	if err != nil {
@@ -157,13 +156,13 @@ func (bb *Bybit) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 		return nil, errors.New(bb.Name() + " resp empty")
 	}
 
-	assetsMap := make(map[string]*SpotAsset)
+	assetsMap := make(map[string]*FuturesAsset)
 	for _, v := range recv.Result.List {
 		if len(v.Coin) == 0 {
 			continue
 		}
 		for _, as := range v.Coin {
-			assetsMap[as.Symbol] = &SpotAsset{
+			assetsMap[as.Symbol] = &FuturesAsset{
 				Symbol: as.Symbol,
 				Avail:  as.Avail,
 				Total:  as.Avail,
@@ -172,35 +171,29 @@ func (bb *Bybit) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 	}
 	return assetsMap, nil
 }
-func (bb *Bybit) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
-	price, amt, qty decimal.Decimal,
-	side, timeInForce, orderType string) (string, error) {
-
+func (bb *Bybit) FuturesPlaceOrder(typ, symbol, cltId string, /*BTCUSDT*/
+	price, qty decimal.Decimal, side, orderType, timeInForce string,
+	positionMode /*0单仓,1双仓*/, tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error) {
+	typ = bb.fromStdCategory(typ)
 	params := map[string]any{
-		"category":     "spot",
+		"category":     typ,
 		"symbol":  symbol,
-		"isLeverage": 0,
 		"side": bb.fromStdSide(side),
 		"orderType": bb.fromStdOrderType(orderType),
 		"orderFilter": "Order",
+		"qty": qty.String(),
 	}
 	if cltId != "" {
 		params["orderLinkId"] = cltId
 	}
-	if orderType == "MARKET" {
-		if amt.IsPositive() {
-			params["qty"] = amt.String()
-			params["marketUnit"] = "quoteCoin"
-		} else {
-			params["qty"] = qty.String()
-			params["marketUnit"] = "baseCoin"
-		}
-	} else {
-		params["qty"] = qty.String()
+	if orderType == "LIMIT" {
 		params["price"] = price.String()
 		if timeInForce != "" {
 			params["timeInForce"] = timeInForce
 		}
+	}
+	if reduceOnly == 1 {
+		params["reduceOnly"] = true
 	}
 	body, _ := json.Marshal(params)
 	url := bbUniEndpoint + "/v5/order/create"
@@ -220,9 +213,160 @@ func (bb *Bybit) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 	}
 	return recv.Result.OrderId, nil
 }
-func (bb *Bybit) SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId string) error {
+func (bb *Bybit) FuturesGetOrder(typ, symbol, orderId, cltId string) (*FuturesOrder, error) {
+	typ = bb.fromStdCategory(typ)
+	query := "category=" + typ + "&symbol=" + symbol
+	if orderId != "" {
+		query += "&orderId=" + orderId
+	} else if cltId != "" {
+		query += "&orderLinkId=" + cltId
+	} else {
+		return nil, errors.New(bb.Name() + " orderId or cltId empty!")
+	}
+	url := bbUniEndpoint + "/v5/order/realtime?" + query
+	_, resp, err := ihttp.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
+	if err != nil {
+		return nil, errors.New(bb.Name() + " net error! " + err.Error())
+	}
+	recv := struct {
+		Code   int    `json:"retCode,omitempty"`
+		Msg    string `json:"retMsg,omitempty"`
+		Result struct {
+			List []struct {
+				Symbol       string          `json:"symbol,omitempty"` // BTCUSDT
+				OrderId      string           `json:"orderId,omitempty"`
+				ClientId     string          `json:"orderLinkId,omitempty"` 
+				Price        decimal.Decimal `json:"price,omitempty"`
+				Quantity     decimal.Decimal `json:"qty,omitempty"`             // 用户设置的原始订单数量
+				Type         string          `json:"orderType,omitempty"`        // LIMIT/MARKET
+				TimeInForce  string          `json:"timeInForce,omitempty"` // GTC/FOK/IOC
+				Side         string          `json:"side,omitempty"`
+				ExecutedQty  decimal.Decimal `json:"cumExecQty,omitempty"`         // 交易的订单数量
+				CummQuoteQty decimal.Decimal `json:"cumExecValue,omitempty"` // 累计交易的金额
+				AvgPrice       decimal.Decimal `json:"avgPrice,omitempty"`
+				FeeQty       decimal.Decimal `json:"cumExecFee,omitempty"`
+				Status       string          `json:"orderStatus,omitempty"`
+				Time         string           `json:"createdTime,omitempty"`
+				UTime        string           `json:"updatedTime,omitempty"`
+				FeeDetail map[string]string `json:"cumFeeDetail,omitempty"`
+			} `json:"list,omitempty"`
+		} `json:"result,omitempty"`
+	}{}
+	if err = json.Unmarshal(resp, &recv); err != nil {
+		return nil, errors.New(bb.Name() + " unmarshal error! " + err.Error())
+	}
+	if recv.Code != 0 {
+		return nil, errors.New(bb.Name() + " api err! " + recv.Msg)
+	}
+	if len(recv.Result.List) == 0 {
+		return nil, errors.New(bb.Name() + " resp empty")
+	}
+	order := recv.Result.List[0]
+	o := &FuturesOrder{
+		Symbol:      order.Symbol,
+		OrderId:     order.OrderId,
+		ClientId:    order.ClientId,
+		Price:       order.Price,
+		Qty:         order.Quantity,
+		FilledQty:   order.ExecutedQty,
+		FilledAmt:   order.CummQuoteQty,
+		Status:      bb.toStdOrderStatus(order.Status),
+		Type:        bb.toStdOrderType(order.Type),
+		Side:        bb.toStdSide(order.Side),
+	}
+	o.CTime, _ = strconv.ParseInt(order.Time, 10, 64)
+	o.UTime, _ = strconv.ParseInt(order.UTime, 10, 64)
+	if typ == "inverse" {
+		o.AvgPrice =  order.AvgPrice
+		for k, v := range order.FeeDetail {
+			o.FeeAsset = k
+			o.FeeQty, _ = decimal.NewFromString(v)
+			break
+		}
+	} else {
+		o.FeeAsset = "USDT"
+		o.FeeQty = order.FeeQty
+	}
+	return o, nil
+}
+func (bb *Bybit) FuturesGetOpenOrders(typ, symbol string) ([]*FuturesOrder, error) {
+	typ = bb.fromStdCategory(typ)
+	query := "limit=50&category=" + typ
+	if symbol != "" {
+		query += "&symbol=" + symbol
+	} else if typ == "linear" {
+		query += "&settleCoin=USDT"
+	}
+	url := bbUniEndpoint + "/v5/order/realtime?" + query
+	_, resp, err := ihttp.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
+	if err != nil {
+		return nil, errors.New(bb.Name() + " net error! " + err.Error())
+	}
+	recv := struct {
+		Code   int    `json:"retCode,omitempty"`
+		Msg    string `json:"retMsg,omitempty"`
+		Result struct {
+			List []struct {
+				Symbol       string          `json:"symbol,omitempty"` // BTCUSDT
+				OrderId      string           `json:"orderId,omitempty"`
+				ClientId     string          `json:"orderLinkId,omitempty"` 
+				Price        decimal.Decimal `json:"price,omitempty"`
+				Quantity     decimal.Decimal `json:"qty,omitempty"`             // 用户设置的原始订单数量
+				Type         string          `json:"orderType,omitempty"`        // LIMIT/MARKET
+				TimeInForce  string          `json:"timeInForce,omitempty"` // GTC/FOK/IOC
+				Side         string          `json:"side,omitempty"`
+				ExecutedQty  decimal.Decimal `json:"cumExecQty,omitempty"`         // 交易的订单数量
+				CummQuoteQty decimal.Decimal `json:"cumExecValue,omitempty"` // 累计交易的金额
+				AvgPrice       decimal.Decimal `json:"avgPrice,omitempty"`
+				FeeQty       decimal.Decimal `json:"cumExecFee,omitempty"`
+				Status       string          `json:"orderStatus,omitempty"`
+				Time         string           `json:"createdTime,omitempty"`
+				UTime        string           `json:"updatedTime,omitempty"`
+				FeeDetail map[string]string `json:"cumFeeDetail,omitempty"`
+			} `json:"list,omitempty"`
+		} `json:"result,omitempty"`
+	}{}
+	if err = json.Unmarshal(resp, &recv); err != nil {
+		return nil, errors.New(bb.Name() + " unmarshal error! " + err.Error())
+	}
+	if recv.Code != 0 {
+		return nil, errors.New(bb.Name() + " api err! " + recv.Msg)
+	}
+	oL := make([]*FuturesOrder, 0, len(recv.Result.List))
+	for _, order := range recv.Result.List {
+		o := &FuturesOrder{
+			Symbol:      order.Symbol,
+			OrderId:     order.OrderId,
+			ClientId:    order.ClientId,
+			Price:       order.Price,
+			Qty:         order.Quantity,
+			FilledQty:   order.ExecutedQty,
+			FilledAmt:   order.CummQuoteQty,
+			Status:      bb.toStdOrderStatus(order.Status),
+			Type:        bb.toStdOrderType(order.Type),
+			Side:        bb.toStdSide(order.Side),
+		}
+		o.CTime, _ = strconv.ParseInt(order.Time, 10, 64)
+		o.UTime, _ = strconv.ParseInt(order.UTime, 10, 64)
+		if typ == "inverse" {
+			o.AvgPrice =  order.AvgPrice
+			for k, v := range order.FeeDetail {
+				o.FeeAsset = k
+				o.FeeQty, _ = decimal.NewFromString(v)
+				break
+			}
+		} else {
+			o.FeeAsset = "USDT"
+			o.FeeQty = order.FeeQty
+		}
+		oL = append(oL, o)
+	}
+	return oL, nil
+}
+func (bb *Bybit) FuturesCancelOrder(typ, symbol, orderId, cltId string) error {
+	typ = bb.fromStdCategory(typ)
 	params := map[string]any{
-		"category":     "spot",
+		"category":     typ,
 		"symbol":  symbol,
 		"orderFilter": "Order",
 	}
@@ -251,137 +395,78 @@ func (bb *Bybit) SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId strin
 	}
 	return nil
 }
-func (bb *Bybit) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error) {
-	query := "category=spot&symbol=" + symbol
-	if orderId != "" {
-		query += "&orderId=" + orderId
-	} else if cltId != "" {
-		query += "&orderLinkId=" + cltId
-	} else {
-		return nil, errors.New(bb.Name() + " orderId or cltId empty!")
+func (bb *Bybit) FuturesSwitchTradeMode(typ, symbol string, mode, leverage int) error {
+	typ = bb.fromStdCategory(typ)
+	leverageS := fmt.Sprintf("%d", leverage)
+	params := map[string]any{
+		"category":     typ,
+		"symbol":  symbol,
+		"buyLeverage": leverageS,
+		"sellLeverage": leverageS,
 	}
-	url := bbUniEndpoint + "/v5/order/realtime?" + query
-	_, resp, err := ihttp.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
-	if err != nil {
-		return nil, errors.New(bb.Name() + " net error! " + err.Error())
-	}
+	body, _ := json.Marshal(params)
+	url := bbUniEndpoint + "/v5/position/set-leverage"
+	_, resp, err := ihttp.Post(url, body, bbApiDeadline, bb.buildHeaders("", string(body)))
 	recv := struct {
 		Code   int    `json:"retCode,omitempty"`
 		Msg    string `json:"retMsg,omitempty"`
-		Result struct {
-			List []struct {
-				Symbol       string          `json:"symbol,omitempty"` // BTCUSDT
-				OrderId      string           `json:"orderId,omitempty"`
-				ClientId     string          `json:"orderLinkId,omitempty"` 
-				Price        decimal.Decimal `json:"price,omitempty"`
-				Quantity     decimal.Decimal `json:"qty,omitempty"`             // 用户设置的原始订单数量
-				Type         string          `json:"orderType,omitempty"`        // LIMIT/MARKET
-				TimeInForce  string          `json:"timeInForce,omitempty"` // GTC/FOK/IOC
-				Side         string          `json:"side,omitempty"`
-				ExecutedQty  decimal.Decimal `json:"cumExecQty,omitempty"`         // 交易的订单数量
-				CummQuoteQty decimal.Decimal `json:"cumExecValue,omitempty"` // 累计交易的金额
-				FeeQty       decimal.Decimal `json:"cumExecFee,omitempty"`
-				Status       string          `json:"orderStatus,omitempty"`
-				Time         string           `json:"createdTime,omitempty"`
-				UTime        string           `json:"updatedTime,omitempty"`
-				FeeDetail map[string]string `json:"cumFeeDetail,omitempty"`
-			} `json:"list,omitempty"`
-		} `json:"result,omitempty"`
 	}{}
 	if err = json.Unmarshal(resp, &recv); err != nil {
-		return nil, errors.New(bb.Name() + " unmarshal error! " + err.Error())
+		return errors.New(bb.Name() + " Unmarshal err! " + err.Error())
 	}
 	if recv.Code != 0 {
-		return nil, errors.New(bb.Name() + " api err! " + recv.Msg)
+		return errors.New(recv.Msg)
 	}
-	if len(recv.Result.List) == 0 {
-		return nil, errors.New(bb.Name() + " resp empty")
-	}
-	order := recv.Result.List[0]
-	o := &SpotOrder{
-		Symbol:      order.Symbol,
-		OrderId:     order.OrderId,
-		ClientId:    order.ClientId,
-		Price:       order.Price,
-		Qty:         order.Quantity,
-		FilledQty:   order.ExecutedQty,
-		FilledAmt:   order.CummQuoteQty,
-		Status:      bb.toStdOrderStatus(order.Status),
-		Type:        bb.toStdOrderType(order.Type),
-		TimeInForce: order.TimeInForce,
-		Side:        bb.toStdSide(order.Side),
-	}
-	o.CTime, _ = strconv.ParseInt(order.Time, 10, 64)
-	o.UTime, _ = strconv.ParseInt(order.UTime, 10, 64)
-	for k, v := range order.FeeDetail {
-		o.FeeAsset = k
-		o.FeeQty, _ = decimal.NewFromString(v)
-		break
-	}
-	return o, nil
+	return nil
 }
-func (bb *Bybit) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
-	query := "category=spot&limit=50&symbol=" + symbol
-	url := bbUniEndpoint + "/v5/order/realtime?" + query
-	_, resp, err := ihttp.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
-	if err != nil {
-		return nil, errors.New(bb.Name() + " net error! " + err.Error())
+func (bb *Bybit) FuturesGetAllPositionList(typ string) (map[string]*FuturesPosition, error) {
+	typ = bb.fromStdCategory(typ)
+	query := "limit=200&category=" + typ
+	if typ == "linear" {
+		query += "&settleCoin=USDT"
 	}
+	url := bbUniEndpoint + "/v5/position/list?" + query
+	_, resp, err := ihttp.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
 	recv := struct {
 		Code   int    `json:"retCode,omitempty"`
 		Msg    string `json:"retMsg,omitempty"`
 		Result struct {
 			List []struct {
-				Symbol       string          `json:"symbol,omitempty"` // BTCUSDT
-				OrderId      string           `json:"orderId,omitempty"`
-				ClientId     string          `json:"orderLinkId,omitempty"` 
-				Price        decimal.Decimal `json:"price,omitempty"`
-				Quantity     decimal.Decimal `json:"qty,omitempty"`             // 用户设置的原始订单数量
-				Type         string          `json:"orderType,omitempty"`        // LIMIT/MARKET
-				TimeInForce  string          `json:"timeInForce,omitempty"` // GTC/FOK/IOC
-				Side         string          `json:"side,omitempty"`
-				ExecutedQty  decimal.Decimal `json:"cumExecQty,omitempty"`         // 交易的订单数量
-				CummQuoteQty decimal.Decimal `json:"cumExecValue,omitempty"` // 累计交易的金额
-				FeeQty       decimal.Decimal `json:"cumExecFee,omitempty"`
-				Status       string          `json:"orderStatus,omitempty"`
-				Time         string           `json:"createdTime,omitempty"`
-				UTime        string           `json:"updatedTime,omitempty"`
-				FeeDetail map[string]string `json:"cumFeeDetail,omitempty"`
+				Symbol     string          `json:"symbol"`
+				Side     string          `json:"side"`
+				EntryPrice decimal.Decimal `json:"avgPrice,omitempty"`
+				Leverage   decimal.Decimal `json:"leverage,omitempty"`
+				LiqPrice   decimal.Decimal `json:"liqPrice,omitempty"`
+				//MarkPrice decimal.Decimal `json:"markPrice,omitempty"`
+				PositionQty   decimal.Decimal `json:"size,omitempty"`
+				NotionalVal   decimal.Decimal `json:"positionValue,omitempty"`
+				UnrealisedPnl decimal.Decimal `json:"unrealisedPnl,omitempty"`
+				Time int64 `json:"updateTime,omitempty"` // msec
 			} `json:"list,omitempty"`
 		} `json:"result,omitempty"`
 	}{}
+
 	if err = json.Unmarshal(resp, &recv); err != nil {
-		return nil, errors.New(bb.Name() + " unmarshal error! " + err.Error())
+		return nil, errors.New(bb.Name() + " unmarshal fail! " + err.Error())
 	}
 	if recv.Code != 0 {
 		return nil, errors.New(bb.Name() + " api err! " + recv.Msg)
 	}
-	if len(recv.Result.List) == 0 {
-		return nil, errors.New(bb.Name() + " resp empty")
-	}
-	dl := make([]*SpotOrder, 0, len(recv.Result.List))
-	for _, order := range recv.Result.List {
-		o := &SpotOrder{
-			Symbol:      order.Symbol,
-			OrderId:     order.OrderId,
-			ClientId:    order.ClientId,
-			Price:       order.Price,
-			Qty:         order.Quantity,
-			FilledQty:   order.ExecutedQty,
-			FilledAmt:   order.CummQuoteQty,
-			Status:      bb.toStdOrderStatus(order.Status),
-			Type:        bb.toStdOrderType(order.Type),
-			TimeInForce: order.TimeInForce,
-			Side:        bb.toStdSide(order.Side),
+	positionM := make(map[string]*FuturesPosition)
+	for _, v := range recv.Result.List {
+		side := bb.toStdSide(v.Side)
+		cp := FuturesPosition{
+			Symbol:           v.Symbol,
+			Side:             side,
+			PositionQty:      v.PositionQty,
+			EntryPrice:       v.EntryPrice,
+			UnRealizedProfit: v.UnrealisedPnl,
+			LiqPrice:         v.LiqPrice,
+			Leverage:         v.Leverage,
+			UTime:            v.Time,
 		}
-		o.CTime, _ = strconv.ParseInt(order.Time, 10, 64)
-		o.UTime, _ = strconv.ParseInt(order.UTime, 10, 64)
-		for k, v := range order.FeeDetail {
-			o.FeeAsset = k
-			o.FeeQty, _ = decimal.NewFromString(v)
-			break
-		}
-		dl = append(dl, o)
+		positionM[cp.Symbol] = &cp
 	}
-	return dl, nil
+
+	return positionM, nil
 }

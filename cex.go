@@ -51,6 +51,7 @@ type Exchanger interface {
 
 	//= ws private
 	// cex object 如果closed需要重新连接时，请不要复用，一定要创建新的obj
+	SpotWsPrivateSupported() bool
 	SpotWsPrivateOpen() error
 	// channels: orders
 	//           balance
@@ -117,6 +118,7 @@ type Exchanger interface {
 	FuturesWsPublicIsClosed() bool
 
 	// priv
+	FuturesWsPrivateSupported(typ string) bool
 	FuturesWsPrivateOpen(typ string) error
 	// channels: orders
 	//           positions
@@ -136,6 +138,7 @@ type Exchanger interface {
 	UnifiedGetAssets() (map[string]*UnifiedAsset, error)
 
 	// ws
+	UnifiedWsSupported() bool
 	UnifiedWsOpen() error
 	// channels: balance@symbol1,symbol2,symbol3
 	UnifiedWsSubscribe(channels []string)
@@ -169,8 +172,8 @@ func init() {
 	CexList["gate"] = "Gate"
 	CexList["okx"] = "Okx"
 	CexList["bigone"] = "BigONE"
+	CexList["bybit"] 	= "Bybit"
 	//CexList["mexc"] = "Mexc"
-	//CexList["bybit"] 	= "Bybit"
 	//CexList["bitget"] 	= "Bitget"
 
 	CexSXList = make(map[string]string)
@@ -217,14 +220,14 @@ func New(cexName, account, apikey, secretkey, passwd string) (Exchanger, error) 
 			apikey:    apikey,
 			secretkey: secretkey,
 		}
-	} /*else if cexName == "bybit" {
+	} else if cexName == "bybit" {
 		cexObj = &Bybit{
 			name:      cexName,
 			account:   account,
 			apikey:    apikey,
 			secretkey: secretkey,
 		}
-	} else if cexName == "bitget" {
+	} /*else if cexName == "bitget" {
 		cexObj = &Bitget{
 			name:      cexName,
 			account:   account,

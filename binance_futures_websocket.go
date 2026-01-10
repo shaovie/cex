@@ -337,6 +337,9 @@ func (bn *Binance) getListenKey(typ string) (string, error) {
 	}
 	return ret.ListenKey, nil
 }
+func (bn *Binance) FuturesWsPrivateSupported(typ string) bool {
+	return true
+}
 func (bn *Binance) FuturesWsPrivateOpen(typ string) error {
 	bn.futuresWsPrivateTyp = typ
 	if err := bn.futuresWsPrivateOpen(typ); err != nil {

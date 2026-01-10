@@ -318,6 +318,9 @@ func (bo *Bigone) spotWsHandleOrderBook5(symbol string, ch chan<- any) {
 }
 
 // = priv channel
+func (bo *Bigone) SpotWsPrivateSupported() bool {
+	return true
+}
 func (bo *Bigone) SpotWsPrivateOpen() error {
 	url := "wss://big.one/ws/v2"
 	var err error
