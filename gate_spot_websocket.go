@@ -601,7 +601,8 @@ func (gt *Gate) spotWsHandleCancelOrderResp(errS string) {
 }
 
 // priv ws api
-func (gt *Gate) SpotWsPlaceOrder(symbol, cltId string, price, qty decimal.Decimal,
+func (gt *Gate) SpotWsPlaceOrder(symbol, cltId string,
+	price, amt, qty decimal.Decimal,
 	side, timeInForce, orderType string) (string, error) {
 	if gt.SpotWsPrivateIsClosed() {
 		return "", errors.New(gt.Name() + " spot priv ws closed")
@@ -645,6 +646,8 @@ func (gt *Gate) SpotWsPlaceOrder(symbol, cltId string, price, qty decimal.Decima
 	}
 	if orderType == "LIMIT" {
 		req.Payload.ReqParam.Price = price.String()
+	} else if orderType == "MARKET" && side == "BUY" {
+		req.Payload.ReqParam.Qty = amt.String()
 	}
 	if timeInForce != "" {
 		req.Payload.ReqParam.TimeInForce = gt.fromStdTimeInForce(timeInForce)

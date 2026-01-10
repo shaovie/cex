@@ -244,6 +244,9 @@ func main() {
 			ilog.Rinfo("%s ProfitLossHistory %v %s", "ETHUSD", plh[i], time.UnixMilli(plh[i].Time).Format("2006-01-02 15:04:05"))
 		}
 	}
+	if err = cexObj.Transfer("BTC", "CM_FUTURE", "SPOT", decimal.NewFromFloat(0.33)); err != nil {
+		ilog.Rinfo("transfer fail: " + err.Error())
+	}
 	testRest(cexObj, typ)
 	testPrivWs(cexObj, typ)
 	go testPubWs(cexObj, typ)

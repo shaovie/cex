@@ -537,7 +537,8 @@ func (bn *Binance) spotWsHandleCancelOrderResp(errS string) {
 }
 
 // priv ws api
-func (bn *Binance) SpotWsPlaceOrder(symbol, cltId string, price, qty decimal.Decimal,
+func (bn *Binance) SpotWsPlaceOrder(symbol, cltId string,
+	price, amt, qty decimal.Decimal,
 	side, timeInForce, orderType string) (string, error) {
 	if bn.SpotWsPrivateIsClosed() {
 		return "", errors.New(bn.Name() + " spot.ws.priv ws closed")
@@ -558,9 +559,9 @@ func (bn *Binance) SpotWsPlaceOrder(symbol, cltId string, price, qty decimal.Dec
 		params["price"] = price.String()
 		params["timeInForce"] = timeInForce
 	} else if orderType == "MARKET" {
-		if side == "BUY" {
-			params["quoteOrderQty"] = qty.String()
-		} else {
+		if amt.IsPositive() {
+			params["quoteOrderQty"] = amt.String()
+		} else if qty.IsPositive() {
 			params["quantity"] = qty.String()
 		}
 	}

@@ -148,7 +148,8 @@ func (gt *Gate) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 	}
 	return assetsMap, nil
 }
-func (gt *Gate) SpotPlaceOrder(symbol, clientId string, price, qty decimal.Decimal,
+func (gt *Gate) SpotPlaceOrder(symbol, clientId string,
+	price, amt, qty decimal.Decimal,
 	side, timeInForce, orderType string) (string, error) {
 
 	path := "/api/v4/spot/orders"
@@ -160,6 +161,8 @@ func (gt *Gate) SpotPlaceOrder(symbol, clientId string, price, qty decimal.Decim
 	}
 	if orderType == "LIMIT" {
 		payload += `,"price":"` + price.String() + `"`
+	} else if orderType == "MARKET" && side == "BUY" {
+		qty = amt
 	}
 	if timeInForce != "" {
 		payload += `,"time_in_force":"` + gt.fromStdTimeInForce(timeInForce) + `"`

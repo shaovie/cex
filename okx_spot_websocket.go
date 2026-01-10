@@ -598,7 +598,8 @@ func (ok *Okx) spotWsHandleCancelOrderResp(reqId string, data json.RawMessage, c
 	}
 }
 func (ok *Okx) SpotWsPlaceOrder(symbol, clientId string, /*BTCUSDT*/
-	price, qty decimal.Decimal, side, timeInForce, orderType string) (string, error) {
+	price, amt, qty decimal.Decimal,
+	side, timeInForce, orderType string) (string, error) {
 	if ok.SpotWsPrivateIsClosed() {
 		return "", errors.New(ok.Name() + " spot priv ws closed")
 	}
@@ -614,6 +615,9 @@ func (ok *Okx) SpotWsPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 
 	if timeInForce == "IOC" || timeInForce == "FOK" {
 		orderType = timeInForce
+	}
+	if orderType == "MARKET" && side == "BUY" {
+		qty = amt
 	}
 	symbolS := ok.getSpotSymbol(symbol)
 	arg := Arg{

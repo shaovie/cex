@@ -24,7 +24,7 @@ func (us *Unsupported) SpotGetBBO(symbol string) (BestBidAsk, error) {
 func (us *Unsupported) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 	return nil, errors.New("not support")
 }
-func (us *Unsupported) SpotPlaceOrder(symbol, cltId string, price, qty decimal.Decimal,
+func (us *Unsupported) SpotPlaceOrder(symbol, cltId string, price, amt, qty decimal.Decimal,
 	side, timeInForce, orderType string) (string, error) {
 	return "", errors.New("not support")
 }
@@ -52,7 +52,7 @@ func (us *Unsupported) SpotWsPrivateSubscribe(channels []string)  {}
 func (us *Unsupported) SpotWsPrivateLoop(ch chan<- any)           {}
 func (us *Unsupported) SpotWsPrivateClose()                       {}
 func (us *Unsupported) SpotWsPrivateIsClosed() bool               { return true }
-func (us *Unsupported) SpotWsPlaceOrder(symbol, cltId string, price, qty decimal.Decimal,
+func (us *Unsupported) SpotWsPlaceOrder(symbol, cltId string, price, amt, qty decimal.Decimal,
 	side, timeInForce, orderType string) (string, error) {
 	return "", errors.New("not support")
 }

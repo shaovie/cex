@@ -23,8 +23,9 @@ type Exchanger interface {
 	SpotGetBBO(symbol string) (BestBidAsk, error)
 	SpotGetAllAssets() (map[string]*SpotAsset, error)
 
-	// 市价BUY qty=quote amt, 市价SELL qty=base qty, 参数涵义参考 struct SpotOrder
-	SpotPlaceOrder(symbol, cltId string, price, qty decimal.Decimal,
+	// 市价 amt/qty任选1(优先amt) binance全支持, bigone只qty, gate,okx只amt
+	// 限价 只能qty=base qty, 参数涵义参考 struct SpotOrder
+	SpotPlaceOrder(symbol, cltId string, price, amt, qty decimal.Decimal,
 		side, timeInForce, orderType string) (string, error)
 	// orderId, cltId 二选一
 	SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId string) error
@@ -58,8 +59,9 @@ type Exchanger interface {
 	SpotWsPrivateLoop(ch chan<- any)
 	SpotWsPrivateClose()
 	SpotWsPrivateIsClosed() bool
-	// 市价BUY qty=quote amt, 市价SELL qty=base qty, 参数涵义参考 struct SpotOrder
-	SpotWsPlaceOrder(symbol, cltId string, price, qty decimal.Decimal,
+	// 市价 amt/qty任选1(优先amt) binance全支持, bigone只qty, gate,okx只amt
+	// 限价 只能qty=base qty, 参数涵义参考 struct SpotOrder
+	SpotWsPlaceOrder(symbol, cltId string, price, amt, qty decimal.Decimal,
 		side, timeInForce, orderType string) (string /*req id*/, error)
 	// orderId, cltId 二选一
 	SpotWsCancelOrder(symbol, orderId, cltId string) (string, error)
@@ -86,6 +88,7 @@ type Exchanger interface {
 		price, qty decimal.Decimal, side, orderType, timeInForce string,
 		positionMode /*0单仓,1双仓*/, tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error)
 	FuturesGetOrder(typ, symbol, orderId, cltId string) (*FuturesOrder, error)
+	// symbol 为空取所有的
 	FuturesGetOpenOrders(typ, symbol string) ([]*FuturesOrder, error)
 	FuturesCancelOrder(typ string, symbol /*BTCUSDT*/, orderId, cltId string) error
 	//  单仓:0/双仓:1 切换

@@ -134,7 +134,8 @@ func (bo *Bigone) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 	return assetsMap, nil
 }
 func (bo *Bigone) SpotPlaceOrder(symbol, clientId string, /*BTCUSDT*/
-	price, qty decimal.Decimal, side, timeInForce, orderType string) (string, error) {
+	price, amt, qty decimal.Decimal,
+	side, timeInForce, orderType string) (string, error) {
 
 	symbolS := boSpotSymbolMap[symbol]
 	url := boSpotEndpoint + "/viewer/orders"

@@ -138,10 +138,14 @@ func (ok *Okx) SpotGetAll24hTicker() (map[string]Pub24hTicker, error) {
 	return allTk, nil
 }
 func (ok *Okx) SpotPlaceOrder(symbol, clientId string, /*BTCUSDT*/
-	price, qty decimal.Decimal, side, timeInForce, orderType string) (string, error) {
+	price, amt, qty decimal.Decimal,
+	side, timeInForce, orderType string) (string, error) {
 
 	if timeInForce == "IOC" || timeInForce == "FOK" {
 		orderType = timeInForce
+	}
+	if orderType == "MARKET" && side == "BUY" {
+		qty = amt
 	}
 	symbolS := ok.getSpotSymbol(symbol)
 	payload := `{"instId":"` + symbolS + `"` +

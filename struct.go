@@ -56,11 +56,12 @@ func (exp *SpotExchangePairRule) AdjustQty(price, v decimal.Decimal) decimal.Dec
 	if v.LessThan(exp.MinOrderQty) || v.GreaterThan(exp.MaxOrderQty) {
 		return decimal.Decimal{}
 	}
+	ret := v.Div(exp.QtyStep).Floor().Mul(exp.QtyStep)
 	if price.IsPositive() && exp.MinNotional.IsPositive() &&
-		price.Mul(v).LessThan(exp.MinNotional) {
+		price.Mul(ret).LessThan(exp.MinNotional) {
 		return decimal.Zero
 	}
-	return v.Div(exp.QtyStep).Floor().Mul(exp.QtyStep)
+	return ret
 }
 
 type FuturesExchangePairRule struct {
@@ -87,17 +88,18 @@ func (exp *FuturesExchangePairRule) AdjustPrice(v decimal.Decimal) decimal.Decim
 	return v.Div(exp.PriceTickSize).Floor().Mul(exp.PriceTickSize)
 }
 func (exp *FuturesExchangePairRule) AdjustQty(price, v decimal.Decimal) decimal.Decimal {
-	if v.LessThan(exp.MinOrderQty) || v.GreaterThan(exp.MaxOrderQty) {
-		return decimal.Zero
-	}
-	if price.IsPositive() && exp.MinNotional.IsPositive() &&
-		price.Mul(v).LessThan(exp.MinNotional) {
-		return decimal.Zero
-	}
 	if exp.Typ == "CM" { // 币本位是张数
 		return v
 	}
-	return v.Div(exp.QtyStep).Floor().Mul(exp.QtyStep)
+	if v.LessThan(exp.MinOrderQty) || v.GreaterThan(exp.MaxOrderQty) {
+		return decimal.Zero
+	}
+	ret := v.Div(exp.QtyStep).Floor().Mul(exp.QtyStep)
+	if price.IsPositive() && exp.MinNotional.IsPositive() &&
+		price.Mul(ret).LessThan(exp.MinNotional) {
+		return decimal.Zero
+	}
+	return ret
 }
 
 type SpotAsset struct {
@@ -121,19 +123,10 @@ func (sa *SpotAsset) Val(v *SpotAsset) {
 }
 
 type FuturesAsset struct {
-	Symbol string          // BTC
-	Total  decimal.Decimal // 账户余额/钱包余额
-	Avail  decimal.Decimal // 可用下单余额
-}
-
-func (sa *FuturesAsset) Val(v *FuturesAsset) {
-	if v.Symbol != "" {
-		sa.Symbol = v.Symbol
-	}
-	sa.Avail = v.Avail
-	if !v.Total.Equals(decimal.NewFromInt(999999999)) {
-		sa.Total = v.Total
-	}
+	Symbol            string          // BTC
+	Total             decimal.Decimal // 账户余额/钱包余额
+	Avail             decimal.Decimal // 可用下单余额
+	MaxWithdrawAmount decimal.Decimal // for binance's rest api
 }
 
 type UnifiedAsset struct {

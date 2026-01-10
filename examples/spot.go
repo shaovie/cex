@@ -142,7 +142,7 @@ func testPrivWs(cexObj cex.Exchanger) {
 	cltId := gutils.RandomStr(24)
 	placeTime := time.Now().UnixMilli()
 	ilog.Rinfo("to palce order: price=%s qty=%s at %d", price.String(), qty.String(), placeTime)
-	reqId, err := cexObj.SpotWsPlaceOrder("BTCUSDT", cltId, price, qty, "BUY", "GTC", "LIMIT")
+	reqId, err := cexObj.SpotWsPlaceOrder("BTCUSDT", cltId, price, decimal.Zero, qty, "BUY", "GTC", "LIMIT")
 	if err != nil {
 		ilog.Rinfo("ws place order fail: %s", err.Error())
 	} else {
@@ -188,7 +188,7 @@ func testRest(cexObj cex.Exchanger) {
 	}
 	cltId := gutils.RandomStr(24)
 	placeTime := time.Now().UnixMilli()
-	orderId, err := cexObj.SpotPlaceOrder("BTCUSDT", cltId, price, qty, "BUY", "GTC", "LIMIT")
+	orderId, err := cexObj.SpotPlaceOrder("BTCUSDT", cltId, price, decimal.Zero, qty, "BUY", "GTC", "LIMIT")
 	if err != nil {
 		ilog.Rinfo("place order fail: %s", err.Error())
 	} else {
