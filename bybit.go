@@ -31,6 +31,12 @@ type Bybit struct {
 	spotWsPrivateClosedMtx sync.RWMutex
 }
 
+type BbSubscribeArg struct {
+	Id   string   `json:"req_id"`
+	Op   string   `json:"op"`
+	Args []string `json:"args,omitempty"`
+}
+
 const bbUniEndpoint = "https://api.bybit.com"
 const bbApiDeadline = 1200 * time.Millisecond
 

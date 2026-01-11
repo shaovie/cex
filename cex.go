@@ -37,8 +37,9 @@ type Exchanger interface {
 	// cex object 如果closed需要重新连接时，请不要复用，一定要创建新的obj
 	SpotWsPublicOpen() error
 	// channels: orderbook5@symbolA,symbolB (5档)
-	//           bbo@symbolA,symbolB     // 最优买卖价 只binance实现
-	//           ticker@symbolA,symbolB     // bigone不支持
+	//           bbo@symbolA,symbolB     // 最优买卖价 只binance,bybit实现
+	//           ticker@symbolA,symbolB     // bigone,bybit不支持
+	// 每个交易所支持的参数数量不同
 	SpotWsPublicSubscribe(channels []string)
 	SpotWsPublicUnsubscribe(channels []string)
 	SpotWsPublicTickerPoolPut(v any)
@@ -172,7 +173,7 @@ func init() {
 	CexList["gate"] = "Gate"
 	CexList["okx"] = "Okx"
 	CexList["bigone"] = "BigONE"
-	CexList["bybit"] 	= "Bybit"
+	CexList["bybit"] = "Bybit"
 	//CexList["mexc"] = "Mexc"
 	//CexList["bitget"] 	= "Bitget"
 

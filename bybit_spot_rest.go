@@ -2,8 +2,8 @@ package cex
 
 import (
 	"encoding/json"
-	"strconv"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/shaovie/gutils/ihttp"
@@ -140,9 +140,9 @@ func (bb *Bybit) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 		Time   int64  `json:"time,omitempty"`
 		Result struct {
 			List []struct {
-				Coin []struct{
-					Avail decimal.Decimal `json:"walletBalance,omitempty"`
-					Symbol string `json:"coin,omitempty"`
+				Coin []struct {
+					Avail  decimal.Decimal `json:"walletBalance,omitempty"`
+					Symbol string          `json:"coin,omitempty"`
 				} `json:"coin,omitempty"`
 			} `json:"list,omitempty"`
 		} `json:"result,omitempty"`
@@ -177,11 +177,11 @@ func (bb *Bybit) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 	side, timeInForce, orderType string) (string, error) {
 
 	params := map[string]any{
-		"category":     "spot",
-		"symbol":  symbol,
-		"isLeverage": 0,
-		"side": bb.fromStdSide(side),
-		"orderType": bb.fromStdOrderType(orderType),
+		"category":    "spot",
+		"symbol":      symbol,
+		"isLeverage":  0,
+		"side":        bb.fromStdSide(side),
+		"orderType":   bb.fromStdOrderType(orderType),
 		"orderFilter": "Order",
 	}
 	if cltId != "" {
@@ -209,7 +209,7 @@ func (bb *Bybit) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 		Code   int    `json:"retCode,omitempty"`
 		Msg    string `json:"retMsg,omitempty"`
 		Result struct {
-			OrderId     string          `json:"orderId"`
+			OrderId string `json:"orderId"`
 		} `json:"result,omitempty"`
 	}{}
 	if err = json.Unmarshal(resp, &recv); err != nil {
@@ -222,8 +222,8 @@ func (bb *Bybit) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 }
 func (bb *Bybit) SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId string) error {
 	params := map[string]any{
-		"category":     "spot",
-		"symbol":  symbol,
+		"category":    "spot",
+		"symbol":      symbol,
 		"orderFilter": "Order",
 	}
 	if orderId != "" {
@@ -240,7 +240,7 @@ func (bb *Bybit) SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId strin
 		Code   int    `json:"retCode,omitempty"`
 		Msg    string `json:"retMsg,omitempty"`
 		Result struct {
-			OrderId     string          `json:"orderId"`
+			OrderId string `json:"orderId"`
 		} `json:"result,omitempty"`
 	}{}
 	if err = json.Unmarshal(resp, &recv); err != nil {
@@ -270,21 +270,21 @@ func (bb *Bybit) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error)
 		Msg    string `json:"retMsg,omitempty"`
 		Result struct {
 			List []struct {
-				Symbol       string          `json:"symbol,omitempty"` // BTCUSDT
-				OrderId      string           `json:"orderId,omitempty"`
-				ClientId     string          `json:"orderLinkId,omitempty"` 
-				Price        decimal.Decimal `json:"price,omitempty"`
-				Quantity     decimal.Decimal `json:"qty,omitempty"`             // 用户设置的原始订单数量
-				Type         string          `json:"orderType,omitempty"`        // LIMIT/MARKET
-				TimeInForce  string          `json:"timeInForce,omitempty"` // GTC/FOK/IOC
-				Side         string          `json:"side,omitempty"`
-				ExecutedQty  decimal.Decimal `json:"cumExecQty,omitempty"`         // 交易的订单数量
-				CummQuoteQty decimal.Decimal `json:"cumExecValue,omitempty"` // 累计交易的金额
-				FeeQty       decimal.Decimal `json:"cumExecFee,omitempty"`
-				Status       string          `json:"orderStatus,omitempty"`
-				Time         string           `json:"createdTime,omitempty"`
-				UTime        string           `json:"updatedTime,omitempty"`
-				FeeDetail map[string]string `json:"cumFeeDetail,omitempty"`
+				Symbol       string            `json:"symbol,omitempty"` // BTCUSDT
+				OrderId      string            `json:"orderId,omitempty"`
+				ClientId     string            `json:"orderLinkId,omitempty"`
+				Price        decimal.Decimal   `json:"price,omitempty"`
+				Quantity     decimal.Decimal   `json:"qty,omitempty"`         // 用户设置的原始订单数量
+				Type         string            `json:"orderType,omitempty"`   // LIMIT/MARKET
+				TimeInForce  string            `json:"timeInForce,omitempty"` // GTC/FOK/IOC
+				Side         string            `json:"side,omitempty"`
+				ExecutedQty  decimal.Decimal   `json:"cumExecQty,omitempty"`   // 交易的订单数量
+				CummQuoteQty decimal.Decimal   `json:"cumExecValue,omitempty"` // 累计交易的金额
+				FeeQty       decimal.Decimal   `json:"cumExecFee,omitempty"`
+				Status       string            `json:"orderStatus,omitempty"`
+				Time         string            `json:"createdTime,omitempty"`
+				UTime        string            `json:"updatedTime,omitempty"`
+				FeeDetail    map[string]string `json:"cumFeeDetail,omitempty"`
 			} `json:"list,omitempty"`
 		} `json:"result,omitempty"`
 	}{}
@@ -332,21 +332,21 @@ func (bb *Bybit) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 		Msg    string `json:"retMsg,omitempty"`
 		Result struct {
 			List []struct {
-				Symbol       string          `json:"symbol,omitempty"` // BTCUSDT
-				OrderId      string           `json:"orderId,omitempty"`
-				ClientId     string          `json:"orderLinkId,omitempty"` 
-				Price        decimal.Decimal `json:"price,omitempty"`
-				Quantity     decimal.Decimal `json:"qty,omitempty"`             // 用户设置的原始订单数量
-				Type         string          `json:"orderType,omitempty"`        // LIMIT/MARKET
-				TimeInForce  string          `json:"timeInForce,omitempty"` // GTC/FOK/IOC
-				Side         string          `json:"side,omitempty"`
-				ExecutedQty  decimal.Decimal `json:"cumExecQty,omitempty"`         // 交易的订单数量
-				CummQuoteQty decimal.Decimal `json:"cumExecValue,omitempty"` // 累计交易的金额
-				FeeQty       decimal.Decimal `json:"cumExecFee,omitempty"`
-				Status       string          `json:"orderStatus,omitempty"`
-				Time         string           `json:"createdTime,omitempty"`
-				UTime        string           `json:"updatedTime,omitempty"`
-				FeeDetail map[string]string `json:"cumFeeDetail,omitempty"`
+				Symbol       string            `json:"symbol,omitempty"` // BTCUSDT
+				OrderId      string            `json:"orderId,omitempty"`
+				ClientId     string            `json:"orderLinkId,omitempty"`
+				Price        decimal.Decimal   `json:"price,omitempty"`
+				Quantity     decimal.Decimal   `json:"qty,omitempty"`         // 用户设置的原始订单数量
+				Type         string            `json:"orderType,omitempty"`   // LIMIT/MARKET
+				TimeInForce  string            `json:"timeInForce,omitempty"` // GTC/FOK/IOC
+				Side         string            `json:"side,omitempty"`
+				ExecutedQty  decimal.Decimal   `json:"cumExecQty,omitempty"`   // 交易的订单数量
+				CummQuoteQty decimal.Decimal   `json:"cumExecValue,omitempty"` // 累计交易的金额
+				FeeQty       decimal.Decimal   `json:"cumExecFee,omitempty"`
+				Status       string            `json:"orderStatus,omitempty"`
+				Time         string            `json:"createdTime,omitempty"`
+				UTime        string            `json:"updatedTime,omitempty"`
+				FeeDetail    map[string]string `json:"cumFeeDetail,omitempty"`
 			} `json:"list,omitempty"`
 		} `json:"result,omitempty"`
 	}{}
