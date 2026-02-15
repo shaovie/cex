@@ -33,8 +33,8 @@ type BybitSpotBBO struct {
 	Asks   [][2]decimal.Decimal `json:"a,omitempty"`
 }
 type BybitSpot24hTicker struct {
-	Symbol      string          `json:"s"`
-	Last        decimal.Decimal `json:"c"`
-	Volume      decimal.Decimal `json:"v"`
-	QuoteVolume decimal.Decimal `json:"q"`
+	Symbol      string          `json:"symbol"`
+	Last        decimal.Decimal `json:"lastPrice"`
+	Volume      decimal.Decimal `json:"volume24h"`
+	QuoteVolume decimal.Decimal `json:"turnover24h"`
 }

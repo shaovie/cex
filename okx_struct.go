@@ -26,6 +26,7 @@ type OkxWsPubMsg struct {
 func (v *OkxWsPubMsg) reset() {
 	v.Data = nil
 	v.Arg.Channel = ""
+	v.Arg.Symbol = ""
 	v.Event = ""
 }
 

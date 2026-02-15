@@ -58,7 +58,7 @@ func (bo *Bigone) SpotWsPublicSubscribe(channels []string) {
 	if len(channels) == 0 {
 		return
 	}
-	tickerSymbols := make([]string, 0, 4)
+	bboSymbols := make([]string, 0, 4)
 	for _, c := range channels {
 		arr := strings.Split(c, "@")
 		if arr[0] == "orderbook5" {
@@ -75,7 +75,7 @@ func (bo *Bigone) SpotWsPublicSubscribe(channels []string) {
 					bo.spotWsPublicConnMtx.Unlock()
 				}
 			}
-		} else if arr[0] == "ticker xx" { // 先不支持
+		} else if arr[0] == "bbo" { // 先不支持
 			var symbolArr []string
 			if len(arr) > 1 && len(arr[1]) > 0 {
 				symbolArr = strings.Split(arr[1], ",")
@@ -84,13 +84,13 @@ func (bo *Bigone) SpotWsPublicSubscribe(channels []string) {
 			}
 			for _, v := range symbolArr {
 				if sym := bo.getSpotSymbol(v); sym != "" {
-					tickerSymbols = append(tickerSymbols, sym)
+					bboSymbols = append(bboSymbols, strings.ToUpper(sym))
 				}
 			}
 		}
 	}
-	if len(tickerSymbols) > 0 {
-		jv, _ := json.Marshal(tickerSymbols)
+	if len(bboSymbols) > 0 {
+		jv, _ := json.Marshal(bboSymbols)
 		req := fmt.Sprintf(`{"requestId": "%s", "subscribeMarketsTickerRequest":{"markets":%s}}`,
 			gutils.RandomStr(8), string(jv))
 		bo.spotWsPublicConnMtx.Lock()
@@ -102,7 +102,7 @@ func (bo *Bigone) SpotWsPublicUnsubscribe(channels []string) {
 	if len(channels) == 0 {
 		return
 	}
-	tickerSymbols := make([]string, 0, 4)
+	bboSymbols := make([]string, 0, 4)
 	for _, c := range channels {
 		arr := strings.Split(c, "@")
 		if arr[0] == "orderbook5" {
@@ -119,7 +119,7 @@ func (bo *Bigone) SpotWsPublicUnsubscribe(channels []string) {
 					bo.spotWsPublicConnMtx.Unlock()
 				}
 			}
-		} else if arr[0] == "ticker" {
+		} else if arr[0] == "bbo" {
 			var symbolArr []string
 			if len(arr) > 1 && len(arr[1]) > 0 {
 				symbolArr = strings.Split(arr[1], ",")
@@ -128,13 +128,13 @@ func (bo *Bigone) SpotWsPublicUnsubscribe(channels []string) {
 			}
 			for _, v := range symbolArr {
 				if sym := bo.getSpotSymbol(v); sym != "" {
-					tickerSymbols = append(tickerSymbols, sym)
+					bboSymbols = append(bboSymbols, strings.ToUpper(sym))
 				}
 			}
 		}
 	}
-	if len(tickerSymbols) > 0 {
-		jv, _ := json.Marshal(tickerSymbols)
+	if len(bboSymbols) > 0 {
+		jv, _ := json.Marshal(bboSymbols)
 		req := fmt.Sprintf(`{"requestId": "%s", "unsubscribeMarketsTickerRequest":{"markets":%s}}`,
 			gutils.RandomStr(8), string(jv))
 		bo.spotWsPublicConnMtx.Lock()

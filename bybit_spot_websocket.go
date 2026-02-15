@@ -68,7 +68,14 @@ func (bb *Bybit) SpotWsPublicSubscribe(channels []string) {
 			if len(arr) > 1 && len(arr[1]) > 0 {
 				symbolArr := strings.Split(arr[1], ",")
 				for _, sym := range symbolArr {
-					arg.Args = append(arg.Args, "orderbook.1."+strings.ToLower(sym))
+					arg.Args = append(arg.Args, "orderbook.1."+strings.ToUpper(sym))
+				}
+			}
+		} else if arr[0] == "ticker" {
+			if len(arr) > 1 && len(arr[1]) > 0 {
+				symbolArr := strings.Split(arr[1], ",")
+				for _, sym := range symbolArr {
+					arg.Args = append(arg.Args, "tickers."+strings.ToUpper(sym))
 				}
 			}
 		}
@@ -92,7 +99,14 @@ func (bb *Bybit) SpotWsPublicUnsubscribe(channels []string) {
 			if len(arr) > 1 && len(arr[1]) > 0 {
 				symbolArr := strings.Split(arr[1], ",")
 				for _, sym := range symbolArr {
-					arg.Args = append(arg.Args, "orderbook.1."+strings.ToLower(sym))
+					arg.Args = append(arg.Args, "orderbook.1."+strings.ToUpper(sym))
+				}
+			}
+		} else if arr[0] == "ticker" {
+			if len(arr) > 1 && len(arr[1]) > 0 {
+				symbolArr := strings.Split(arr[1], ",")
+				for _, sym := range symbolArr {
+					arg.Args = append(arg.Args, "tickers."+strings.ToUpper(sym))
 				}
 			}
 		}
@@ -117,7 +131,7 @@ func (bb *Bybit) SpotWsPublicLoop(ch chan<- any) {
 	defer bb.SpotWsPublicClose()
 	defer close(ch)
 
-	pingInterval := 26 * time.Second
+	pingInterval := 27 * time.Second
 	pongWait := pingInterval + 2*time.Second
 	bb.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
 	bb.spotWsPublicConn.SetPongHandler(func(string) error {
@@ -147,7 +161,7 @@ func (bb *Bybit) SpotWsPublicLoop(ch chan<- any) {
 			}
 			break
 		}
-		msg := bnWsPubMsgPool.Get().(*BybitWsPubMsg)
+		msg := bbWsPubMsgPool.Get().(*BybitWsPubMsg)
 		msg.reset()
 		if err = easyjson.Unmarshal(recv, msg); err != nil {
 			ilog.Error(bb.Name() + " spot.ws.public invalid msg:" + string(recv))
@@ -156,6 +170,8 @@ func (bb *Bybit) SpotWsPublicLoop(ch chan<- any) {
 		l = len(msg.Topic)
 		if l > 12 && msg.Topic[:12] == "orderbook.1." {
 			bb.spotWsHandleBBO(msg, ch)
+		} else if l > 8 && msg.Topic[:8] == "tickers." {
+			bb.spotWsHandle24hTickers(msg, ch)
 		} else {
 			if msg.Op == "subscribe" || msg.Op == "unsubscribe" { // 订阅的响应
 				if strings.Index(string(recv), "false") != -1 {
@@ -164,7 +180,7 @@ func (bb *Bybit) SpotWsPublicLoop(ch chan<- any) {
 			}
 		}
 	END:
-		bnWsPubMsgPool.Put(msg)
+		bbWsPubMsgPool.Put(msg)
 	}
 }
 func (bb *Bybit) SpotWsPublicIsClosed() bool {
@@ -211,23 +227,24 @@ func (bb *Bybit) spotWsHandleOrderBook5(msg *BybitWsPubMsg, ch chan<- any) {
 func (bb *Bybit) spotWsHandleBBO(msg *BybitWsPubMsg, ch chan<- any) {
 	bbo := bbSpotWsPublicBBOInnerPool.Get().(*BybitSpotBBO)
 	defer bbSpotWsPublicBBOInnerPool.Put(bbo)
-	if err := easyjson.Unmarshal(msg.Data, bbo); err == nil {
-		/*
-			obd := wsPublicBBOPool.Get().(*BestBidAsk)
-			obd.Symbol = bbo.Symbol
-			obd.Time = 0 // 币安不提供
-			obd.BidPrice = bbo.BidPrice
-			obd.BidQty = bbo.BidQty
-			obd.AskPrice = bbo.AskPrice
-			obd.AskQty = bbo.AskQty
-			ch <- obd
-		*/
+	bbo.Bids = bbo.Bids[:0]
+	bbo.Asks = bbo.Asks[:0]
+	if err := easyjson.Unmarshal(msg.Data, bbo); err == nil &&
+		len(bbo.Bids) == 1 && len(bbo.Bids) == len(bbo.Asks) {
+		obd := wsPublicBBOPool.Get().(*BestBidAsk)
+		obd.Symbol = bbo.Symbol
+		obd.Time = msg.Time
+		obd.BidPrice = bbo.Bids[0][0]
+		obd.BidQty = bbo.Bids[0][1]
+		obd.AskPrice = bbo.Asks[0][0]
+		obd.AskQty = bbo.Asks[0][1]
+		ch <- obd
 	}
 }
-func (bb *Bybit) spotWsHandle24hTickers(data json.RawMessage, ch chan<- any) {
-	ticker := bnSpotWsPublicTickerInnerPool.Get().(*BybitSpot24hTicker)
-	defer bnSpotWsPublicTickerInnerPool.Put(ticker)
-	if err := json.Unmarshal(data, ticker); err == nil {
+func (bb *Bybit) spotWsHandle24hTickers(msg *BybitWsPubMsg, ch chan<- any) {
+	ticker := bbSpotWsPublicTickerInnerPool.Get().(*BybitSpot24hTicker)
+	defer bbSpotWsPublicTickerInnerPool.Put(ticker)
+	if err := easyjson.Unmarshal(msg.Data, ticker); err == nil {
 		tk := wsPublicTickerPool.Get().(*Pub24hTicker)
 		tk.Symbol = ticker.Symbol
 		tk.LastPrice = ticker.Last

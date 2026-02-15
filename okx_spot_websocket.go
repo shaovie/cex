@@ -57,9 +57,8 @@ func (ok *Okx) SpotWsPublicSubscribe(channels []string) {
 		return
 	}
 	type Arg struct {
-		Channel  string `json:"channel"`
-		InstId   string `json:"instId"`
-		InstType string `json:"instType"`
+		Channel string `json:"channel"`
+		InstId  string `json:"instId"`
 	}
 	req := struct {
 		Id   string `json:"id"`
@@ -76,7 +75,18 @@ func (ok *Okx) SpotWsPublicSubscribe(channels []string) {
 			symbolArr := strings.Split(arr[1], ",")
 			for _, sym := range symbolArr {
 				if symbolS := ok.getSpotSymbol(sym); symbolS != "" {
-					arg := Arg{Channel: "books5", InstId: symbolS, InstType: "SPOT"}
+					arg := Arg{Channel: "books5", InstId: symbolS}
+					req.Args = append(req.Args, &arg)
+				}
+			}
+		} else if arr[0] == "bbo" {
+			if len(arr) < 2 || len(arr[1]) == 0 {
+				continue
+			}
+			symbolArr := strings.Split(arr[1], ",")
+			for _, sym := range symbolArr {
+				if symbolS := ok.getSpotSymbol(sym); symbolS != "" {
+					arg := Arg{Channel: "bbo-tbt", InstId: symbolS}
 					req.Args = append(req.Args, &arg)
 				}
 			}
@@ -85,7 +95,7 @@ func (ok *Okx) SpotWsPublicSubscribe(channels []string) {
 				symbolArr := strings.Split(arr[1], ",")
 				for _, v := range symbolArr {
 					if sym := ok.getSpotSymbol(v); sym != "" {
-						arg := Arg{Channel: "tickers", InstId: sym, InstType: "SPOT"}
+						arg := Arg{Channel: "tickers", InstId: sym}
 						req.Args = append(req.Args, &arg)
 					}
 				}
@@ -104,14 +114,14 @@ func (ok *Okx) SpotWsPublicUnsubscribe(channels []string) {
 		return
 	}
 	type Arg struct {
-		Channel  string `json:"channel"`
-		InstId   string `json:"instId"`
-		InstType string `json:"instType"`
+		Channel string `json:"channel"`
+		InstId  string `json:"instId"`
 	}
 	req := struct {
+		Id   string `json:"id"`
 		Op   string `json:"op"`
 		Args []*Arg `json:"args"`
-	}{Op: "unsubscribe"}
+	}{Id: gutils.RandomStr(8), Op: "unsubscribe"}
 	req.Args = make([]*Arg, 0, 2)
 	for _, c := range channels {
 		arr := strings.Split(c, "@")
@@ -122,7 +132,18 @@ func (ok *Okx) SpotWsPublicUnsubscribe(channels []string) {
 			symbolArr := strings.Split(arr[1], ",")
 			for _, sym := range symbolArr {
 				if symbolS := ok.getSpotSymbol(sym); symbolS != "" {
-					arg := Arg{Channel: "books5", InstId: symbolS, InstType: "SPOT"}
+					arg := Arg{Channel: "books5", InstId: symbolS}
+					req.Args = append(req.Args, &arg)
+				}
+			}
+		} else if arr[0] == "bbo" {
+			if len(arr) < 2 || len(arr[1]) == 0 {
+				continue
+			}
+			symbolArr := strings.Split(arr[1], ",")
+			for _, sym := range symbolArr {
+				if symbolS := ok.getSpotSymbol(sym); symbolS != "" {
+					arg := Arg{Channel: "bbo-tbt", InstId: symbolS}
 					req.Args = append(req.Args, &arg)
 				}
 			}
@@ -131,7 +152,7 @@ func (ok *Okx) SpotWsPublicUnsubscribe(channels []string) {
 				symbolArr := strings.Split(arr[1], ",")
 				for _, v := range symbolArr {
 					if sym := ok.getSpotSymbol(v); sym != "" {
-						arg := Arg{Channel: "tickers", InstId: sym, InstType: "SPOT"}
+						arg := Arg{Channel: "tickers", InstId: sym}
 						req.Args = append(req.Args, &arg)
 					}
 				}
@@ -197,7 +218,9 @@ func (ok *Okx) SpotWsPublicLoop(ch chan<- any) {
 		}
 		if len(msg.Event) == 0 {
 			if msg.Arg.Channel == "books5" {
-				ok.spotWsHandleOrderBook5(msg.Arg.Symbol, recv, ch)
+				ok.spotWsHandleOrderBook5(msg.Arg.Symbol, msg.Data, ch)
+			} else if msg.Arg.Channel == "bbo-tbt" {
+				ok.spotWsHandleBBO(msg.Arg.Symbol, msg.Data, ch)
 			} else if msg.Arg.Channel == "tickers" {
 				ok.spotWsHandle24hTickers(msg.Data, ch)
 			}
@@ -209,8 +232,7 @@ func (ok *Okx) SpotWsPublicLoop(ch chan<- any) {
 		} else if msg.Event == "channel-conn-count" {
 		} else if msg.Event == "channel-conn-count-error" {
 			ilog.Error(ok.Name() + " spot.ws.public recv err: " + string(recv))
-			okxWsPubMsgPool.Put(msg)
-			break
+			goto END
 		} else {
 			ilog.Error(ok.Name() + " spot.ws.public recv unknown msg: " + string(recv))
 		}
@@ -238,13 +260,9 @@ func (ok *Okx) spotWsHandleOrderBook5(symbol string, data json.RawMessage, ch ch
 		return
 	}
 	sym := symbol[:firstDash] + symbol[firstDash+1:]
-	depthL := OkxOrderBooks{Data: make([]OkxOrderBook, 0, 1)}
-	depthL.Data = append(depthL.Data, OkxOrderBook{
-		Bids: make([][2]decimal.Decimal, 0, 5),
-		Asks: make([][2]decimal.Decimal, 0, 5),
-	})
-	if err := json.Unmarshal(data, &depthL); err == nil && len(depthL.Data) > 0 {
-		for _, depth := range depthL.Data {
+	var orderBookList []OkxOrderBook
+	if err := json.Unmarshal(data, &orderBookList); err == nil && len(orderBookList) > 0 {
+		for _, depth := range orderBookList {
 			if len(depth.Bids) != len(depth.Asks) {
 				ilog.Error(ok.Name() + " spot.ws.public " + symbol + " exception")
 				continue
@@ -264,6 +282,33 @@ func (ok *Okx) spotWsHandleOrderBook5(symbol string, data json.RawMessage, ch ch
 				obd.Asks = append(obd.Asks, aTk)
 			}
 			ch <- obd
+		}
+	}
+}
+func (ok *Okx) spotWsHandleBBO(symbol string, data json.RawMessage, ch chan<- any) {
+	firstDash := strings.Index(symbol, "-")
+	if firstDash == -1 {
+		return
+	}
+	sym := symbol[:firstDash] + symbol[firstDash+1:]
+
+	var orderBookList []OkxOrderBook
+	if err := json.Unmarshal(data, &orderBookList); err == nil && len(orderBookList) == 1 {
+		for _, depth := range orderBookList {
+			if len(depth.Bids) != len(depth.Asks) && len(depth.Bids) != 1 {
+				ilog.Error(ok.Name() + " spot.ws.public " + symbol + " bbo exception")
+				continue
+			}
+			ts, _ := strconv.ParseInt(depth.Time, 10, 64)
+			obd := wsPublicBBOPool.Get().(*BestBidAsk)
+			obd.Symbol = sym
+			obd.Time = ts
+			obd.BidPrice = depth.Bids[0][0]
+			obd.BidQty = depth.Bids[0][1]
+			obd.AskPrice = depth.Asks[0][0]
+			obd.AskQty = depth.Asks[0][1]
+			ch <- obd
+			break
 		}
 	}
 }

@@ -18,7 +18,7 @@ func (ok *Okx) SpotSupported() bool {
 	return true
 }
 func (ok *Okx) SpotServerTime() (int64, error) {
-	url := okUniEndpoint + "/api/v5/pubic/time"
+	url := okUniEndpoint + "/api/v5/public/time"
 	_, resp, err := ihttp.Get(url, okApiDeadline, nil)
 	if err != nil {
 		return 0, errors.New(ok.Name() + " net error! " + err.Error())

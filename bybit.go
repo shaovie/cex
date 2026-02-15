@@ -37,8 +37,20 @@ type BbSubscribeArg struct {
 	Args []string `json:"args,omitempty"`
 }
 
+var (
+	bbWsPubMsgPool sync.Pool
+)
+
 const bbUniEndpoint = "https://api.bybit.com"
 const bbApiDeadline = 1200 * time.Millisecond
+
+func init() {
+	bbWsPubMsgPool = sync.Pool{
+		New: func() any {
+			return &BybitWsPubMsg{}
+		},
+	}
+}
 
 func (bb *Bybit) Name() string {
 	return bb.name

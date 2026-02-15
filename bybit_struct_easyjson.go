@@ -370,13 +370,13 @@ func easyjsonA6afe24DecodeGithubComShaovieCex2(in *jlexer.Lexer, out *BybitSpot2
 		key := in.UnsafeFieldName(false)
 		in.WantColon()
 		switch key {
-		case "s":
+		case "symbol":
 			if in.IsNull() {
 				in.Skip()
 			} else {
 				out.Symbol = string(in.String())
 			}
-		case "c":
+		case "lastPrice":
 			if in.IsNull() {
 				in.Skip()
 			} else {
@@ -384,7 +384,7 @@ func easyjsonA6afe24DecodeGithubComShaovieCex2(in *jlexer.Lexer, out *BybitSpot2
 					in.AddError((out.Last).UnmarshalJSON(data))
 				}
 			}
-		case "v":
+		case "volume24h":
 			if in.IsNull() {
 				in.Skip()
 			} else {
@@ -392,7 +392,7 @@ func easyjsonA6afe24DecodeGithubComShaovieCex2(in *jlexer.Lexer, out *BybitSpot2
 					in.AddError((out.Volume).UnmarshalJSON(data))
 				}
 			}
-		case "q":
+		case "turnover24h":
 			if in.IsNull() {
 				in.Skip()
 			} else {
@@ -415,22 +415,22 @@ func easyjsonA6afe24EncodeGithubComShaovieCex2(out *jwriter.Writer, in BybitSpot
 	first := true
 	_ = first
 	{
-		const prefix string = ",\"s\":"
+		const prefix string = ",\"symbol\":"
 		out.RawString(prefix[1:])
 		out.String(string(in.Symbol))
 	}
 	{
-		const prefix string = ",\"c\":"
+		const prefix string = ",\"lastPrice\":"
 		out.RawString(prefix)
 		out.Raw((in.Last).MarshalJSON())
 	}
 	{
-		const prefix string = ",\"v\":"
+		const prefix string = ",\"volume24h\":"
 		out.RawString(prefix)
 		out.Raw((in.Volume).MarshalJSON())
 	}
 	{
-		const prefix string = ",\"q\":"
+		const prefix string = ",\"turnover24h\":"
 		out.RawString(prefix)
 		out.Raw((in.QuoteVolume).MarshalJSON())
 	}
