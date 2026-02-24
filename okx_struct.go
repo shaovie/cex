@@ -18,7 +18,7 @@ type OkxWsPubMsg struct {
 	Arg struct {
 		Channel string `json:"channel,omitempty"`
 		Symbol  string `json:"instId,omitempty"`
-	} `json:"arg,omitempty"`
+	} `json:"arg"`
 	Event string          `json:"event,omitempty"`
 	Data  json.RawMessage `json:"data,omitempty"`
 }
@@ -48,7 +48,7 @@ type OkxFundingRates struct {
 		Symbol   string          `json:"instId"`
 		InstType string          `json:"instType"`
 		NextTime string          `json:"nextFundingTime,omitempty"` // msec
-		Fr       decimal.Decimal `json:"fundingRate,omitempty"`
+		Fr       decimal.Decimal `json:"fundingRate"`
 	} `json:"data,omitempty"`
 }
 type OkxKLine struct {

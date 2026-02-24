@@ -72,8 +72,8 @@ func (ok *Okx) SpotWsPublicSubscribe(channels []string) {
 			if len(arr) < 2 || len(arr[1]) == 0 {
 				continue
 			}
-			symbolArr := strings.Split(arr[1], ",")
-			for _, sym := range symbolArr {
+			symbolArr := strings.SplitSeq(arr[1], ",")
+			for sym := range symbolArr {
 				if symbolS := ok.getSpotSymbol(sym); symbolS != "" {
 					arg := Arg{Channel: "books5", InstId: symbolS}
 					req.Args = append(req.Args, &arg)
@@ -83,8 +83,8 @@ func (ok *Okx) SpotWsPublicSubscribe(channels []string) {
 			if len(arr) < 2 || len(arr[1]) == 0 {
 				continue
 			}
-			symbolArr := strings.Split(arr[1], ",")
-			for _, sym := range symbolArr {
+			symbolArr := strings.SplitSeq(arr[1], ",")
+			for sym := range symbolArr {
 				if symbolS := ok.getSpotSymbol(sym); symbolS != "" {
 					arg := Arg{Channel: "bbo-tbt", InstId: symbolS}
 					req.Args = append(req.Args, &arg)
@@ -92,8 +92,8 @@ func (ok *Okx) SpotWsPublicSubscribe(channels []string) {
 			}
 		} else if arr[0] == "ticker" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.Split(arr[1], ",")
-				for _, v := range symbolArr {
+				symbolArr := strings.SplitSeq(arr[1], ",")
+				for v := range symbolArr {
 					if sym := ok.getSpotSymbol(v); sym != "" {
 						arg := Arg{Channel: "tickers", InstId: sym}
 						req.Args = append(req.Args, &arg)
@@ -129,8 +129,8 @@ func (ok *Okx) SpotWsPublicUnsubscribe(channels []string) {
 			if len(arr) < 2 || len(arr[1]) == 0 {
 				continue
 			}
-			symbolArr := strings.Split(arr[1], ",")
-			for _, sym := range symbolArr {
+			symbolArr := strings.SplitSeq(arr[1], ",")
+			for sym := range symbolArr {
 				if symbolS := ok.getSpotSymbol(sym); symbolS != "" {
 					arg := Arg{Channel: "books5", InstId: symbolS}
 					req.Args = append(req.Args, &arg)
@@ -140,8 +140,8 @@ func (ok *Okx) SpotWsPublicUnsubscribe(channels []string) {
 			if len(arr) < 2 || len(arr[1]) == 0 {
 				continue
 			}
-			symbolArr := strings.Split(arr[1], ",")
-			for _, sym := range symbolArr {
+			symbolArr := strings.SplitSeq(arr[1], ",")
+			for sym := range symbolArr {
 				if symbolS := ok.getSpotSymbol(sym); symbolS != "" {
 					arg := Arg{Channel: "bbo-tbt", InstId: symbolS}
 					req.Args = append(req.Args, &arg)
@@ -149,8 +149,8 @@ func (ok *Okx) SpotWsPublicUnsubscribe(channels []string) {
 			}
 		} else if arr[0] == "ticker" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.Split(arr[1], ",")
-				for _, v := range symbolArr {
+				symbolArr := strings.SplitSeq(arr[1], ",")
+				for v := range symbolArr {
 					if sym := ok.getSpotSymbol(v); sym != "" {
 						arg := Arg{Channel: "tickers", InstId: sym}
 						req.Args = append(req.Args, &arg)
@@ -255,11 +255,11 @@ func (ok *Okx) SpotWsPublicClose() {
 	ok.spotWsPublicConn.Close()
 }
 func (ok *Okx) spotWsHandleOrderBook5(symbol string, data json.RawMessage, ch chan<- any) {
-	firstDash := strings.Index(symbol, "-")
-	if firstDash == -1 {
+	before, after, ok0 := strings.Cut(symbol, "-")
+	if !ok0 {
 		return
 	}
-	sym := symbol[:firstDash] + symbol[firstDash+1:]
+	sym := before + after
 	var orderBookList []OkxOrderBook
 	if err := json.Unmarshal(data, &orderBookList); err == nil && len(orderBookList) > 0 {
 		for _, depth := range orderBookList {
@@ -286,11 +286,11 @@ func (ok *Okx) spotWsHandleOrderBook5(symbol string, data json.RawMessage, ch ch
 	}
 }
 func (ok *Okx) spotWsHandleBBO(symbol string, data json.RawMessage, ch chan<- any) {
-	firstDash := strings.Index(symbol, "-")
-	if firstDash == -1 {
+	before, after, ok0 := strings.Cut(symbol, "-")
+	if !ok0 {
 		return
 	}
-	sym := symbol[:firstDash] + symbol[firstDash+1:]
+	sym := before + after
 
 	var orderBookList []OkxOrderBook
 	if err := json.Unmarshal(data, &orderBookList); err == nil && len(orderBookList) == 1 {
@@ -425,7 +425,7 @@ type OkxWsPrivMsg struct {
 	// push
 	Arg struct {
 		Channel string `json:"channel,omitempty"`
-	} `json:"arg,omitempty"`
+	} `json:"arg"`
 	Event string          `json:"event,omitempty"`
 	Data  json.RawMessage `json:"data,omitempty"`
 }
@@ -536,7 +536,7 @@ func (ok *Okx) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
 		OrderId     string          `json:"ordId"`
 		ClientId    string          `json:"clOrdId,omitempty"`
 		Price       string          `json:"px,omitempty"`
-		Qty         decimal.Decimal `json:"sz,omitempty"`
+		Qty         decimal.Decimal `json:"sz"`
 		ExecutedQty string          `json:"accFillSz,omitempty"`
 		AvgPrice    string          `json:"avgPx,omitempty"`
 		Status      string          `json:"state"`

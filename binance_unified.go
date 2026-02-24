@@ -146,8 +146,8 @@ func (bn *Binance) UnifiedWsLoop(ch chan<- any) {
 func (bn *Binance) unifiedWsHandleBalance(data json.RawMessage, ch chan<- any) {
 	bl := []struct {
 		Symbol string          `json:"a,omitempty"`
-		Avail  decimal.Decimal `json:"f,omitempty"`
-		Locked decimal.Decimal `json:"l,omitempty"`
+		Avail  decimal.Decimal `json:"f"`
+		Locked decimal.Decimal `json:"l"`
 	}{}
 	if err := json.Unmarshal(data, &bl); err == nil && len(bl) > 0 {
 		for _, as := range bl {

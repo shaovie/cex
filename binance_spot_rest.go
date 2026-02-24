@@ -45,15 +45,15 @@ func (bn *Binance) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, erro
 			Status  string `json:"status"`
 			Filters []struct {
 				FilterType string          `json:"filterType"`
-				MaxPrice   decimal.Decimal `json:"maxPrice,omitempty"`
-				MinPrice   decimal.Decimal `json:"minPrice,omitempty"`
-				TickSize   decimal.Decimal `json:"tickSize,omitempty"`
+				MaxPrice   decimal.Decimal `json:"maxPrice"`
+				MinPrice   decimal.Decimal `json:"minPrice"`
+				TickSize   decimal.Decimal `json:"tickSize"`
 
-				MaxQty   decimal.Decimal `json:"maxQty,omitempty"`
-				MinQty   decimal.Decimal `json:"minQty,omitempty"`
-				StepSize decimal.Decimal `json:"stepSize,omitempty"`
+				MaxQty   decimal.Decimal `json:"maxQty"`
+				MinQty   decimal.Decimal `json:"minQty"`
+				StepSize decimal.Decimal `json:"stepSize"`
 
-				MinNotional decimal.Decimal `json:"minNotional,omitempty"`
+				MinNotional decimal.Decimal `json:"minNotional"`
 			} `json:"filters,omitempty"`
 		} `json:"symbols,omitempty"`
 	}{}
@@ -134,10 +134,10 @@ func (bn *Binance) SpotGetBBO(symbol string) (BestBidAsk, error) {
 	}
 	bbo := struct {
 		Symbol   string          `json:"symbol,omitempty"`
-		BidPrice decimal.Decimal `json:"bidPrice,omitempty"`
-		BidQty   decimal.Decimal `json:"bidQty,omitempty"`
-		AskPrice decimal.Decimal `json:"askPrice,omitempty"`
-		AskQty   decimal.Decimal `json:"askQty,omitempty"`
+		BidPrice decimal.Decimal `json:"bidPrice"`
+		BidQty   decimal.Decimal `json:"bidQty"`
+		AskPrice decimal.Decimal `json:"askPrice"`
+		AskQty   decimal.Decimal `json:"askQty"`
 	}{}
 	if err = json.Unmarshal(resp, &bbo); err != nil {
 		return BestBidAsk{}, errors.New(bn.Name() + " Unmarshal err! " + err.Error())
@@ -161,8 +161,8 @@ func (bn *Binance) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 		Msg      string `json:"msg,omitempty"`
 		Balances []struct {
 			Symbol string          `json:"asset,omitempty"`
-			Free   decimal.Decimal `json:"free,omitempty"`
-			Locked decimal.Decimal `json:"locked,omitempty"`
+			Free   decimal.Decimal `json:"free"`
+			Locked decimal.Decimal `json:"locked"`
 		} `json:"balances,omitempty"`
 	}{}
 	if err = json.Unmarshal(resp, &recv); err != nil {
@@ -287,10 +287,10 @@ func (bn *Binance) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, erro
 		Symbol       string          `json:"symbol,omitempty"` // BTCUSDT
 		OrderId      int64           `json:"orderId,omitempty"`
 		ClientId     string          `json:"clientOrderId,omitempty"` // BTCUSDT
-		Price        decimal.Decimal `json:"price,omitempty"`
-		Quantity     decimal.Decimal `json:"origQty,omitempty"`             // 用户设置的原始订单数量
-		ExecutedQty  decimal.Decimal `json:"executedQty,omitempty"`         // 交易的订单数量
-		CummQuoteQty decimal.Decimal `json:"cummulativeQuoteQty,omitempty"` // 累计交易的金额
+		Price        decimal.Decimal `json:"price"`
+		Quantity     decimal.Decimal `json:"origQty"`             // 用户设置的原始订单数量
+		ExecutedQty  decimal.Decimal `json:"executedQty"`         // 交易的订单数量
+		CummQuoteQty decimal.Decimal `json:"cummulativeQuoteQty"` // 累计交易的金额
 		Status       string          `json:"status,omitempty"`
 		Type         string          `json:"type,omitempty"`        // LIMIT/MARKET
 		TimeInForce  string          `json:"timeInForce,omitempty"` // GTC/FOK/IOC
@@ -337,10 +337,10 @@ func (bn *Binance) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 		Symbol       string          `json:"symbol,omitempty"` // BTCUSDT
 		OrderId      int64           `json:"orderId,omitempty"`
 		ClientId     string          `json:"clientOrderId,omitempty"`
-		Price        decimal.Decimal `json:"price,omitempty"`
-		Quantity     decimal.Decimal `json:"origQty,omitempty"`             // 用户设置的原始订单数量
-		ExecutedQty  decimal.Decimal `json:"executedQty,omitempty"`         // 交易的订单数量
-		CummQuoteQty decimal.Decimal `json:"cummulativeQuoteQty,omitempty"` // 累计交易的金额
+		Price        decimal.Decimal `json:"price"`
+		Quantity     decimal.Decimal `json:"origQty"`             // 用户设置的原始订单数量
+		ExecutedQty  decimal.Decimal `json:"executedQty"`         // 交易的订单数量
+		CummQuoteQty decimal.Decimal `json:"cummulativeQuoteQty"` // 累计交易的金额
 		Status       string          `json:"status,omitempty"`
 		Type         string          `json:"type,omitempty"`        // LIMIT/MARKET
 		TimeInForce  string          `json:"timeInForce,omitempty"` // GTC/FOK/IOC

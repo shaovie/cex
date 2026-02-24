@@ -27,7 +27,7 @@ func (bo *Bigone) SpotServerTime() (int64, error) {
 		Msg  string `json:"message,omitempty"`
 		Data struct {
 			Timestamp int64 `json:"Timestamp,omitempty"`
-		} `json:"data,omitempty"`
+		} `json:"data"`
 	}{}
 
 	err = json.Unmarshal(resp, &recv)
@@ -166,7 +166,7 @@ func (bo *Bigone) SpotPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 		Data struct {
 			OrderId int64  `json:"id,omitempty"`
 			Status  string `json:"state,omitempty"`
-		} `json:"data,omitempty"`
+		} `json:"data"`
 	}{}
 	err = json.Unmarshal(resp, &ret)
 	if err != nil {
@@ -202,7 +202,7 @@ func (bo *Bigone) SpotCancelOrder(symbol, orderId, cltId string) error {
 		Msg  string `json:"message,omitempty"`
 		Data struct {
 			Status string `json:"state,omitempty"`
-		} `json:"data,omitempty"`
+		} `json:"data"`
 	}{}
 	err = json.Unmarshal(resp, &ret)
 	if err != nil {
@@ -233,17 +233,17 @@ func (bo *Bigone) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error
 		Data struct {
 			Symbol      string          `json:"asset_pair_name,omitempty"`
 			OrderId     int64           `json:"id,omitempty"`
-			Price       decimal.Decimal `json:"price,omitempty"`
-			Qty         decimal.Decimal `json:"amount,omitempty"`
-			ExecutedQty decimal.Decimal `json:"filled_amount,omitempty"`
-			AvgPrice    decimal.Decimal `json:"avg_deal_price,omitempty"`
+			Price       decimal.Decimal `json:"price"`
+			Qty         decimal.Decimal `json:"amount"`
+			ExecutedQty decimal.Decimal `json:"filled_amount"`
+			AvgPrice    decimal.Decimal `json:"avg_deal_price"`
 			Status      string          `json:"state,omitempty"`
 			Type        string          `json:"type,omitempty"`
 			Side        string          `json:"side,omitempty"`
 			ClientId    string          `json:"client_order_id,omitempty"`
 			Time        string          `json:"created_at,omitempty"`
 			UTime       string          `json:"updated_at,omitempty"`
-		} `json:"data,omitempty"`
+		} `json:"data"`
 	}{}
 	err = json.Unmarshal(resp, &ret)
 	if err != nil {
@@ -285,10 +285,10 @@ func (bo *Bigone) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 			Symbol      string          `json:"asset_pair_name,omitempty"`
 			Id          int64           `json:"id,omitempty"`
 			ClientId    string          `json:"client_order_id,omitempty"`
-			Price       decimal.Decimal `json:"price,omitempty"`
-			Qty         decimal.Decimal `json:"amount,omitempty"`
-			ExecutedQty decimal.Decimal `json:"filled_amount,omitempty"`
-			AvgPrice    decimal.Decimal `json:"avg_deal_price,omitempty"`
+			Price       decimal.Decimal `json:"price"`
+			Qty         decimal.Decimal `json:"amount"`
+			ExecutedQty decimal.Decimal `json:"filled_amount"`
+			AvgPrice    decimal.Decimal `json:"avg_deal_price"`
 			Status      string          `json:"state,omitempty"`
 			Type        string          `json:"type,omitempty"`
 			Side        string          `json:"side,omitempty"`

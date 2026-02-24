@@ -62,30 +62,19 @@ func easyjsonBb14c8deEncodeGithubComShaovieCex(out *jwriter.Writer, in OkxWsPubM
 	out.RawByte('{')
 	first := true
 	_ = first
-	if true {
+	{
 		const prefix string = ",\"arg\":"
-		first = false
 		out.RawString(prefix[1:])
 		easyjsonBb14c8deEncode(out, in.Arg)
 	}
 	if in.Event != "" {
 		const prefix string = ",\"event\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
+		out.RawString(prefix)
 		out.String(string(in.Event))
 	}
 	if len(in.Data) != 0 {
 		const prefix string = ",\"data\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
+		out.RawString(prefix)
 		out.Raw((in.Data).MarshalJSON())
 	}
 	out.RawByte('}')
@@ -668,14 +657,14 @@ func easyjsonBb14c8deDecodeGithubComShaovieCex4(in *jlexer.Lexer, out *OkxFundin
 							Symbol   string          `json:"instId"`
 							InstType string          `json:"instType"`
 							NextTime string          `json:"nextFundingTime,omitempty"`
-							Fr       decimal.Decimal `json:"fundingRate,omitempty"`
+							Fr       decimal.Decimal `json:"fundingRate"`
 						}, 0, 1)
 					} else {
 						out.Data = []struct {
 							Symbol   string          `json:"instId"`
 							InstType string          `json:"instType"`
 							NextTime string          `json:"nextFundingTime,omitempty"`
-							Fr       decimal.Decimal `json:"fundingRate,omitempty"`
+							Fr       decimal.Decimal `json:"fundingRate"`
 						}{}
 					}
 				} else {
@@ -686,7 +675,7 @@ func easyjsonBb14c8deDecodeGithubComShaovieCex4(in *jlexer.Lexer, out *OkxFundin
 						Symbol   string          `json:"instId"`
 						InstType string          `json:"instType"`
 						NextTime string          `json:"nextFundingTime,omitempty"`
-						Fr       decimal.Decimal `json:"fundingRate,omitempty"`
+						Fr       decimal.Decimal `json:"fundingRate"`
 					}
 					easyjsonBb14c8deDecode1(in, &v19)
 					out.Data = append(out.Data, v19)
@@ -773,7 +762,7 @@ func easyjsonBb14c8deDecode1(in *jlexer.Lexer, out *struct {
 	Symbol   string          `json:"instId"`
 	InstType string          `json:"instType"`
 	NextTime string          `json:"nextFundingTime,omitempty"`
-	Fr       decimal.Decimal `json:"fundingRate,omitempty"`
+	Fr       decimal.Decimal `json:"fundingRate"`
 }) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
@@ -828,7 +817,7 @@ func easyjsonBb14c8deEncode1(out *jwriter.Writer, in struct {
 	Symbol   string          `json:"instId"`
 	InstType string          `json:"instType"`
 	NextTime string          `json:"nextFundingTime,omitempty"`
-	Fr       decimal.Decimal `json:"fundingRate,omitempty"`
+	Fr       decimal.Decimal `json:"fundingRate"`
 }) {
 	out.RawByte('{')
 	first := true
@@ -848,7 +837,7 @@ func easyjsonBb14c8deEncode1(out *jwriter.Writer, in struct {
 		out.RawString(prefix)
 		out.String(string(in.NextTime))
 	}
-	if true {
+	{
 		const prefix string = ",\"fundingRate\":"
 		out.RawString(prefix)
 		out.Raw((in.Fr).MarshalJSON())

@@ -1,6 +1,7 @@
 package cex
 
 import (
+	"maps"
 	"math/rand"
 	"sync"
 	"time"
@@ -142,9 +143,7 @@ func futuresUpdateExPairRule() {
 						if ol == nil {
 							ol = ret
 						} else {
-							for sym, epr := range ret {
-								ol[sym] = epr
-							}
+							maps.Copy(ol, ret)
 						}
 						futuresExchangePairRule[cexName] = ol
 						futuresExchangePairRuleMtx.Unlock()
@@ -159,9 +158,7 @@ func futuresUpdateExPairRule() {
 						if ol == nil {
 							ol = ret
 						} else {
-							for sym, epr := range ret {
-								ol[sym] = epr
-							}
+							maps.Copy(ol, ret)
 						}
 						futuresExchangePairRule[cexName] = ol
 						futuresExchangePairRuleMtx.Unlock()
@@ -179,7 +176,7 @@ func futuresUpdateExPairRule() {
 func PowOneTenth(n int) decimal.Decimal {
 	b01 := decimal.NewFromFloat(0.1)
 	b1 := decimal.NewFromInt(1)
-	for i := 0; i < n; i++ {
+	for range n {
 		b1 = b1.Mul(b01)
 	}
 	return b1

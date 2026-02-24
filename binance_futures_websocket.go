@@ -79,8 +79,8 @@ func (bn *Binance) FuturesWsPublicSubscribe(channels []string) {
 		arr := strings.Split(c, "@")
 		if arr[0] == "orderbook5" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.Split(arr[1], ",")
-				for _, sym := range symbolArr {
+				symbolArr := strings.SplitSeq(arr[1], ",")
+				for sym := range symbolArr {
 					if bn.futuresWsPublicTyp == "CM" {
 						sym += "_PERP"
 					}
@@ -89,8 +89,8 @@ func (bn *Binance) FuturesWsPublicSubscribe(channels []string) {
 			}
 		} else if arr[0] == "bbo" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.Split(arr[1], ",")
-				for _, sym := range symbolArr {
+				symbolArr := strings.SplitSeq(arr[1], ",")
+				for sym := range symbolArr {
 					if bn.futuresWsPublicTyp == "CM" {
 						sym += "_PERP"
 					}
@@ -99,8 +99,8 @@ func (bn *Binance) FuturesWsPublicSubscribe(channels []string) {
 			}
 		} else if arr[0] == "ticker" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.Split(arr[1], ",")
-				for _, sym := range symbolArr {
+				symbolArr := strings.SplitSeq(arr[1], ",")
+				for sym := range symbolArr {
 					if bn.futuresWsPublicTyp == "CM" {
 						sym += "_PERP"
 					}
@@ -126,8 +126,8 @@ func (bn *Binance) FuturesWsPublicUnsubscribe(channels []string) {
 		arr := strings.Split(c, "@")
 		if arr[0] == "orderbook5" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.Split(arr[1], ",")
-				for _, sym := range symbolArr {
+				symbolArr := strings.SplitSeq(arr[1], ",")
+				for sym := range symbolArr {
 					if bn.futuresWsPublicTyp == "CM" {
 						sym += "_PERP"
 					}
@@ -136,8 +136,8 @@ func (bn *Binance) FuturesWsPublicUnsubscribe(channels []string) {
 			}
 		} else if arr[0] == "bbo" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.Split(arr[1], ",")
-				for _, sym := range symbolArr {
+				symbolArr := strings.SplitSeq(arr[1], ",")
+				for sym := range symbolArr {
 					if bn.futuresWsPublicTyp == "CM" {
 						sym += "_PERP"
 					}
@@ -146,8 +146,8 @@ func (bn *Binance) FuturesWsPublicUnsubscribe(channels []string) {
 			}
 		} else if arr[0] == "ticker" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.Split(arr[1], ",")
-				for _, sym := range symbolArr {
+				symbolArr := strings.SplitSeq(arr[1], ",")
+				for sym := range symbolArr {
 					if bn.futuresWsPublicTyp == "CM" {
 						sym += "_PERP"
 					}
@@ -525,14 +525,14 @@ func (bn *Binance) futuresWsHandleOrder(data json.RawMessage, ch chan<- any) {
 		OrderTypeOrig string          `json:"ot,omitempty"` // 原始订单类型
 		ExecTime      int64           `json:"T,omitempty"`  // 成交时间 msec
 		TradeId       int64           `json:"t,omitempty"`  //
-		Qty           decimal.Decimal `json:"q,omitempty"`  // 原始订单数量
-		Price         decimal.Decimal `json:"p,omitempty"`  // 原始订单价格
-		AvgPrice      decimal.Decimal `json:"ap,omitempty"` // 订单平均价格
-		ExecQty       decimal.Decimal `json:"l,omitempty"`  // 末次成交数量
-		ExecPrice     decimal.Decimal `json:"L,omitempty"`  // 末次成交价格
-		ExecutedQty   decimal.Decimal `json:"z,omitempty"`  // 订单累计已成交量  在CM中还不确定含义
-		CummQuoteQty  decimal.Decimal `json:"Z,omitempty"`  // 订单累计已成交金额 文档不存在
-		FeeQty        decimal.Decimal `json:"n,omitempty"`  // 手续费数量
+		Qty           decimal.Decimal `json:"q"`            // 原始订单数量
+		Price         decimal.Decimal `json:"p"`            // 原始订单价格
+		AvgPrice      decimal.Decimal `json:"ap"`           // 订单平均价格
+		ExecQty       decimal.Decimal `json:"l"`            // 末次成交数量
+		ExecPrice     decimal.Decimal `json:"L"`            // 末次成交价格
+		ExecutedQty   decimal.Decimal `json:"z"`            // 订单累计已成交量  在CM中还不确定含义
+		CummQuoteQty  decimal.Decimal `json:"Z"`            // 订单累计已成交金额 文档不存在
+		FeeQty        decimal.Decimal `json:"n"`            // 手续费数量
 		FeeAsset      string          `json:"N,omitempty"`  // 手续费类型
 		EventType     string          `json:"x,omitempty"`  // 本次事件的执行类型
 		Status        string          `json:"X,omitempty"`  // 订单当前状态
@@ -571,9 +571,9 @@ func (bn *Binance) futuresWsHandlePosition(data json.RawMessage, ch chan<- any, 
 		Event string `json:"m,omitempty"`
 		Pos   []struct {
 			Symbol           string          `json:"s,omitempty"`
-			EntryPrice       decimal.Decimal `json:"ep,omitempty"`
-			UnRealizedProfit decimal.Decimal `json:"up,omitempty"`
-			Qty              decimal.Decimal `json:"pa,omitempty"`
+			EntryPrice       decimal.Decimal `json:"ep"`
+			UnRealizedProfit decimal.Decimal `json:"up"`
+			Qty              decimal.Decimal `json:"pa"`
 			PositionMode     string          `json:"ps,omitempty"`
 			UTime            int64           `json:"time_ms,omitempty"`
 		} `json:"P,omitempty"`
@@ -634,7 +634,7 @@ func (bn *Binance) futuresWsPrivateApiLoop(ch chan<- any, wg *sync.WaitGroup) {
 		Err    struct {
 			Code int    `json:"code,omitempty"`
 			Msg  string `json:"msg,omitempty"`
-		} `json:"error,omitempty"`
+		} `json:"error"`
 	}
 	for {
 		_, recv, err := bn.futuresWsPrivateApiConn.ReadMessage()

@@ -27,7 +27,7 @@ type BigoneSpotWsPubMsg struct {
 	Err struct {
 		Code int    `json:"code,omitempty"`
 		Msg  string `json:"message,omitempty"`
-	} `json:"error,omitempty"`
+	} `json:"error"`
 
 	DepthSnap    json.RawMessage `json:"depthSnapshot,omitempty"`
 	DepthUpdate  json.RawMessage `json:"depthUpdate,omitempty"`
@@ -54,7 +54,7 @@ type BigoneSpotOrderBookDepth struct {
 	Asks   []BigoneSpotOrderBookItem `json:"asks"`
 }
 type BigoneSpotOrderBook struct {
-	Depth    BigoneSpotOrderBookDepth `json:"depth,omitempty"`
+	Depth    BigoneSpotOrderBookDepth `json:"depth"`
 	ChangeId string                   `json:"changeId,omitempty"`
 	PrevId   string                   `json:"prevId,omitempty"`
 }
@@ -62,7 +62,7 @@ type BigoneSpotWsPrivMsg struct {
 	Err struct {
 		Code int    `json:"code,omitempty"`
 		Msg  string `json:"message,omitempty"`
-	} `json:"error,omitempty"`
+	} `json:"error"`
 
 	OrderUpdate   json.RawMessage `json:"orderUpdate,omitempty"`
 	AccountSnap   json.RawMessage `json:"accountsSnapshot,omitempty"`

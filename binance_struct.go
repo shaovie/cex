@@ -32,18 +32,18 @@ func (v *BinanceWsPubMsg) reset() {
 
 type BinanceSpotBBO struct {
 	Symbol   string          `json:"s,omitempty"`
-	BidPrice decimal.Decimal `json:"b,omitempty"`
-	BidQty   decimal.Decimal `json:"B,omitempty"`
-	AskPrice decimal.Decimal `json:"a,omitempty"`
-	AskQty   decimal.Decimal `json:"A,omitempty"`
+	BidPrice decimal.Decimal `json:"b"`
+	BidQty   decimal.Decimal `json:"B"`
+	AskPrice decimal.Decimal `json:"a"`
+	AskQty   decimal.Decimal `json:"A"`
 }
 type BinanceFuturesBBO struct {
 	Symbol   string          `json:"s,omitempty"`
 	Time     int64           `json:"T,omitempty"`
-	BidPrice decimal.Decimal `json:"b,omitempty"`
-	BidQty   decimal.Decimal `json:"B,omitempty"`
-	AskPrice decimal.Decimal `json:"a,omitempty"`
-	AskQty   decimal.Decimal `json:"A,omitempty"`
+	BidPrice decimal.Decimal `json:"b"`
+	BidQty   decimal.Decimal `json:"B"`
+	AskPrice decimal.Decimal `json:"a"`
+	AskQty   decimal.Decimal `json:"A"`
 }
 type BinanceSpotOrderBook struct {
 	Bids [][2]decimal.Decimal `json:"bids,omitempty"`

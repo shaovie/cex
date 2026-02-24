@@ -37,8 +37,8 @@ func (bo *Bigone) Withdrawal(symbol, addr, memo, chain string, qty decimal.Decim
 		Data struct {
 			Status string          `json:"state,omitempty"`
 			Txid   string          `json:"txid,omitempty"`
-			Qty    decimal.Decimal `json:"amount,omitempty"`
-		} `json:"data,omitempty"`
+			Qty    decimal.Decimal `json:"amount"`
+		} `json:"data"`
 	}{}
 	err = json.Unmarshal(resp, &ret)
 	if err != nil {

@@ -63,16 +63,16 @@ func (bn *Binance) FuturesLoadAllPairRule(typ string) (map[string]*FuturesExchan
 			Status         string          `json:"status,omitempty"`
 			ContractType   string          `json:"contractType,omitempty"`
 			ContractStatus string          `json:"contractStatus,omitempty"` // for CM
-			ContractSize   decimal.Decimal `json:"contractSize,omitempty"`   // for CM
+			ContractSize   decimal.Decimal `json:"contractSize"`             // for CM
 			Filters        []struct {
 				FilterType  string          `json:"filterType"`
-				MaxPrice    decimal.Decimal `json:"maxPrice,omitempty"`
-				MinPrice    decimal.Decimal `json:"minPrice,omitempty"`
-				MaxQty      decimal.Decimal `json:"maxQty,omitempty"`
-				MinQty      decimal.Decimal `json:"minQty,omitempty"`
-				TickSize    decimal.Decimal `json:"tickSize,omitempty"`
-				StepSize    decimal.Decimal `json:"stepSize,omitempty"`
-				MinNotional decimal.Decimal `json:"notional,omitempty"` // for UM
+				MaxPrice    decimal.Decimal `json:"maxPrice"`
+				MinPrice    decimal.Decimal `json:"minPrice"`
+				MaxQty      decimal.Decimal `json:"maxQty"`
+				MinQty      decimal.Decimal `json:"minQty"`
+				TickSize    decimal.Decimal `json:"tickSize"`
+				StepSize    decimal.Decimal `json:"stepSize"`
+				MinNotional decimal.Decimal `json:"notional"` // for UM
 			}
 		} `json:"symbols"`
 	}{}
@@ -135,8 +135,8 @@ func (bn *Binance) FuturesGetAll24hTicker(typ string) (map[string]Pub24hTicker, 
 		Symbol      string          `json:"symbol"`
 		Last        decimal.Decimal `json:"lastPrice"`
 		Volume      decimal.Decimal `json:"volume"`
-		QuoteVolume decimal.Decimal `json:"quoteVolume,omitempty"`
-		BaseVolume  decimal.Decimal `json:"baseVolume,omitempty"`
+		QuoteVolume decimal.Decimal `json:"quoteVolume"`
+		BaseVolume  decimal.Decimal `json:"baseVolume"`
 	}{}
 
 	if err = json.Unmarshal(resp, &tks); err != nil {
@@ -167,10 +167,10 @@ func (bn *Binance) FuturesGetBBO(typ, symbol string) (BestBidAsk, error) {
 		}
 		bbo := struct {
 			Symbol   string          `json:"symbol,omitempty"`
-			BidPrice decimal.Decimal `json:"bidPrice,omitempty"`
-			BidQty   decimal.Decimal `json:"bidQty,omitempty"`
-			AskPrice decimal.Decimal `json:"askPrice,omitempty"`
-			AskQty   decimal.Decimal `json:"askQty,omitempty"`
+			BidPrice decimal.Decimal `json:"bidPrice"`
+			BidQty   decimal.Decimal `json:"bidQty"`
+			AskPrice decimal.Decimal `json:"askPrice"`
+			AskQty   decimal.Decimal `json:"askQty"`
 		}{}
 		if err = json.Unmarshal(resp, &bbo); err != nil {
 			return BestBidAsk{}, errors.New(bn.Name() + " Unmarshal err! " + err.Error())
@@ -194,10 +194,10 @@ func (bn *Binance) FuturesGetBBO(typ, symbol string) (BestBidAsk, error) {
 		}
 		bboL := []struct {
 			Symbol   string          `json:"symbol,omitempty"`
-			BidPrice decimal.Decimal `json:"bidPrice,omitempty"`
-			BidQty   decimal.Decimal `json:"bidQty,omitempty"`
-			AskPrice decimal.Decimal `json:"askPrice,omitempty"`
-			AskQty   decimal.Decimal `json:"askQty,omitempty"`
+			BidPrice decimal.Decimal `json:"bidPrice"`
+			BidQty   decimal.Decimal `json:"bidQty"`
+			AskPrice decimal.Decimal `json:"askPrice"`
+			AskQty   decimal.Decimal `json:"askQty"`
 		}{}
 		if err = json.Unmarshal(resp, &bboL); err != nil {
 			return BestBidAsk{}, errors.New(bn.Name() + " Unmarshal err! " + err.Error())
@@ -274,8 +274,8 @@ func (bn *Binance) FuturesGetFundingRateHistory(typ, symbol string,
 		return nil, bn.handleExceptionResp("FuturesGetFundingRateHistory", resp)
 	}
 	ret := []struct {
-		FundingRate decimal.Decimal `json:"fundingRate,omitempty"`
-		MarkPrice   decimal.Decimal `json:"markPrice,omitempty"`
+		FundingRate decimal.Decimal `json:"fundingRate"`
+		MarkPrice   decimal.Decimal `json:"markPrice"`
 		Time        int64           `json:"fundingTime,omitempty"`
 	}{}
 	if err = json.Unmarshal(resp, &ret); err != nil {
@@ -358,10 +358,10 @@ func (bn *Binance) FuturesGetAllAssets(typ string) (map[string]*FuturesAsset, er
 	}
 	alls := []struct {
 		Symbol              string          `json:"asset,omitempty"`
-		Total               decimal.Decimal `json:"balance,omitempty"`
-		AvailBalance        decimal.Decimal `json:"availableBalance,omitempty"`  // 可用下单余额
-		MaxWithdrawAmount   decimal.Decimal `json:"maxWithdrawAmount,omitempty"` // 最大可转出余额
-		CMMaxWithdrawAmount decimal.Decimal `json:"withdrawAvailable,omitempty"` // 最大可转出余额
+		Total               decimal.Decimal `json:"balance"`
+		AvailBalance        decimal.Decimal `json:"availableBalance"`  // 可用下单余额
+		MaxWithdrawAmount   decimal.Decimal `json:"maxWithdrawAmount"` // 最大可转出余额
+		CMMaxWithdrawAmount decimal.Decimal `json:"withdrawAvailable"` // 最大可转出余额
 	}{}
 	if err = json.Unmarshal(resp, &alls); err != nil {
 		return nil, errors.New(bn.Name() + " unmarshal error! " + err.Error())
@@ -509,12 +509,12 @@ func (bn *Binance) FuturesGetOrder(typ, symbol, orderId, cltId string) (*Futures
 		Symbol       string          `json:"symbol,omitempty"` // BTCUSDT
 		OrderId      int64           `json:"orderId,omitempty"`
 		ClientId     string          `json:"clientOrderId,omitempty"` // BTCUSDT
-		Price        decimal.Decimal `json:"price,omitempty"`
-		Quantity     decimal.Decimal `json:"origQty,omitempty"`     // 用户设置的原始订单数量
-		ExecutedQty  decimal.Decimal `json:"executedQty,omitempty"` // 交易的订单数量
-		CummQuoteQty decimal.Decimal `json:"cumQuote,omitempty"`    // 累计交易的金额 for UM
-		CummBaseQty  decimal.Decimal `json:"cumBase,omitempty"`     // 累计交易的金额(标地数量) for CM
-		AvgPrice     decimal.Decimal `json:"avgPrice,omitempty"`    // for CM
+		Price        decimal.Decimal `json:"price"`
+		Quantity     decimal.Decimal `json:"origQty"`     // 用户设置的原始订单数量
+		ExecutedQty  decimal.Decimal `json:"executedQty"` // 交易的订单数量
+		CummQuoteQty decimal.Decimal `json:"cumQuote"`    // 累计交易的金额 for UM
+		CummBaseQty  decimal.Decimal `json:"cumBase"`     // 累计交易的金额(标地数量) for CM
+		AvgPrice     decimal.Decimal `json:"avgPrice"`    // for CM
 		Status       string          `json:"status,omitempty"`
 		Type         string          `json:"type,omitempty"`        // LIMIT/MARKET
 		TimeInForce  string          `json:"timeInForce,omitempty"` // GTC/FOK/IOC
@@ -576,11 +576,11 @@ func (bn *Binance) FuturesGetOpenOrders(typ, symbol string) ([]*FuturesOrder, er
 		Symbol       string          `json:"symbol,omitempty"` // BTCUSDT
 		OrderId      int64           `json:"orderId,omitempty"`
 		ClientId     string          `json:"clientOrderId,omitempty"` // BTCUSDT
-		Price        decimal.Decimal `json:"price,omitempty"`
-		Quantity     decimal.Decimal `json:"origQty,omitempty"`     // 用户设置的原始订单数量
-		ExecutedQty  decimal.Decimal `json:"executedQty,omitempty"` // 交易的订单数量
-		CummQuoteQty decimal.Decimal `json:"cumQuote,omitempty"`    // 累计交易的金额 for UM
-		CummBaseQty  decimal.Decimal `json:"cumBase,omitempty"`     // 累计交易的金额(标地数量) for CM
+		Price        decimal.Decimal `json:"price"`
+		Quantity     decimal.Decimal `json:"origQty"`     // 用户设置的原始订单数量
+		ExecutedQty  decimal.Decimal `json:"executedQty"` // 交易的订单数量
+		CummQuoteQty decimal.Decimal `json:"cumQuote"`    // 累计交易的金额 for UM
+		CummBaseQty  decimal.Decimal `json:"cumBase"`     // 累计交易的金额(标地数量) for CM
 		Status       string          `json:"status,omitempty"`
 		Type         string          `json:"type,omitempty"`        // LIMIT/MARKET
 		TimeInForce  string          `json:"timeInForce,omitempty"` // GTC/FOK/IOC
@@ -802,12 +802,12 @@ func (bn *Binance) FuturesMaintMargin(typ, symbol string) ([]*FuturesLeverageBra
 	type Bracket struct {
 		Bracket          int64           `json:"bracket,omitempty"`
 		InitialLeverage  int64           `json:"initialLeverage,omitempty"`
-		QtyCap           decimal.Decimal `json:"qtyCap,omitempty"`        // 该层对应的数量上限
-		QtyFloor         decimal.Decimal `json:"qtyFloor,omitempty"`      // 该层对应的数量下限
-		NotionalCap      decimal.Decimal `json:"notionalCap,omitempty"`   // 该层对应的数量上限
-		NotionalFloor    decimal.Decimal `json:"notionalFloor,omitempty"` // 该层对应的数量下限
-		MaintMarginRatio decimal.Decimal `json:"maintMarginRatio,omitempty"`
-		Cum              decimal.Decimal `json:"cum,omitempty"`
+		QtyCap           decimal.Decimal `json:"qtyCap"`        // 该层对应的数量上限
+		QtyFloor         decimal.Decimal `json:"qtyFloor"`      // 该层对应的数量下限
+		NotionalCap      decimal.Decimal `json:"notionalCap"`   // 该层对应的数量上限
+		NotionalFloor    decimal.Decimal `json:"notionalFloor"` // 该层对应的数量下限
+		MaintMarginRatio decimal.Decimal `json:"maintMarginRatio"`
+		Cum              decimal.Decimal `json:"cum"`
 	}
 	ret := []struct {
 		Symbol   string    `json:"symbol,omitempty"`
@@ -855,15 +855,15 @@ func (bn *Binance) FuturesGetAllPositionList(typ string) (map[string]*FuturesPos
 	}
 	recv := []struct {
 		Symbol     string          `json:"symbol"`
-		EntryPrice decimal.Decimal `json:"entryPrice,omitempty"`
-		Leverage   decimal.Decimal `json:"leverage,omitempty"`
-		LiqPrice   decimal.Decimal `json:"liquidationPrice,omitempty"`
+		EntryPrice decimal.Decimal `json:"entryPrice"`
+		Leverage   decimal.Decimal `json:"leverage"`
+		LiqPrice   decimal.Decimal `json:"liquidationPrice"`
 		//MarkPrice decimal.Decimal `json:"markPrice,omitempty"`
 		// 符号代表多空方向, 正数为多，负数为空
-		PositionQty   decimal.Decimal `json:"positionAmt,omitempty"`
-		NotionalVal   decimal.Decimal `json:"notionalValue,omitempty"` // for CM
-		Notional      decimal.Decimal `json:"notional,omitempty"`      // for UM
-		UnrealisedPnl decimal.Decimal `json:"unRealizedProfit,omitempty"`
+		PositionQty   decimal.Decimal `json:"positionAmt"`
+		NotionalVal   decimal.Decimal `json:"notionalValue"` // for CM
+		Notional      decimal.Decimal `json:"notional"`      // for UM
+		UnrealisedPnl decimal.Decimal `json:"unRealizedProfit"`
 		Side          string          `json:"positionSide,omitempty"` // BOTH/SELL/BUY
 
 		Time int64 `json:"updateTime,omitempty"` // msec
@@ -927,7 +927,7 @@ func (bn *Binance) FuturesGetProfitLossHistory(typ, symbol, plType string,
 		//Symbol          string           `json:"symbol,omitempty"`
 		IncomeType string          `json:"incomeType,omitempty"`
 		Asset      string          `json:"asset,omitempty"`
-		Income     decimal.Decimal `json:"income,omitempty"`
+		Income     decimal.Decimal `json:"income"`
 		Time       int64           `json:"time,omitempty"`
 	}{}
 	if err = json.Unmarshal(resp, &ret); err != nil {

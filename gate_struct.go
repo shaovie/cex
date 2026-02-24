@@ -14,8 +14,8 @@ type GateSpotOrderBook struct {
 }
 
 type GateContractOrderBookTick struct {
-	Price decimal.Decimal `json:"p,omitempty"`
-	Size  decimal.Decimal `json:"s,omitempty"`
+	Price decimal.Decimal `json:"p"`
+	Size  decimal.Decimal `json:"s"`
 }
 type GateContractOrderBook struct {
 	Symbol string                      `json:"contract,omitempty"`
@@ -55,6 +55,6 @@ type GateContract24hTicker struct {
 type GateFundingRate struct {
 	Name     string          `json:"name"`
 	NextTime int64           `json:"funding_next_apply,omitempty"`
-	Fr       decimal.Decimal `json:"funding_rate,omitempty"`
+	Fr       decimal.Decimal `json:"funding_rate"`
 	Offline  bool            `json:"in_delisting,omitempty"` // 下线过渡期
 }

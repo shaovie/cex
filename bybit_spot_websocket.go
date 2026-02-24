@@ -66,15 +66,15 @@ func (bb *Bybit) SpotWsPublicSubscribe(channels []string) {
 		arr := strings.Split(c, "@")
 		if arr[0] == "bbo" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.Split(arr[1], ",")
-				for _, sym := range symbolArr {
+				symbolArr := strings.SplitSeq(arr[1], ",")
+				for sym := range symbolArr {
 					arg.Args = append(arg.Args, "orderbook.1."+strings.ToUpper(sym))
 				}
 			}
 		} else if arr[0] == "ticker" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.Split(arr[1], ",")
-				for _, sym := range symbolArr {
+				symbolArr := strings.SplitSeq(arr[1], ",")
+				for sym := range symbolArr {
 					arg.Args = append(arg.Args, "tickers."+strings.ToUpper(sym))
 				}
 			}
@@ -97,15 +97,15 @@ func (bb *Bybit) SpotWsPublicUnsubscribe(channels []string) {
 		arr := strings.Split(c, "@")
 		if arr[0] == "bbo" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.Split(arr[1], ",")
-				for _, sym := range symbolArr {
+				symbolArr := strings.SplitSeq(arr[1], ",")
+				for sym := range symbolArr {
 					arg.Args = append(arg.Args, "orderbook.1."+strings.ToUpper(sym))
 				}
 			}
 		} else if arr[0] == "ticker" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.Split(arr[1], ",")
-				for _, sym := range symbolArr {
+				symbolArr := strings.SplitSeq(arr[1], ",")
+				for sym := range symbolArr {
 					arg.Args = append(arg.Args, "tickers."+strings.ToUpper(sym))
 				}
 			}

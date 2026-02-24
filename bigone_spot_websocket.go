@@ -65,8 +65,8 @@ func (bo *Bigone) SpotWsPublicSubscribe(channels []string) {
 			if len(arr) < 2 || len(arr[1]) == 0 {
 				continue
 			}
-			symbolArr := strings.Split(arr[1], ",")
-			for _, sym := range symbolArr {
+			symbolArr := strings.SplitSeq(arr[1], ",")
+			for sym := range symbolArr {
 				if symbol := bo.getSpotSymbol(sym); symbol != "" {
 					req := fmt.Sprintf(`{"requestId": "%s", "subscribeMarketDepthRequest":{"market":"%s"}}`,
 						gutils.RandomStr(8), symbol)
@@ -109,8 +109,8 @@ func (bo *Bigone) SpotWsPublicUnsubscribe(channels []string) {
 			if len(arr) < 2 || len(arr[1]) == 0 {
 				continue
 			}
-			symbolArr := strings.Split(arr[1], ",")
-			for _, sym := range symbolArr {
+			symbolArr := strings.SplitSeq(arr[1], ",")
+			for sym := range symbolArr {
 				if symbol := bo.getSpotSymbol(sym); symbol != "" {
 					req := fmt.Sprintf(`{"requestId": "%s", "unsubscribeMarketDepthRequest":{"market":"%s"}}`,
 						gutils.RandomStr(8), symbol)
@@ -301,14 +301,14 @@ func (bo *Bigone) spotWsHandleOrderBook5(symbol string, ch chan<- any) {
 	obd.Asks = obd.Asks[:0]
 
 	it := bids.Iterator()
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		it.Next()
 		val, _ := decimal.NewFromString(it.Value())
 		tk := Ticker{Price: it.Key(), Quantity: val}
 		obd.Bids = append(obd.Bids, tk)
 	}
 	it = asks.Iterator()
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		it.Next()
 		val, _ := decimal.NewFromString(it.Value())
 		tk := Ticker{Price: it.Key(), Quantity: val}
@@ -348,7 +348,7 @@ func (bo *Bigone) SpotWsPrivateOpen() error {
 		RequestId string `json:"requestId,omitempty"`
 		Success   struct {
 			Ok bool `json:"ok,omitempty"` // 200 is ok
-		} `json:"success,omitempty"`
+		} `json:"success"`
 	}{}
 	if err = json.Unmarshal(msg, &resp); err != nil {
 		bo.SpotWsPrivateClose()
@@ -457,14 +457,14 @@ func (bo *Bigone) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
 			Symbol    string          `json:"market,omitempty"`
 			OrderId   string          `json:"id,omitempty"`
 			ClientId  string          `json:"clientOrderId,omitempty"`
-			Price     decimal.Decimal `json:"price,omitempty"`
-			Qty       decimal.Decimal `json:"amount,omitempty"`
-			FilledQty decimal.Decimal `json:"filledAmount,omitempty"`
-			AvgPrice  decimal.Decimal `json:"avgDealPrice,omitempty"`
+			Price     decimal.Decimal `json:"price"`
+			Qty       decimal.Decimal `json:"amount"`
+			FilledQty decimal.Decimal `json:"filledAmount"`
+			AvgPrice  decimal.Decimal `json:"avgDealPrice"`
 			Status    string          `json:"state,omitempty"`
 			Type      string          `json:"type,omitempty"`
 			Side      string          `json:"side,omitempty"`
-			FeeQty    decimal.Decimal `json:"filledFees,omitempty"`
+			FeeQty    decimal.Decimal `json:"filledFees"`
 			Time      string          `json:"createdAt,omitempty"`
 			UTime     string          `json:"updatedAt,omitempty"`
 		} `json:"order"`
@@ -526,7 +526,7 @@ func (bo *Bigone) spotWsHandleAccountUpdate(data json.RawMessage, ch chan<- any)
 			Symbol  string          `json:"asset"`
 			Balance decimal.Decimal `json:"balance"`
 			Locked  decimal.Decimal `json:"lockedBalance"`
-		} `json:"account,omitempty"`
+		} `json:"account"`
 	}{}
 	if err := json.Unmarshal(data, &as); err == nil && len(as.Account.Symbol) > 0 {
 		ch <- &SpotAsset{

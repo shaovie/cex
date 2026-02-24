@@ -25,7 +25,7 @@ func (bb *Bybit) serverTime() (int64, error) {
 	recv := struct {
 		Result struct {
 			Time string `json:"timeNano,omitempty"`
-		} `json:"result,omitempty"`
+		} `json:"result"`
 	}{}
 	if err = json.Unmarshal(resp, &recv); err != nil {
 		return 0, errors.New(bb.Name() + " unmarshal error! " + err.Error())
@@ -50,18 +50,18 @@ func (bb *Bybit) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error)
 				Quote         string `json:"quoteCoin,omitempty"`
 				Status        string `json:"status,omitempty"`
 				LotSizeFilter struct {
-					MaxQty      decimal.Decimal `json:"maxOrderQty,omitempty"`
-					MinQty      decimal.Decimal `json:"minOrderQty,omitempty"`
-					MinAmt      decimal.Decimal `json:"minOrderAmt,omitempty"`
-					MaxAmt      decimal.Decimal `json:"maxOrderAmt,omitempty"`
-					StepSize    decimal.Decimal `json:"basePrecision,omitempty"`
-					AmtStepSize decimal.Decimal `json:"quotePrecision,omitempty"`
-				} `json:"lotSizeFilter,omitempty"`
+					MaxQty      decimal.Decimal `json:"maxOrderQty"`
+					MinQty      decimal.Decimal `json:"minOrderQty"`
+					MinAmt      decimal.Decimal `json:"minOrderAmt"`
+					MaxAmt      decimal.Decimal `json:"maxOrderAmt"`
+					StepSize    decimal.Decimal `json:"basePrecision"`
+					AmtStepSize decimal.Decimal `json:"quotePrecision"`
+				} `json:"lotSizeFilter"`
 				PriceFilter struct {
-					TickSize decimal.Decimal `json:"tickSize,omitempty"`
-				} `json:"priceFilter,omitempty"`
+					TickSize decimal.Decimal `json:"tickSize"`
+				} `json:"priceFilter"`
 			} `json:"list,omitempty"`
-		} `json:"result,omitempty"`
+		} `json:"result"`
 	}{}
 	if err = json.Unmarshal(resp, &recv); err != nil {
 		return nil, errors.New(bb.Name() + " unmarshal fail! " + err.Error())
@@ -110,7 +110,7 @@ func (bb *Bybit) SpotGetBBO(symbol string) (BestBidAsk, error) {
 				AskPrice decimal.Decimal `json:"ask1Price"`
 				AskQty   decimal.Decimal `json:"ask1Size"`
 			} `json:"list,omitempty"`
-		} `json:"result,omitempty"`
+		} `json:"result"`
 	}{}
 	if err = json.Unmarshal(resp, &ret); err != nil {
 		return BestBidAsk{}, errors.New(bb.Name() + " Unmarshal err! " + err.Error())
@@ -141,11 +141,11 @@ func (bb *Bybit) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 		Result struct {
 			List []struct {
 				Coin []struct {
-					Avail  decimal.Decimal `json:"walletBalance,omitempty"`
+					Avail  decimal.Decimal `json:"walletBalance"`
 					Symbol string          `json:"coin,omitempty"`
 				} `json:"coin,omitempty"`
 			} `json:"list,omitempty"`
-		} `json:"result,omitempty"`
+		} `json:"result"`
 	}{}
 	if err = json.Unmarshal(resp, &recv); err != nil {
 		return nil, errors.New(bb.Name() + " unmarshal error! " + err.Error())
@@ -210,7 +210,7 @@ func (bb *Bybit) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 		Msg    string `json:"retMsg,omitempty"`
 		Result struct {
 			OrderId string `json:"orderId"`
-		} `json:"result,omitempty"`
+		} `json:"result"`
 	}{}
 	if err = json.Unmarshal(resp, &recv); err != nil {
 		return "", errors.New(bb.Name() + " Unmarshal err! " + err.Error())
@@ -241,7 +241,7 @@ func (bb *Bybit) SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId strin
 		Msg    string `json:"retMsg,omitempty"`
 		Result struct {
 			OrderId string `json:"orderId"`
-		} `json:"result,omitempty"`
+		} `json:"result"`
 	}{}
 	if err = json.Unmarshal(resp, &recv); err != nil {
 		return errors.New(bb.Name() + " Unmarshal err! " + err.Error())
@@ -273,20 +273,20 @@ func (bb *Bybit) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error)
 				Symbol       string            `json:"symbol,omitempty"` // BTCUSDT
 				OrderId      string            `json:"orderId,omitempty"`
 				ClientId     string            `json:"orderLinkId,omitempty"`
-				Price        decimal.Decimal   `json:"price,omitempty"`
-				Quantity     decimal.Decimal   `json:"qty,omitempty"`         // 用户设置的原始订单数量
+				Price        decimal.Decimal   `json:"price"`
+				Quantity     decimal.Decimal   `json:"qty"`                   // 用户设置的原始订单数量
 				Type         string            `json:"orderType,omitempty"`   // LIMIT/MARKET
 				TimeInForce  string            `json:"timeInForce,omitempty"` // GTC/FOK/IOC
 				Side         string            `json:"side,omitempty"`
-				ExecutedQty  decimal.Decimal   `json:"cumExecQty,omitempty"`   // 交易的订单数量
-				CummQuoteQty decimal.Decimal   `json:"cumExecValue,omitempty"` // 累计交易的金额
-				FeeQty       decimal.Decimal   `json:"cumExecFee,omitempty"`
+				ExecutedQty  decimal.Decimal   `json:"cumExecQty"`   // 交易的订单数量
+				CummQuoteQty decimal.Decimal   `json:"cumExecValue"` // 累计交易的金额
+				FeeQty       decimal.Decimal   `json:"cumExecFee"`
 				Status       string            `json:"orderStatus,omitempty"`
 				Time         string            `json:"createdTime,omitempty"`
 				UTime        string            `json:"updatedTime,omitempty"`
 				FeeDetail    map[string]string `json:"cumFeeDetail,omitempty"`
 			} `json:"list,omitempty"`
-		} `json:"result,omitempty"`
+		} `json:"result"`
 	}{}
 	if err = json.Unmarshal(resp, &recv); err != nil {
 		return nil, errors.New(bb.Name() + " unmarshal error! " + err.Error())
@@ -335,20 +335,20 @@ func (bb *Bybit) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 				Symbol       string            `json:"symbol,omitempty"` // BTCUSDT
 				OrderId      string            `json:"orderId,omitempty"`
 				ClientId     string            `json:"orderLinkId,omitempty"`
-				Price        decimal.Decimal   `json:"price,omitempty"`
-				Quantity     decimal.Decimal   `json:"qty,omitempty"`         // 用户设置的原始订单数量
+				Price        decimal.Decimal   `json:"price"`
+				Quantity     decimal.Decimal   `json:"qty"`                   // 用户设置的原始订单数量
 				Type         string            `json:"orderType,omitempty"`   // LIMIT/MARKET
 				TimeInForce  string            `json:"timeInForce,omitempty"` // GTC/FOK/IOC
 				Side         string            `json:"side,omitempty"`
-				ExecutedQty  decimal.Decimal   `json:"cumExecQty,omitempty"`   // 交易的订单数量
-				CummQuoteQty decimal.Decimal   `json:"cumExecValue,omitempty"` // 累计交易的金额
-				FeeQty       decimal.Decimal   `json:"cumExecFee,omitempty"`
+				ExecutedQty  decimal.Decimal   `json:"cumExecQty"`   // 交易的订单数量
+				CummQuoteQty decimal.Decimal   `json:"cumExecValue"` // 累计交易的金额
+				FeeQty       decimal.Decimal   `json:"cumExecFee"`
 				Status       string            `json:"orderStatus,omitempty"`
 				Time         string            `json:"createdTime,omitempty"`
 				UTime        string            `json:"updatedTime,omitempty"`
 				FeeDetail    map[string]string `json:"cumFeeDetail,omitempty"`
 			} `json:"list,omitempty"`
-		} `json:"result,omitempty"`
+		} `json:"result"`
 	}{}
 	if err = json.Unmarshal(resp, &recv); err != nil {
 		return nil, errors.New(bb.Name() + " unmarshal error! " + err.Error())

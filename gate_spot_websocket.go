@@ -63,8 +63,8 @@ func (gt *Gate) SpotWsPublicSubscribe(channels []string) {
 				continue
 			}
 			arg.Channel = "spot.order_book"
-			symbolArr := strings.Split(arr[1], ",")
-			for _, sym := range symbolArr {
+			symbolArr := strings.SplitSeq(arr[1], ",")
+			for sym := range symbolArr {
 				if symbol := gt.getSpotSymbol(sym); symbol != "" {
 					arg.Payload = []string{symbol, "5", "100ms"}
 					req, _ := json.Marshal(&arg)
@@ -110,8 +110,8 @@ func (gt *Gate) SpotWsPublicUnsubscribe(channels []string) {
 				continue
 			}
 			arg.Channel = "spot.order_book"
-			symbolArr := strings.Split(arr[1], ",")
-			for _, sym := range symbolArr {
+			symbolArr := strings.SplitSeq(arr[1], ",")
+			for sym := range symbolArr {
 				if symbol := gt.getSpotSymbol(sym); symbol != "" {
 					arg.Payload = []string{symbol, "5", "100ms"}
 					req, _ := json.Marshal(&arg)
@@ -301,7 +301,7 @@ func (gt *Gate) SpotWsPrivateOpen() error {
 		Header    struct {
 			Channel string `json:"channel,omitempty"`
 			Status  string `json:"status,omitempty"` // 200 is ok
-		} `json:"header,omitempty"`
+		} `json:"header"`
 	}{}
 	if err = json.Unmarshal(msg, &resp); err != nil {
 		gt.SpotWsPrivateClose()
@@ -379,14 +379,14 @@ type GtWsPrivMsg struct {
 	Header    struct {
 		Channel string `json:"channel,omitempty"`
 		Status  string `json:"status,omitempty"` // 200 is ok
-	} `json:"header,omitempty"`
+	} `json:"header"`
 	RespData struct {
 		Result json.RawMessage `json:"result,omitempty"`
 		Errs   struct {
 			Label   string `json:"label,omitempty"`
 			Message string `json:"message,omitempty"`
-		} `json:"errs,omitempty"`
-	} `json:"data,omitempty"`
+		} `json:"errs"`
+	} `json:"data"`
 }
 
 func (v *GtWsPrivMsg) reset() {
@@ -477,18 +477,18 @@ func (gt *Gate) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
 		Symbol       string          `json:"currency_pair,omitempty"`
 		OrderId      string          `json:"id,omitempty"`
 		ClientId     string          `json:"text,omitempty"`
-		Price        decimal.Decimal `json:"price,omitempty"`
-		Qty          decimal.Decimal `json:"amount,omitempty"`
-		CummQuoteQty decimal.Decimal `json:"filled_total,omitempty"`
-		ExecutedQty  decimal.Decimal `json:"filled_amount,omitempty"`
-		Left         decimal.Decimal `json:"left,omitempty"`
+		Price        decimal.Decimal `json:"price"`
+		Qty          decimal.Decimal `json:"amount"`
+		CummQuoteQty decimal.Decimal `json:"filled_total"`
+		ExecutedQty  decimal.Decimal `json:"filled_amount"`
+		Left         decimal.Decimal `json:"left"`
 		Status       string          `json:"status,omitempty"`
 		Type         string          `json:"type,omitempty"`
 		TimeInForce  string          `json:"time_in_force,omitempty"` // GTC/FOK/IOC
 		Side         string          `json:"side,omitempty"`
 		FeeCoin      string          `json:"fee_currency,omitempty"`
-		FeeQty       decimal.Decimal `json:"fee,omitempty"`
-		GtQty        decimal.Decimal `json:"gt_fee,omitempty"`    //
+		FeeQty       decimal.Decimal `json:"fee"`
+		GtQty        decimal.Decimal `json:"gt_fee"`              //
 		Event        string          `json:"event,omitempty"`     //
 		FinishAs     string          `json:"finish_as,omitempty"` //
 		Time         string          `json:"create_time_ms,omitempty"`

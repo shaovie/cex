@@ -74,22 +74,22 @@ func (bn *Binance) SpotWsPublicSubscribe(channels []string) {
 		arr := strings.Split(c, "@")
 		if arr[0] == "orderbook5" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.Split(arr[1], ",")
-				for _, sym := range symbolArr {
+				symbolArr := strings.SplitSeq(arr[1], ",")
+				for sym := range symbolArr {
 					arg.Params = append(arg.Params, strings.ToLower(sym)+"@depth5@100ms")
 				}
 			}
 		} else if arr[0] == "bbo" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.Split(arr[1], ",")
-				for _, sym := range symbolArr {
+				symbolArr := strings.SplitSeq(arr[1], ",")
+				for sym := range symbolArr {
 					arg.Params = append(arg.Params, strings.ToLower(sym)+"@bookTicker")
 				}
 			}
 		} else if arr[0] == "ticker" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.Split(arr[1], ",")
-				for _, sym := range symbolArr {
+				symbolArr := strings.SplitSeq(arr[1], ",")
+				for sym := range symbolArr {
 					arg.Params = append(arg.Params, strings.ToLower(sym)+"@miniTicker")
 				}
 			}
@@ -112,22 +112,22 @@ func (bn *Binance) SpotWsPublicUnsubscribe(channels []string) {
 		arr := strings.Split(c, "@")
 		if arr[0] == "orderbook5" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.Split(arr[1], ",")
-				for _, sym := range symbolArr {
+				symbolArr := strings.SplitSeq(arr[1], ",")
+				for sym := range symbolArr {
 					arg.Params = append(arg.Params, strings.ToLower(sym)+"@depth5@100ms")
 				}
 			}
 		} else if arr[0] == "bbo" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.Split(arr[1], ",")
-				for _, sym := range symbolArr {
+				symbolArr := strings.SplitSeq(arr[1], ",")
+				for sym := range symbolArr {
 					arg.Params = append(arg.Params, strings.ToLower(sym)+"@bookTicker")
 				}
 			}
 		} else if arr[0] == "ticker" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.Split(arr[1], ",")
-				for _, sym := range symbolArr {
+				symbolArr := strings.SplitSeq(arr[1], ",")
+				for sym := range symbolArr {
 					arg.Params = append(arg.Params, strings.ToLower(sym)+"@miniTicker")
 				}
 			}
@@ -352,13 +352,13 @@ type BnSpotWsPrivMsg struct {
 	Err    struct {
 		Code int    `json:"code,omitempty"`
 		Msg  string `json:"msg,omitempty"`
-	} `json:"error,omitempty"`
+	} `json:"error"`
 	Result json.RawMessage `json:"result,omitempty"`
 
 	Data struct {
 		Event string `json:"e,omitempty"`
 		Time  int64  `json:"E,omitempty"` // msec
-	} `json:"event,omitempty"`
+	} `json:"event"`
 }
 
 func (v *BnSpotWsPrivMsg) reset() {
@@ -445,23 +445,23 @@ func (bn *Binance) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
 			Side         string          `json:"S,omitempty"`
 			OrderType    string          `json:"o,omitempty"`
 			TimeInForce  string          `json:"f,omitempty"` // GTC/FOK/IOC
-			IceXX        decimal.Decimal `json:"F,omitempty"` // 冰山订单数量
+			IceXX        decimal.Decimal `json:"F"`           // 冰山订单数量
 			CreateTime   int64           `json:"O,omitempty"` // 订单创建时间 msec
 			ExecTime     int64           `json:"T,omitempty"` // 成交时间 msec
 			Xt           int64           `json:"t,omitempty"` // 未知
-			Qty          decimal.Decimal `json:"q,omitempty"` // 原始订单数量
-			QtyXX        decimal.Decimal `json:"Q,omitempty"` // Quote Order Quantity
-			Price        decimal.Decimal `json:"p,omitempty"` // 原始订单价格
-			TrigerPrice  decimal.Decimal `json:"P,omitempty"` // 止盈止损单触发价格
-			ExecQty      decimal.Decimal `json:"l,omitempty"` // 末次成交数量
-			ExecPrice    decimal.Decimal `json:"L,omitempty"` // 末次成交价格
-			ExecutedQty  decimal.Decimal `json:"z,omitempty"` // 订单累计已成交量
-			CummQuoteQty decimal.Decimal `json:"Z,omitempty"` // 订单累计已成交金额
-			FeeQty       decimal.Decimal `json:"n,omitempty"` // 手续费数量
+			Qty          decimal.Decimal `json:"q"`           // 原始订单数量
+			QtyXX        decimal.Decimal `json:"Q"`           // Quote Order Quantity
+			Price        decimal.Decimal `json:"p"`           // 原始订单价格
+			TrigerPrice  decimal.Decimal `json:"P"`           // 止盈止损单触发价格
+			ExecQty      decimal.Decimal `json:"l"`           // 末次成交数量
+			ExecPrice    decimal.Decimal `json:"L"`           // 末次成交价格
+			ExecutedQty  decimal.Decimal `json:"z"`           // 订单累计已成交量
+			CummQuoteQty decimal.Decimal `json:"Z"`           // 订单累计已成交金额
+			FeeQty       decimal.Decimal `json:"n"`           // 手续费数量
 			FeeAsset     string          `json:"N,omitempty"` // 手续费类型
 			EventType    string          `json:"x,omitempty"` // 本次事件的执行类型
 			Status       string          `json:"X,omitempty"` // 订单当前状态
-		} `json:"event,omitempty"`
+		} `json:"event"`
 	}{}
 	if err := json.Unmarshal(data, &order); err == nil && order.Data.OrderId > 0 {
 		if order.Data.Status == "CANCELED" {
@@ -494,7 +494,7 @@ func (bn *Binance) spotWsHandleBalanceUpdate(data json.RawMessage, ch chan<- any
 				Balance decimal.Decimal `json:"f"`
 				Locked  decimal.Decimal `json:"l"`
 			} `json:"B,omitempty"`
-		} `json:"event,omitempty"`
+		} `json:"event"`
 	}{}
 	if err := json.Unmarshal(data, &msg); err == nil && len(msg.Event.B) > 0 {
 		for _, as := range msg.Event.B {

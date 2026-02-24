@@ -44,9 +44,9 @@ func (gt *Gate) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) 
 		Base         string          `json:"base,omitempty"`
 		Quote        string          `json:"quote,omitempty"`
 		Status       string          `json:"trade_status"`
-		MinNotional  decimal.Decimal `json:"min_quote_amount,omitempty"`
+		MinNotional  decimal.Decimal `json:"min_quote_amount"`
 		QtyPrecision int32           `json:"amount_precision,omitempty"`
-		MinBaseQty   decimal.Decimal `json:"min_base_amount,omitempty"`
+		MinBaseQty   decimal.Decimal `json:"min_base_amount"`
 		Precision    int32           `json:"precision,omitempty"`
 	}{}
 
@@ -252,18 +252,18 @@ func (gt *Gate) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error) 
 		Symbol       string          `json:"currency_pair,omitempty"`
 		OrderId      string          `json:"id,omitempty"`
 		ClientId     string          `json:"text,omitempty"`
-		Price        decimal.Decimal `json:"price,omitempty"`
-		Qty          decimal.Decimal `json:"amount,omitempty"`
-		ExecutedQty  decimal.Decimal `json:"filled_amount,omitempty"`
-		CummQuoteQty decimal.Decimal `json:"filled_total,omitempty"`
-		Left         decimal.Decimal `json:"left,omitempty"`
+		Price        decimal.Decimal `json:"price"`
+		Qty          decimal.Decimal `json:"amount"`
+		ExecutedQty  decimal.Decimal `json:"filled_amount"`
+		CummQuoteQty decimal.Decimal `json:"filled_total"`
+		Left         decimal.Decimal `json:"left"`
 		Status       string          `json:"status,omitempty"`
 		Type         string          `json:"type,omitempty"`
 		TimeInForce  string          `json:"time_in_force,omitempty"` // GTC/FOK/IOC
 		Side         string          `json:"side,omitempty"`
 		FeeCoin      string          `json:"fee_currency,omitempty"`
-		FeeQty       decimal.Decimal `json:"fee,omitempty"`
-		GtQty        decimal.Decimal `json:"gt_fee,omitempty"`    //
+		FeeQty       decimal.Decimal `json:"fee"`
+		GtQty        decimal.Decimal `json:"gt_fee"`              //
 		Event        string          `json:"event,omitempty"`     //
 		FinishAs     string          `json:"finish_as,omitempty"` //
 		Time         int64           `json:"create_time_ms,omitempty"`
@@ -339,18 +339,18 @@ func (gt *Gate) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 			Symbol       string          `json:"currency_pair,omitempty"`
 			OrderId      string          `json:"id,omitempty"`
 			ClientId     string          `json:"text,omitempty"`
-			Price        decimal.Decimal `json:"price,omitempty"`
-			Qty          decimal.Decimal `json:"amount,omitempty"`
-			ExecutedQty  decimal.Decimal `json:"filled_amount,omitempty"`
-			CummQuoteQty decimal.Decimal `json:"filled_total,omitempty"`
-			Left         decimal.Decimal `json:"left,omitempty"`
+			Price        decimal.Decimal `json:"price"`
+			Qty          decimal.Decimal `json:"amount"`
+			ExecutedQty  decimal.Decimal `json:"filled_amount"`
+			CummQuoteQty decimal.Decimal `json:"filled_total"`
+			Left         decimal.Decimal `json:"left"`
 			Status       string          `json:"status,omitempty"`
 			Type         string          `json:"type,omitempty"`
 			TimeInForce  string          `json:"time_in_force,omitempty"` // GTC/FOK/IOC
 			Side         string          `json:"side,omitempty"`
 			FeeCoin      string          `json:"fee_currency,omitempty"`
-			FeeQty       decimal.Decimal `json:"fee,omitempty"`
-			GtQty        decimal.Decimal `json:"gt_fee,omitempty"`    //
+			FeeQty       decimal.Decimal `json:"fee"`
+			GtQty        decimal.Decimal `json:"gt_fee"`              //
 			Event        string          `json:"event,omitempty"`     //
 			FinishAs     string          `json:"finish_as,omitempty"` //
 			Time         int64           `json:"create_time_ms,omitempty"`

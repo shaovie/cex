@@ -41,8 +41,8 @@ func (mc *Mexc) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) 
 			Quote  string `json:"quoteAsset,omitempty"`
 			Status string `json:"status"` // 1 - 开放， 2 - 暂停， 3 - 下线
 
-			StepSize decimal.Decimal `json:"quoteAmountPrecision,omitempty"`
-			TickSize decimal.Decimal `json:"baseSizePrecision,omitempty"`
+			StepSize decimal.Decimal `json:"quoteAmountPrecision"`
+			TickSize decimal.Decimal `json:"baseSizePrecision"`
 		} `json:"symbols,omitempty"`
 	}{}
 	err = json.Unmarshal(resp, &recv)
