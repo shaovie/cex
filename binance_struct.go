@@ -49,10 +49,24 @@ type BinanceSpotOrderBook struct {
 	Bids [][2]decimal.Decimal `json:"bids,omitempty"`
 	Asks [][2]decimal.Decimal `json:"asks,omitempty"`
 }
+
+func (v *BinanceSpotOrderBook) reset() {
+	v.Bids = v.Bids[:0]
+	v.Asks = v.Asks[:0]
+}
+
 type BinanceFuturesOrderBook struct {
 	Event  string               `json:"e,omitempty"`
 	Time   int64                `json:"E,omitempty"`
 	Symbol string               `json:"s,omitempty"`
 	Bids   [][2]decimal.Decimal `json:"b,omitempty"`
 	Asks   [][2]decimal.Decimal `json:"a,omitempty"`
+}
+
+func (v *BinanceFuturesOrderBook) reset() {
+	// v.Event = ""
+	// v.Time = 0
+	// v.Symbol = ""
+	v.Bids = v.Bids[:0]
+	v.Asks = v.Asks[:0]
 }

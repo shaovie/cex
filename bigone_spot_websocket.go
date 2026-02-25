@@ -20,8 +20,10 @@ import (
 )
 
 var (
-	boSpotWsPubMsgPool  sync.Pool
-	boSpotWsPrivMsgPool sync.Pool
+	boSpotWsPubMsgPool          sync.Pool
+	boSpotWsPrivMsgPool         sync.Pool
+	boSpotWsPublicBBOInnerPool  sync.Pool
+	boSpotWsPublicBBOsInnerPool sync.Pool
 )
 
 func init() {
@@ -33,6 +35,16 @@ func init() {
 	boSpotWsPrivMsgPool = sync.Pool{
 		New: func() any {
 			return &BigoneSpotWsPrivMsg{}
+		},
+	}
+	boSpotWsPublicBBOInnerPool = sync.Pool{
+		New: func() any {
+			return &BigoneSpotBBO{}
+		},
+	}
+	boSpotWsPublicBBOsInnerPool = sync.Pool{
+		New: func() any {
+			return &BigoneSpotBBOs{}
 		},
 	}
 }
@@ -148,6 +160,9 @@ func (bo *Bigone) SpotWsPublicTickerPoolPut(v any) {
 func (bo *Bigone) SpotWsPublicOrderBook5PoolPut(v any) {
 	wsPublicOrderBook5Pool.Put(v)
 }
+func (bo *Bigone) SpotWsPublicBBOPoolPut(v any) {
+	wsPublicBBOPool.Put(v)
+}
 func (bo *Bigone) SpotWsPublicLoop(ch chan<- any) {
 	defer bo.SpotWsPublicClose()
 	defer close(ch)
@@ -196,7 +211,9 @@ func (bo *Bigone) SpotWsPublicLoop(ch chan<- any) {
 				bo.spotWsHandleOrderBook5(symbol, ch)
 			}
 		} else if msg.TickerSnap != nil {
+			bo.spotWsHandleBBOs(msg.TickerSnap, ch)
 		} else if msg.TickerUpdate != nil {
+			bo.spotWsHandleBBO(msg.TickerUpdate, ch)
 		} else if bytes.Contains(recv, []byte(`"heartbeat":`)) {
 		} else if bytes.Contains(recv, []byte(`"success":`)) {
 		} else {
@@ -256,7 +273,8 @@ func (bo *Bigone) spotWsHandleOrderBookUpdate(data json.RawMessage) (string, boo
 	depth.Depth.Bids = depth.Depth.Bids[:0]
 	depth.Depth.Asks = depth.Depth.Asks[:0]
 	if err := easyjson.Unmarshal(data, depth); err == nil {
-		symbol := strings.ReplaceAll(depth.Depth.Symbol, "-", "")
+		base, quote, _ := strings.Cut(depth.Depth.Symbol, "-")
+		symbol := base + quote
 		if depth.PrevId != bo.spotWsOrderBookSeqId[symbol] {
 			ilog.Error(bo.Name() + " spot.ws.public orderbook seq error!")
 			return "", false
@@ -315,6 +333,40 @@ func (bo *Bigone) spotWsHandleOrderBook5(symbol string, ch chan<- any) {
 		obd.Asks = append(obd.Asks, tk)
 	}
 	ch <- obd
+}
+func (bo *Bigone) spotWsHandleBBO(data json.RawMessage, ch chan<- any) {
+	bbo := boSpotWsPublicBBOInnerPool.Get().(*BigoneSpotBBO)
+	defer boSpotWsPublicBBOInnerPool.Put(bbo)
+	bbo.reset()
+	if err := easyjson.Unmarshal(data, bbo); err == nil {
+		base, quote, _ := strings.Cut(bbo.Ticker.Symbol, "-")
+		obd := wsPublicBBOPool.Get().(*BestBidAsk)
+		obd.Symbol = base + quote
+		obd.Time = 0 // Bigone不提供
+		obd.BidPrice = bbo.Ticker.Bid.Price
+		obd.BidQty = bbo.Ticker.Bid.Qty
+		obd.AskPrice = bbo.Ticker.Ask.Price
+		obd.AskQty = bbo.Ticker.Ask.Qty
+		ch <- obd
+	}
+}
+func (bo *Bigone) spotWsHandleBBOs(data json.RawMessage, ch chan<- any) {
+	bbos := boSpotWsPublicBBOsInnerPool.Get().(*BigoneSpotBBOs)
+	defer boSpotWsPublicBBOsInnerPool.Put(bbos)
+	bbos.reset()
+	if err := easyjson.Unmarshal(data, bbos); err == nil {
+		for _, tk := range bbos.Tickers {
+			base, quote, _ := strings.Cut(tk.Symbol, "-")
+			obd := wsPublicBBOPool.Get().(*BestBidAsk)
+			obd.Symbol = base + quote
+			obd.Time = 0 // Bigone不提供
+			obd.BidPrice = tk.Bid.Price
+			obd.BidQty = tk.Bid.Qty
+			obd.AskPrice = tk.Ask.Price
+			obd.AskQty = tk.Ask.Qty
+			ch <- obd
+		}
+	}
 }
 
 // = priv channel

@@ -248,10 +248,9 @@ func (bn *Binance) FuturesWsPublicClose() {
 func (bn *Binance) futuresWsHandleOrderBook5(data json.RawMessage, ch chan<- any) {
 	depth := bnFuturesWsPublicOrderBookInnerPool.Get().(*BinanceFuturesOrderBook)
 	defer bnFuturesWsPublicOrderBookInnerPool.Put(depth)
-	depth.Bids = depth.Bids[:0]
-	depth.Asks = depth.Asks[:0]
+	depth.reset()
 	if err := easyjson.Unmarshal(data, depth); err == nil {
-		if len(depth.Bids) != len(depth.Asks) {
+		if len(depth.Bids) != len(depth.Asks) || len(depth.Bids) == 0 {
 			ilog.Error(bn.Name() + " futures.ws.public " + depth.Symbol + " orderbook5 exception")
 			return
 		}

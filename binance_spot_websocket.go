@@ -225,10 +225,9 @@ func (bn *Binance) SpotWsPublicClose() {
 func (bn *Binance) spotWsHandleOrderBook5(symbol string, data json.RawMessage, ch chan<- any) {
 	depth := bnSpotWsPublicOrderBookInnerPool.Get().(*BinanceSpotOrderBook)
 	defer bnSpotWsPublicOrderBookInnerPool.Put(depth)
-	depth.Bids = depth.Bids[:0]
-	depth.Asks = depth.Asks[:0]
+	depth.reset()
 	if err := easyjson.Unmarshal(data, depth); err == nil {
-		if len(depth.Bids) != len(depth.Asks) {
+		if len(depth.Bids) != len(depth.Asks) || len(depth.Bids) == 0 {
 			ilog.Error(bn.Name() + " spot.ws.public " + symbol + " orderbook5 exception")
 			return
 		}

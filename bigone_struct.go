@@ -6,33 +6,54 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type BigoneSpot24hTicker struct {
-	Code int    `json:"code,omitempty"`
-	Msg  string `json:"message,omitempty"`
-	Data []struct {
-		Symbol string `json:"asset_pair_name"`
+type BigoneSpotBBO struct {
+	Ticker struct {
+		Symbol string `json:"market"`
 		Bid    struct {
 			Price decimal.Decimal `json:"price"`
-			//Qty        decimal.Decimal `json:"quantity"`
+			Qty   decimal.Decimal `json:"amount"`
 		} `json:"bid"`
 		Ask struct {
 			Price decimal.Decimal `json:"price"`
-			//Qty        decimal.Decimal `json:"quantity"`
+			Qty   decimal.Decimal `json:"amount"`
 		} `json:"ask"`
-		Volume      decimal.Decimal `json:"base_volume"`
-		QuoteVolume decimal.Decimal `json:"quote_volume"`
-	} `json:"data,omitempty"`
+	} `json:"ticker"`
 }
+
+func (v *BigoneSpotBBO) reset() {
+	v.Ticker.Symbol = ""
+	v.Ticker.Bid.Price = decimal.Zero
+	v.Ticker.Ask.Price = decimal.Zero
+}
+
+type BigoneSpotBBOs struct {
+	Tickers []struct {
+		Symbol string `json:"market"`
+		Bid    struct {
+			Price decimal.Decimal `json:"price"`
+			Qty   decimal.Decimal `json:"amount"`
+		} `json:"bid"`
+		Ask struct {
+			Price decimal.Decimal `json:"price"`
+			Qty   decimal.Decimal `json:"amount"`
+		} `json:"ask"`
+	} `json:"tickers"`
+}
+
+func (v *BigoneSpotBBOs) reset() {
+	v.Tickers = v.Tickers[:0]
+}
+
 type BigoneSpotWsPubMsg struct {
 	Err struct {
-		Code int    `json:"code,omitempty"`
-		Msg  string `json:"message,omitempty"`
+		Code int    `json:"code"`
+		Msg  string `json:"message"`
 	} `json:"error"`
 
-	DepthSnap    json.RawMessage `json:"depthSnapshot,omitempty"`
-	DepthUpdate  json.RawMessage `json:"depthUpdate,omitempty"`
-	TickerSnap   json.RawMessage `json:"tickersSnapshot,omitempty"`
-	TickerUpdate json.RawMessage `json:"tickerUpdate,omitempty"`
+	DepthSnap    json.RawMessage `json:"depthSnapshot"`
+	DepthUpdate  json.RawMessage `json:"depthUpdate"`
+	TickerSnap   json.RawMessage `json:"tickersSnapshot"`
+	TickerUpdate json.RawMessage `json:"tickerUpdate"`
 }
 
 func (v *BigoneSpotWsPubMsg) reset() {
@@ -60,13 +81,13 @@ type BigoneSpotOrderBook struct {
 }
 type BigoneSpotWsPrivMsg struct {
 	Err struct {
-		Code int    `json:"code,omitempty"`
-		Msg  string `json:"message,omitempty"`
+		Code int    `json:"code"`
+		Msg  string `json:"message"`
 	} `json:"error"`
 
-	OrderUpdate   json.RawMessage `json:"orderUpdate,omitempty"`
-	AccountSnap   json.RawMessage `json:"accountsSnapshot,omitempty"`
-	AccountUpdate json.RawMessage `json:"accountUpdate,omitempty"`
+	OrderUpdate   json.RawMessage `json:"orderUpdate"`
+	AccountSnap   json.RawMessage `json:"accountsSnapshot"`
+	AccountUpdate json.RawMessage `json:"accountUpdate"`
 }
 
 func (v *BigoneSpotWsPrivMsg) reset() {
