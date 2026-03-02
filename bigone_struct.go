@@ -54,6 +54,8 @@ type BigoneSpotWsPubMsg struct {
 	DepthUpdate  json.RawMessage `json:"depthUpdate"`
 	TickerSnap   json.RawMessage `json:"tickersSnapshot"`
 	TickerUpdate json.RawMessage `json:"tickerUpdate"`
+	TradeSnap    json.RawMessage `json:"tradesSnapshot"`
+	TradeUpdate  json.RawMessage `json:"tradeUpdate"`
 }
 
 func (v *BigoneSpotWsPubMsg) reset() {
@@ -63,6 +65,8 @@ func (v *BigoneSpotWsPubMsg) reset() {
 	v.DepthUpdate = nil
 	v.TickerSnap = nil
 	v.TickerUpdate = nil
+	v.TradeSnap = nil
+	v.TradeUpdate = nil
 }
 
 type BigoneSpotOrderBookItem struct {

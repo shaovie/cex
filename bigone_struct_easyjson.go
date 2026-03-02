@@ -66,6 +66,22 @@ func easyjson12993614DecodeGithubComShaovieCex(in *jlexer.Lexer, out *BigoneSpot
 					in.AddError((out.TickerUpdate).UnmarshalJSON(data))
 				}
 			}
+		case "tradesSnapshot":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.TradeSnap).UnmarshalJSON(data))
+				}
+			}
+		case "tradeUpdate":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.TradeUpdate).UnmarshalJSON(data))
+				}
+			}
 		default:
 			in.SkipRecursive()
 		}
@@ -104,6 +120,16 @@ func easyjson12993614EncodeGithubComShaovieCex(out *jwriter.Writer, in BigoneSpo
 		const prefix string = ",\"tickerUpdate\":"
 		out.RawString(prefix)
 		out.Raw((in.TickerUpdate).MarshalJSON())
+	}
+	{
+		const prefix string = ",\"tradesSnapshot\":"
+		out.RawString(prefix)
+		out.Raw((in.TradeSnap).MarshalJSON())
+	}
+	{
+		const prefix string = ",\"tradeUpdate\":"
+		out.RawString(prefix)
+		out.Raw((in.TradeUpdate).MarshalJSON())
 	}
 	out.RawByte('}')
 }

@@ -44,6 +44,7 @@ func (us *Unsupported) SpotWsPublicUnsubscribe(channels []string) {}
 func (us *Unsupported) SpotWsPublicTickerPoolPut(v any)           {}
 func (us *Unsupported) SpotWsPublicOrderBook5PoolPut(v any)       {}
 func (us *Unsupported) SpotWsPublicBBOPoolPut(v any)              {}
+func (us *Unsupported) SpotWsPublicTradePoolPut(v any)            {}
 func (us *Unsupported) SpotWsPublicLoop(ch chan<- any)            {}
 func (us *Unsupported) SpotWsPublicClose()                        {}
 func (us *Unsupported) SpotWsPublicIsClosed() bool                { return true }

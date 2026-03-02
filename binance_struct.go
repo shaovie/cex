@@ -70,3 +70,11 @@ func (v *BinanceFuturesOrderBook) reset() {
 	v.Bids = v.Bids[:0]
 	v.Asks = v.Asks[:0]
 }
+
+type BinanceSpotPublicTrade struct {
+	Symbol string `json:"s"`
+	//TradeId int64           `json:"t"`
+	Time  int64           `json:"T"`
+	Price decimal.Decimal `json:"p"`
+	Qty   decimal.Decimal `json:"q"`
+}

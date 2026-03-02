@@ -33,11 +33,12 @@ func spotPubWs(cexObj cex.Exchanger) {
 	ilog.Rinfo("test load exchange rule: %v", len(arr) > 0)
 	allSymbols := strings.Join(arr, ",")
 	cexObj.SpotWsPublicSubscribe([]string{"ticker@" + allSymbols,
-		"orderbook5@ETHUSDT,BTCUSDT", "orderbook5@SOLUSDT", "bbo@DOGEUSDT"})
+		"orderbook5@ETHUSDT,BTCUSDT", "orderbook5@SOLUSDT", "bbo@BTCUSDT", "trades@BTCUSDT"})
 	go cexObj.SpotWsPublicLoop(ch)
 	go func() {
-		time.Sleep(3 * time.Second)
-		cexObj.SpotWsPublicUnsubscribe([]string{"orderbook5@BTCUSDT", "bbo@DOGEUSDT"})
+		time.Sleep(30 * time.Second)
+		cexObj.SpotWsPublicUnsubscribe([]string{"orderbook5@BTCUSDT", "bbo@BTCUSDT"})
+		ilog.Rinfo("spot pub ws unsubscribe orderbook5@BTCUSDT bbo@BTCUSDT")
 	}()
 	ticker := time.NewTicker(time.Duration(99) * time.Millisecond)
 	defer ticker.Stop()
@@ -73,6 +74,9 @@ func spotPubWs(cexObj cex.Exchanger) {
 				}
 				tickerN += 1
 				cexObj.SpotWsPublicTickerPoolPut(val)
+			case *cex.PublicTrade:
+				ilog.Rinfo("%s trade:%v", val.Symbol, *val)
+				cexObj.SpotWsPublicTradePoolPut(val)
 			}
 		case <-ticker.C:
 			if cexObj.SpotWsPublicIsClosed() {
@@ -114,7 +118,7 @@ func testPubRest(cexObj cex.Exchanger) {
 func testPubWs(cexObj cex.Exchanger) {
 	go spotPubWs(cexObj)
 	go func() {
-		time.Sleep(10 * time.Second)
+		time.Sleep(50 * time.Second)
 		cexObj.SpotWsPublicUnsubscribe([]string{"orderbook5@ETHUSDT,SOLUSDT"})
 		ilog.Rinfo("spot pub ws unsubscribe orderbook5@ETHUSDT,SOLUSDT")
 		time.Sleep(1 * time.Second)

@@ -99,6 +99,20 @@ func (bo *Bigone) SpotWsPublicSubscribe(channels []string) {
 					bboSymbols = append(bboSymbols, strings.ToUpper(sym))
 				}
 			}
+		} else if arr[0] == "trades" {
+			if len(arr) < 2 || len(arr[1]) == 0 {
+				continue
+			}
+			symbolArr := strings.SplitSeq(arr[1], ",")
+			for sym := range symbolArr {
+				if symbol := bo.getSpotSymbol(sym); symbol != "" {
+					req := fmt.Sprintf(`{"requestId": "%s", "subscribeMarketTradesRequest":{"market":"%s", "limit": "20"}}`,
+						gutils.RandomStr(8), symbol)
+					bo.spotWsPublicConnMtx.Lock()
+					bo.spotWsPublicConn.WriteMessage(websocket.TextMessage, []byte(req))
+					bo.spotWsPublicConnMtx.Unlock()
+				}
+			}
 		}
 	}
 	if len(bboSymbols) > 0 {
@@ -143,6 +157,20 @@ func (bo *Bigone) SpotWsPublicUnsubscribe(channels []string) {
 					bboSymbols = append(bboSymbols, strings.ToUpper(sym))
 				}
 			}
+		} else if arr[0] == "trades" {
+			if len(arr) < 2 || len(arr[1]) == 0 {
+				continue
+			}
+			symbolArr := strings.SplitSeq(arr[1], ",")
+			for sym := range symbolArr {
+				if symbol := bo.getSpotSymbol(sym); symbol != "" {
+					req := fmt.Sprintf(`{"requestId": "%s", "unsubscribeMarketTradesRequest":{"market":"%s"}}`,
+						gutils.RandomStr(8), symbol)
+					bo.spotWsPublicConnMtx.Lock()
+					bo.spotWsPublicConn.WriteMessage(websocket.TextMessage, []byte(req))
+					bo.spotWsPublicConnMtx.Unlock()
+				}
+			}
 		}
 	}
 	if len(bboSymbols) > 0 {
@@ -162,6 +190,9 @@ func (bo *Bigone) SpotWsPublicOrderBook5PoolPut(v any) {
 }
 func (bo *Bigone) SpotWsPublicBBOPoolPut(v any) {
 	wsPublicBBOPool.Put(v)
+}
+func (bo *Bigone) SpotWsPublicTradePoolPut(v any) {
+	wsPublicTradePool.Put(v)
 }
 func (bo *Bigone) SpotWsPublicLoop(ch chan<- any) {
 	defer bo.SpotWsPublicClose()
@@ -214,6 +245,10 @@ func (bo *Bigone) SpotWsPublicLoop(ch chan<- any) {
 			bo.spotWsHandleBBOs(msg.TickerSnap, ch)
 		} else if msg.TickerUpdate != nil {
 			bo.spotWsHandleBBO(msg.TickerUpdate, ch)
+		} else if msg.TradeSnap != nil {
+			bo.spotWsHandleTradeSpap(msg.TradeSnap, ch)
+		} else if msg.TradeUpdate != nil {
+			bo.spotWsHandleTradeUpdate(msg.TradeUpdate, ch)
 		} else if bytes.Contains(recv, []byte(`"heartbeat":`)) {
 		} else if bytes.Contains(recv, []byte(`"success":`)) {
 		} else {
@@ -340,14 +375,34 @@ func (bo *Bigone) spotWsHandleBBO(data json.RawMessage, ch chan<- any) {
 	bbo.reset()
 	if err := easyjson.Unmarshal(data, bbo); err == nil {
 		base, quote, _ := strings.Cut(bbo.Ticker.Symbol, "-")
-		obd := wsPublicBBOPool.Get().(*BestBidAsk)
-		obd.Symbol = base + quote
-		obd.Time = 0 // Bigone不提供
-		obd.BidPrice = bbo.Ticker.Bid.Price
-		obd.BidQty = bbo.Ticker.Bid.Qty
-		obd.AskPrice = bbo.Ticker.Ask.Price
-		obd.AskQty = bbo.Ticker.Ask.Qty
-		ch <- obd
+		symbol := base + quote
+		if cached, ok := bo.spotWsBBOCache[symbol]; ok {
+			cachedUpdated := false
+			if bbo.Ticker.Bid.Price.IsPositive() &&
+				(!bbo.Ticker.Bid.Price.Equals(cached.BidPrice) ||
+					!bbo.Ticker.Bid.Qty.Equals(cached.BidQty)) {
+				cached.BidPrice = bbo.Ticker.Bid.Price
+				cached.BidQty = bbo.Ticker.Bid.Qty
+				cachedUpdated = true
+			}
+			if bbo.Ticker.Ask.Price.IsPositive() &&
+				(!bbo.Ticker.Ask.Price.Equals(cached.AskPrice) ||
+					!bbo.Ticker.Ask.Qty.Equals(cached.AskQty)) {
+				cached.AskPrice = bbo.Ticker.Ask.Price
+				cached.AskQty = bbo.Ticker.Ask.Qty
+				cachedUpdated = true
+			}
+			if cachedUpdated {
+				obd := wsPublicBBOPool.Get().(*BestBidAsk)
+				obd.Symbol = symbol
+				obd.Time = 0 // Bigone不提供
+				obd.BidPrice = cached.BidPrice
+				obd.BidQty = cached.BidQty
+				obd.AskPrice = cached.AskPrice
+				obd.AskQty = cached.AskQty
+				ch <- obd
+			}
+		}
 	}
 }
 func (bo *Bigone) spotWsHandleBBOs(data json.RawMessage, ch chan<- any) {
@@ -355,16 +410,65 @@ func (bo *Bigone) spotWsHandleBBOs(data json.RawMessage, ch chan<- any) {
 	defer boSpotWsPublicBBOsInnerPool.Put(bbos)
 	bbos.reset()
 	if err := easyjson.Unmarshal(data, bbos); err == nil {
-		for _, tk := range bbos.Tickers {
-			base, quote, _ := strings.Cut(tk.Symbol, "-")
+		for i := range bbos.Tickers {
+			base, quote, _ := strings.Cut(bbos.Tickers[i].Symbol, "-")
 			obd := wsPublicBBOPool.Get().(*BestBidAsk)
 			obd.Symbol = base + quote
 			obd.Time = 0 // Bigone不提供
-			obd.BidPrice = tk.Bid.Price
-			obd.BidQty = tk.Bid.Qty
-			obd.AskPrice = tk.Ask.Price
-			obd.AskQty = tk.Ask.Qty
+			obd.BidPrice = bbos.Tickers[i].Bid.Price
+			obd.BidQty = bbos.Tickers[i].Bid.Qty
+			obd.AskPrice = bbos.Tickers[i].Ask.Price
+			obd.AskQty = bbos.Tickers[i].Ask.Qty
+			obd2 := BestBidAsk{}
+			obd2 = *obd
+			bo.spotWsBBOCache[obd.Symbol] = &obd2
 			ch <- obd
+		}
+	}
+}
+func (bo *Bigone) spotWsHandleTradeSpap(data json.RawMessage, ch chan<- any) {
+	trs := struct {
+		Trades []struct {
+			Symbol string          `json:"market"`
+			Price  decimal.Decimal `json:"price"`
+			Qty    decimal.Decimal `json:"amount"`
+			Time   string          `json:"createdAt"`
+		} `json:"trades"`
+	}{}
+	if err := json.Unmarshal(data, &trs); err == nil && len(trs.Trades) > 0 {
+		for i := range trs.Trades {
+			base, quote, ok := strings.Cut(trs.Trades[i].Symbol, "-")
+			if ok {
+				tr := wsPublicTradePool.Get().(*PublicTrade)
+				tr.Symbol = base + quote
+				ctime, _ := time.Parse(time.RFC3339, trs.Trades[i].Time)
+				tr.Time = ctime.UnixMilli()
+				tr.Price = trs.Trades[i].Price
+				tr.Qty = trs.Trades[i].Qty
+				ch <- tr
+			}
+		}
+	}
+}
+func (bo *Bigone) spotWsHandleTradeUpdate(data json.RawMessage, ch chan<- any) {
+	tr := struct {
+		Trade struct {
+			Symbol string          `json:"market"`
+			Price  decimal.Decimal `json:"price"`
+			Qty    decimal.Decimal `json:"amount"`
+			Time   string          `json:"createdAt"`
+		} `json:"trade"`
+	}{}
+	if err := json.Unmarshal(data, &tr); err == nil {
+		base, quote, ok := strings.Cut(tr.Trade.Symbol, "-")
+		if ok {
+			str := wsPublicTradePool.Get().(*PublicTrade)
+			str.Symbol = base + quote
+			ctime, _ := time.Parse(time.RFC3339, tr.Trade.Time)
+			str.Time = ctime.UnixMilli()
+			str.Price = tr.Trade.Price
+			str.Qty = tr.Trade.Qty
+			ch <- str
 		}
 	}
 }

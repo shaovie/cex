@@ -39,12 +39,14 @@ type Exchanger interface {
 	// channels: orderbook5@symbolA,symbolB (5档)
 	//           bbo@symbolA,symbolB     // 最优买卖价 只binance,bybit,bbo,okx实现
 	//           ticker@symbolA,symbolB     // bigone不支持
+	//           trades@symbolA,symbolB // 仅限bigone,binance
 	// 每个交易所支持的参数数量不同
 	SpotWsPublicSubscribe(channels []string)
 	SpotWsPublicUnsubscribe(channels []string)
 	SpotWsPublicTickerPoolPut(v any)
 	SpotWsPublicOrderBook5PoolPut(v any)
 	SpotWsPublicBBOPoolPut(v any)
+	SpotWsPublicTradePoolPut(v any)
 	// Loop结束时会close(ch)
 	SpotWsPublicLoop(ch chan<- any)
 	SpotWsPublicClose()

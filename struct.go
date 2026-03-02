@@ -10,6 +10,7 @@ var (
 	wsPublicTickerPool     *sync.Pool
 	wsPublicOrderBook5Pool *sync.Pool
 	wsPublicBBOPool        *sync.Pool
+	wsPublicTradePool      *sync.Pool
 )
 
 func init() {
@@ -27,6 +28,11 @@ func init() {
 	wsPublicBBOPool = &sync.Pool{
 		New: func() any {
 			return &BestBidAsk{}
+		},
+	}
+	wsPublicTradePool = &sync.Pool{
+		New: func() any {
+			return &PublicTrade{}
 		},
 	}
 }
@@ -149,6 +155,13 @@ func (sa *UnifiedAsset) Val(v *UnifiedAsset) {
 	if !v.Locked.Equals(decimal.NewFromInt(999999999)) {
 		sa.Locked = v.Locked
 	}
+}
+
+type PublicTrade struct {
+	Symbol string // BTCUSDT
+	Time   int64  // msec
+	Price  decimal.Decimal
+	Qty    decimal.Decimal
 }
 
 type SpotOrder struct {

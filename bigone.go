@@ -31,6 +31,7 @@ type Bigone struct {
 	spotWsOrderBookBids            map[string]*treemap.Map[decimal.Decimal, string]
 	spotWsOrderBookAsks            map[string]*treemap.Map[decimal.Decimal, string]
 	spotWsOrderBookSeqId           map[string]string
+	spotWsBBOCache                 map[string]*BestBidAsk
 
 	spotWsPrivateConn      *websocket.Conn
 	spotWsPrivateConnMtx   sync.Mutex
@@ -71,6 +72,7 @@ func (bo *Bigone) Init() error {
 	bo.spotWsOrderBookBids = make(map[string]*treemap.Map[decimal.Decimal, string], 512)
 	bo.spotWsOrderBookAsks = make(map[string]*treemap.Map[decimal.Decimal, string], 512)
 	bo.spotWsOrderBookSeqId = make(map[string]string, 16)
+	bo.spotWsBBOCache = make(map[string]*BestBidAsk, 16)
 
 	bo.spotWsPublicOrderBookInnerPool = &sync.Pool{
 		New: func() any {

@@ -21,6 +21,7 @@ var (
 	bnSpotWsPublicOrderBookInnerPool sync.Pool
 	bnSpotWsPublicBBOInnerPool       sync.Pool
 	bnSpotWsPublicTickerInnerPool    sync.Pool
+	bnSpotWsPublicTradeInnerPool     sync.Pool
 )
 
 func init() {
@@ -45,6 +46,11 @@ func init() {
 	bnSpotWsPublicTickerInnerPool = sync.Pool{
 		New: func() any {
 			return &BinanceSpot24hTicker{}
+		},
+	}
+	bnSpotWsPublicTradeInnerPool = sync.Pool{
+		New: func() any {
+			return &BinanceSpotPublicTrade{}
 		},
 	}
 }
@@ -93,6 +99,13 @@ func (bn *Binance) SpotWsPublicSubscribe(channels []string) {
 					arg.Params = append(arg.Params, strings.ToLower(sym)+"@miniTicker")
 				}
 			}
+		} else if arr[0] == "trades" {
+			if len(arr) > 1 && len(arr[1]) > 0 {
+				symbolArr := strings.SplitSeq(arr[1], ",")
+				for sym := range symbolArr {
+					arg.Params = append(arg.Params, strings.ToLower(sym)+"@aggTrade")
+				}
+			}
 		}
 	}
 	if len(arg.Params) > 0 {
@@ -129,6 +142,13 @@ func (bn *Binance) SpotWsPublicUnsubscribe(channels []string) {
 				symbolArr := strings.SplitSeq(arr[1], ",")
 				for sym := range symbolArr {
 					arg.Params = append(arg.Params, strings.ToLower(sym)+"@miniTicker")
+				}
+			}
+		} else if arr[0] == "trades" {
+			if len(arr) > 1 && len(arr[1]) > 0 {
+				symbolArr := strings.SplitSeq(arr[1], ",")
+				for sym := range symbolArr {
+					arg.Params = append(arg.Params, strings.ToLower(sym)+"@aggTrade")
 				}
 			}
 		}
@@ -199,6 +219,8 @@ func (bn *Binance) SpotWsPublicLoop(ch chan<- any) {
 			bn.spotWsHandleBBO(msg.Data, ch)
 		} else if l > 11 && msg.Stream[l-11:l] == "@miniTicker" {
 			bn.spotWsHandle24hTickers(msg.Data, ch)
+		} else if l > 9 && msg.Stream[l-9:l] == "@aggTrade" {
+			bn.spotWsHandlePublicTrade(msg.Data, ch)
 		} else {
 			if strings.Index(string(recv), `"result":null`) == -1 {
 				ilog.Error(bn.Name() + " spot.ws.public recv unknown msg: " + string(recv))
@@ -272,6 +294,18 @@ func (bn *Binance) spotWsHandle24hTickers(data json.RawMessage, ch chan<- any) {
 		tk.Volume = ticker.Volume
 		tk.QuoteVolume = ticker.QuoteVolume
 		ch <- tk
+	}
+}
+func (bn *Binance) spotWsHandlePublicTrade(data json.RawMessage, ch chan<- any) {
+	tr := bnSpotWsPublicTradeInnerPool.Get().(*BinanceSpotPublicTrade)
+	defer bnSpotWsPublicTradeInnerPool.Put(tr)
+	if err := easyjson.Unmarshal(data, tr); err == nil {
+		pt := wsPublicTradePool.Get().(*PublicTrade)
+		pt.Symbol = tr.Symbol
+		pt.Time = tr.Time
+		pt.Price = tr.Price
+		pt.Qty = tr.Qty
+		ch <- pt
 	}
 }
 
