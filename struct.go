@@ -324,3 +324,52 @@ type FuturesProfitLossHistory struct {
 	Typ    string // FUNDING_FEE
 	Time   int64  // msec
 }
+
+type MarginCrossAccountUserAsset struct {
+	Symbol   string          `json:"asset"`
+	Borrowed decimal.Decimal `json:"borrowed"`
+	Free     decimal.Decimal `json:"free"`
+	Interest decimal.Decimal `json:"interest"`
+	Locked   decimal.Decimal `json:"locked"`
+	NetAsset decimal.Decimal `json:"netAsset"`
+}
+type MarginCrossAccountInfo struct {
+	Type                       string          // accountType:MARGIN_1 全仓Classic模式账户, MARGIN_2 全仓Pro模式账户
+	Created                    bool            // true 表示已开户, false 表示未开户
+	BorrowEnabled              bool            //
+	MarginLevel                decimal.Decimal //
+	TotalCollateralValueInUSDT decimal.Decimal
+	UserAssets                 []*MarginCrossAccountUserAsset
+}
+type MarginMaxBorrowable struct {
+	Amount      decimal.Decimal
+	BorrowLimit decimal.Decimal
+}
+type MarginOrder struct {
+	Symbol   string // BTCUSDT
+	OrderId  string
+	ClientId string
+	// 如果ws api下单成功，会只返回以上部分
+
+	Price decimal.Decimal
+	Qty   decimal.Decimal // 用户设置的原始订单数量
+
+	FilledQty decimal.Decimal // 交易的订单数量
+	FilledAmt decimal.Decimal // 累计交易的金额
+
+	Status      string // NEW/PARTIALLY_FILLED/FILLED/CANCELED/REJECTED/EXPIRED
+	Type        string // LIMIT/MARKET
+	TimeInForce string // GTC/FOK/IOC
+	Side        string // BUY/SELL
+	//FeeAsset    string          // 交易费资产类型, 比如GT,BNB,USDT
+	//FeeQty      decimal.Decimal // 手续费数量(消耗为负值)
+	CTime int64 // msec
+	UTime int64 // msec
+}
+type MarginTrade struct {
+	Symbol   string
+	OrderId  string
+	Fee      decimal.Decimal
+	FeeAsset string
+	Time     int64 // msec
+}

@@ -25,7 +25,7 @@ func (us *Unsupported) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 	return nil, errors.New("not support")
 }
 func (us *Unsupported) SpotPlaceOrder(symbol, cltId string, price, amt, qty decimal.Decimal,
-	side, timeInForce, orderType string) (string, error) {
+	side, timeInForce, orderType string, postOnly bool) (string, error) {
 	return "", errors.New("not support")
 }
 func (us *Unsupported) SpotCancelOrder(symbol, orderId, cltId string) error {
@@ -55,14 +55,35 @@ func (us *Unsupported) SpotWsPrivateLoop(ch chan<- any)           {}
 func (us *Unsupported) SpotWsPrivateClose()                       {}
 func (us *Unsupported) SpotWsPrivateIsClosed() bool               { return true }
 func (us *Unsupported) SpotWsPlaceOrder(symbol, cltId string, price, amt, qty decimal.Decimal,
-	side, timeInForce, orderType string) (string, error) {
+	side, timeInForce, orderType string, postOnly bool) (string, error) {
 	return "", errors.New("not support")
 }
 func (us *Unsupported) SpotWsCancelOrder(s, o, c string) (string, error) {
 	return "", errors.New("not support")
 }
 
-// = contract
+func (us *Unsupported) MarginSupported() bool { return false }
+func (us *Unsupported) MarginGetCrossAccountInfo() (*MarginCrossAccountInfo, error) {
+	return nil, errors.New("not support")
+}
+func (us *Unsupported) MarginGetMaxBorrowable(s string) (MarginMaxBorrowable, error) {
+	return MarginMaxBorrowable{}, nil
+}
+func (us *Unsupported) MarginPlaceOrder(symbol, cltId string, price, amt, qty decimal.Decimal,
+	side, timeInForce, orderType, sideEffectType string, isIsolated bool) (string, error) {
+	return "", errors.New("not support")
+}
+func (us *Unsupported) MarginCancelOrder(symbol, orderId, cltId string, isIsolated bool) error {
+	return errors.New("not support")
+}
+func (us *Unsupported) MarginGetOrder(symbol, orderId, cltId string, isIsolated bool) (*MarginOrder, error) {
+	return nil, errors.New("not support")
+}
+func (us *Unsupported) MarginGetTrades(symbol, orderId string, isIsolated bool) ([]*MarginTrade, error) {
+	return nil, errors.New("not support")
+}
+
+// = futrures
 func (us *Unsupported) FuturesSupported(typ string) bool { return false }
 func (us *Unsupported) FuturesServerTime(typ string) (int64, error) {
 	return 0, errors.New("not support")

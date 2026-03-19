@@ -139,13 +139,17 @@ func (ok *Okx) SpotGetAll24hTicker() (map[string]Pub24hTicker, error) {
 }
 func (ok *Okx) SpotPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 	price, amt, qty decimal.Decimal,
-	side, timeInForce, orderType string) (string, error) {
+	side, timeInForce, orderType string, postOnly bool) (string, error) {
 
 	if timeInForce == "IOC" || timeInForce == "FOK" {
 		orderType = timeInForce
 	}
 	if orderType == "MARKET" && side == "BUY" {
 		qty = amt
+	}
+	ordType := ok.fromStdOrderType(orderType)
+	if orderType == "LIMIT" && postOnly {
+		ordType = "post_only"
 	}
 	symbolS := ok.getSpotSymbol(symbol)
 	payload := `{"instId":"` + symbolS + `"` +
@@ -156,7 +160,7 @@ func (ok *Okx) SpotPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 	payload += "" +
 		`,"px":"` + price.String() + `"` +
 		`,"side":"` + ok.fromStdSide(side) + `"` +
-		`,"ordType":"` + ok.fromStdOrderType(orderType) + `"` + // LIMIT/MARKET/LIMIT_MAKER
+		`,"ordType":"` + ordType + `"` + // LIMIT/MARKET/LIMIT_MAKER
 		`,"tdMode":"cash"` +
 		`}`
 	path := "/api/v5/trade/order"

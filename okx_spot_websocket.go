@@ -644,7 +644,7 @@ func (ok *Okx) spotWsHandleCancelOrderResp(reqId string, data json.RawMessage, c
 }
 func (ok *Okx) SpotWsPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 	price, amt, qty decimal.Decimal,
-	side, timeInForce, orderType string) (string, error) {
+	side, timeInForce, orderType string, postOnly bool) (string, error) {
 	if ok.SpotWsPrivateIsClosed() {
 		return "", errors.New(ok.Name() + " spot priv ws closed")
 	}
@@ -675,6 +675,9 @@ func (ok *Okx) SpotWsPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 	}
 	if orderType == "LIMIT" {
 		arg.Price = price.String()
+		if postOnly {
+			arg.Type = "post_only"
+		}
 	}
 	type Req struct {
 		Id   string `json:"id"`

@@ -188,7 +188,7 @@ func (bn *Binance) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 }
 func (bn *Binance) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 	price, amt, qty decimal.Decimal,
-	side, timeInForce, orderType string) (string, error) {
+	side, timeInForce, orderType string, postOnly bool) (string, error) {
 	params := fmt.Sprintf("&newOrderRespType=ACK&symbol=%s&side=%s&type=%s",
 		symbol, side, orderType)
 	if cltId != "" {

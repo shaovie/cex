@@ -76,6 +76,7 @@ var (
 )
 
 const bnSpotEndpoint = "https://api2.binance.com"
+const bnMarginEndpoint = "https://api2.binance.com"
 const bnUMFuturesEndpoint = "https://fapi.binance.com"
 const bnCMFuturesEndpoint = "https://dapi.binance.com"
 const bnUnifiedEndpoint = "https://papi.binance.com"

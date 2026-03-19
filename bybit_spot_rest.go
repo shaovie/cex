@@ -174,7 +174,7 @@ func (bb *Bybit) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 }
 func (bb *Bybit) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 	price, amt, qty decimal.Decimal,
-	side, timeInForce, orderType string) (string, error) {
+	side, timeInForce, orderType string, postOnly bool) (string, error) {
 
 	params := map[string]any{
 		"category":    "spot",
@@ -200,6 +200,9 @@ func (bb *Bybit) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 		params["price"] = price.String()
 		if timeInForce != "" {
 			params["timeInForce"] = timeInForce
+		}
+		if orderType == "LIMIT" && postOnly {
+			params["timeInForce"] = "PostOnly"
 		}
 	}
 	body, _ := json.Marshal(params)

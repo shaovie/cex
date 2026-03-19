@@ -80,14 +80,14 @@ func (bo *Bigone) SpotWsPublicSubscribe(channels []string) {
 			symbolArr := strings.SplitSeq(arr[1], ",")
 			for sym := range symbolArr {
 				if symbol := bo.getSpotSymbol(sym); symbol != "" {
-					req := fmt.Sprintf(`{"requestId": "%s", "subscribeMarketDepthRequest":{"market":"%s"}}`,
+					req := fmt.Sprintf(`{"requestId": "%s","subscribeMarketDepthRequest":{"market":"%s"}}`,
 						gutils.RandomStr(8), symbol)
 					bo.spotWsPublicConnMtx.Lock()
 					bo.spotWsPublicConn.WriteMessage(websocket.TextMessage, []byte(req))
 					bo.spotWsPublicConnMtx.Unlock()
 				}
 			}
-		} else if arr[0] == "bbo" { // 先不支持
+		} else if arr[0] == "bbo" { // 用ticker实现
 			var symbolArr []string
 			if len(arr) > 1 && len(arr[1]) > 0 {
 				symbolArr = strings.Split(arr[1], ",")
@@ -96,7 +96,7 @@ func (bo *Bigone) SpotWsPublicSubscribe(channels []string) {
 			}
 			for _, v := range symbolArr {
 				if sym := bo.getSpotSymbol(v); sym != "" {
-					bboSymbols = append(bboSymbols, strings.ToUpper(sym))
+					bboSymbols = append(bboSymbols, sym)
 				}
 			}
 		} else if arr[0] == "trades" {
@@ -106,7 +106,7 @@ func (bo *Bigone) SpotWsPublicSubscribe(channels []string) {
 			symbolArr := strings.SplitSeq(arr[1], ",")
 			for sym := range symbolArr {
 				if symbol := bo.getSpotSymbol(sym); symbol != "" {
-					req := fmt.Sprintf(`{"requestId": "%s", "subscribeMarketTradesRequest":{"market":"%s", "limit": "20"}}`,
+					req := fmt.Sprintf(`{"requestId": "%s","subscribeMarketTradesRequest":{"market":"%s","limit": "20"}}`,
 						gutils.RandomStr(8), symbol)
 					bo.spotWsPublicConnMtx.Lock()
 					bo.spotWsPublicConn.WriteMessage(websocket.TextMessage, []byte(req))
@@ -117,7 +117,7 @@ func (bo *Bigone) SpotWsPublicSubscribe(channels []string) {
 	}
 	if len(bboSymbols) > 0 {
 		jv, _ := json.Marshal(bboSymbols)
-		req := fmt.Sprintf(`{"requestId": "%s", "subscribeMarketsTickerRequest":{"markets":%s}}`,
+		req := fmt.Sprintf(`{"requestId":"%s","subscribeMarketsTickerRequest":{"markets":%s}}`,
 			gutils.RandomStr(8), string(jv))
 		bo.spotWsPublicConnMtx.Lock()
 		bo.spotWsPublicConn.WriteMessage(websocket.TextMessage, []byte(req))
@@ -154,7 +154,7 @@ func (bo *Bigone) SpotWsPublicUnsubscribe(channels []string) {
 			}
 			for _, v := range symbolArr {
 				if sym := bo.getSpotSymbol(v); sym != "" {
-					bboSymbols = append(bboSymbols, strings.ToUpper(sym))
+					bboSymbols = append(bboSymbols, sym)
 				}
 			}
 		} else if arr[0] == "trades" {
@@ -242,7 +242,7 @@ func (bo *Bigone) SpotWsPublicLoop(ch chan<- any) {
 				bo.spotWsHandleOrderBook5(symbol, ch)
 			}
 		} else if msg.TickerSnap != nil {
-			bo.spotWsHandleBBOs(msg.TickerSnap, ch)
+			bo.spotWsHandleBBOSnap(msg.TickerSnap, ch)
 		} else if msg.TickerUpdate != nil {
 			bo.spotWsHandleBBO(msg.TickerUpdate, ch)
 		} else if msg.TradeSnap != nil {
@@ -405,7 +405,7 @@ func (bo *Bigone) spotWsHandleBBO(data json.RawMessage, ch chan<- any) {
 		}
 	}
 }
-func (bo *Bigone) spotWsHandleBBOs(data json.RawMessage, ch chan<- any) {
+func (bo *Bigone) spotWsHandleBBOSnap(data json.RawMessage, ch chan<- any) {
 	bbos := boSpotWsPublicBBOsInnerPool.Get().(*BigoneSpotBBOs)
 	defer boSpotWsPublicBBOsInnerPool.Put(bbos)
 	bbos.reset()

@@ -26,7 +26,7 @@ type Exchanger interface {
 	// 市价 amt/qty任选1(优先amt) binance全支持, bigone只qty, gate,okx只amt
 	// 限价 只能qty=base qty, 参数涵义参考 struct SpotOrder
 	SpotPlaceOrder(symbol, cltId string, price, amt, qty decimal.Decimal,
-		side, timeInForce, orderType string) (string, error)
+		side, timeInForce, orderType string, postOnly bool) (string, error)
 	// orderId, cltId 二选一
 	SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId string) error
 	// orderId, cltId 二选一
@@ -65,10 +65,26 @@ type Exchanger interface {
 	SpotWsPrivateIsClosed() bool
 	// 市价 amt/qty任选1(优先amt) binance全支持, bigone只qty, gate,okx只amt
 	// 限价 只能qty=base qty, 参数涵义参考 struct SpotOrder
+	// postOnly = true 只做Maker(仅限OrderType=LIMIT) 只有bigone/okx支持
 	SpotWsPlaceOrder(symbol, cltId string, price, amt, qty decimal.Decimal,
-		side, timeInForce, orderType string) (string /*req id*/, error)
+		side, timeInForce, orderType string, postOnly bool) (string /*req id*/, error)
 	// orderId, cltId 二选一
 	SpotWsCancelOrder(symbol, orderId, cltId string) (string, error)
+
+	//= margin
+	// 全仓杠杆账户详情
+	MarginSupported() bool
+	MarginGetCrossAccountInfo() (*MarginCrossAccountInfo, error)
+	MarginGetMaxBorrowable(symbol /*BTC*/ string) (MarginMaxBorrowable, error)
+	// 市价 amt/qty任选1(优先amt) binance全支持
+	// 限价 只能qty=base qty, 参数涵义参考 struct MarginOrder
+	MarginPlaceOrder(symbol, cltId string, price, amt, qty decimal.Decimal,
+		side, timeInForce, orderType, sideEffectType string, isIsolated bool) (string, error)
+	// orderId, cltId 二选一
+	MarginCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId string, isIsolated bool) error
+	// orderId, cltId 二选一
+	MarginGetOrder(symbol, orderId, cltId string, isIsolated bool) (*MarginOrder, error)
+	MarginGetTrades(symbol, orderId string, isIsolated bool) ([]*MarginTrade, error)
 
 	//= futures, typ=UM,U本位 typ=CM,币本位
 	FuturesSupported(typ string) bool

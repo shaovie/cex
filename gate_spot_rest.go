@@ -150,7 +150,7 @@ func (gt *Gate) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 }
 func (gt *Gate) SpotPlaceOrder(symbol, clientId string,
 	price, amt, qty decimal.Decimal,
-	side, timeInForce, orderType string) (string, error) {
+	side, timeInForce, orderType string, postOnly bool) (string, error) {
 
 	path := "/api/v4/spot/orders"
 	url := gtUniEndpoint + path

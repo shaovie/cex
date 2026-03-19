@@ -68,21 +68,21 @@ func (bo *Bigone) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error
 	now := time.Now().Unix()
 	tboSpotSymbolMap := make(map[string]string)
 	for _, pair := range recv.Data {
-		sb := strings.Split(strings.ToUpper(pair.Symbol), "-")
-		if len(sb) != 2 {
+		base, quote, ok := strings.Cut(pair.Symbol, "-")
+		if !ok {
 			continue
 		}
 		ep := &SpotExchangePairRule{
-			Symbol:        sb[0] + sb[1],
-			Base:          sb[0],
-			Quote:         sb[1],
+			Symbol:        base + quote,
+			Base:          base,
+			Quote:         quote,
 			Time:          now,
 			QtyStep:       PowOneTenth(pair.BaseScale),
 			PriceTickSize: PowOneTenth(pair.QuoteScale),
-			MinPrice:      pair.MinNotional,
 			MaxPrice:      decimal.NewFromFloat(999999999),
 			MaxOrderQty:   decimal.NewFromFloat(999999999),
 		}
+		ep.MinPrice = ep.PriceTickSize
 		ep.MinOrderQty = ep.QtyStep
 		all[ep.Symbol] = ep
 		tboSpotSymbolMap[ep.Symbol] = pair.Symbol
@@ -123,7 +123,6 @@ func (bo *Bigone) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 		if v.Balance.IsZero() {
 			continue
 		}
-		v.Symbol = strings.ToUpper(v.Symbol)
 		assetsMap[v.Symbol] = &SpotAsset{
 			Symbol: v.Symbol,
 			Avail:  v.Balance.Sub(v.Locked),
@@ -135,7 +134,7 @@ func (bo *Bigone) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 }
 func (bo *Bigone) SpotPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 	price, amt, qty decimal.Decimal,
-	side, timeInForce, orderType string) (string, error) {
+	side, timeInForce, orderType string, postOnly bool) (string, error) {
 
 	symbolS := boSpotSymbolMap[symbol]
 	url := boSpotEndpoint + "/viewer/orders"
@@ -146,6 +145,9 @@ func (bo *Bigone) SpotPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 	}
 	if orderType == "LIMIT" {
 		payload += `,"price":"` + price.String() + `"`
+		if postOnly {
+			payload += `,"post_only":true`
+		}
 	}
 	payload += "" +
 		`,"amount":"` + qty.String() + `"` +
@@ -255,6 +257,10 @@ func (bo *Bigone) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error
 
 	ctime, _ := time.Parse(time.RFC3339, ret.Data.Time)
 	utime, _ := time.Parse(time.RFC3339, ret.Data.UTime)
+	status := bo.toStdOrderStatus(ret.Data.Status)
+	if status == "NEW" && ret.Data.ExecutedQty.IsPositive() {
+		status = "PARTIALLY_FILLED"
+	}
 	return &SpotOrder{
 		Symbol:    symbol,
 		OrderId:   strconv.FormatInt(ret.Data.OrderId, 10),
@@ -263,7 +269,7 @@ func (bo *Bigone) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error
 		Qty:       ret.Data.Qty,
 		FilledQty: ret.Data.ExecutedQty,
 		FilledAmt: ret.Data.ExecutedQty.Mul(ret.Data.AvgPrice),
-		Status:    bo.toStdOrderStatus(ret.Data.Status),
+		Status:    status,
 		Type:      bo.toStdOrderType(ret.Data.Type),
 		Side:      bo.toStdSide(ret.Data.Side),
 		CTime:     ctime.UnixMilli(),

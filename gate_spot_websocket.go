@@ -603,7 +603,7 @@ func (gt *Gate) spotWsHandleCancelOrderResp(errS string) {
 // priv ws api
 func (gt *Gate) SpotWsPlaceOrder(symbol, cltId string,
 	price, amt, qty decimal.Decimal,
-	side, timeInForce, orderType string) (string, error) {
+	side, timeInForce, orderType string, postOnly bool) (string, error) {
 	if gt.SpotWsPrivateIsClosed() {
 		return "", errors.New(gt.Name() + " spot priv ws closed")
 	}

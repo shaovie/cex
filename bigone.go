@@ -144,14 +144,12 @@ func (bo *Bigone) toStdOrderType(orderType string) string {
 func (bo *Bigone) toStdOrderStatus(status string) string {
 	if status == "PENDING" || status == "OPENING" {
 		return "NEW"
-	} else if status == "PENDING" {
+	} else if status == "NONE_FILLED" {
 		return "PARTIALLY_FILLED"
 	} else if status == "FILLED" {
 		return "FILLED"
-	} else if status == "CANCELLED" {
+	} else if status == "CANCELLED" || status == "REJECTED" {
 		return "CANCELED"
-	} else if status == "REJECTED" {
-		return "REJECTED"
 	}
 	return ""
 }
