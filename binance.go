@@ -196,3 +196,13 @@ func (bn *Binance) toStdTradeMode(v string) int {
 	}
 	return -1
 }
+func (bn *Binance) toStdWithdrawStatus(v int) string {
+	if v == 0 || v == 2 || v == 4 {
+		return "PENDING"
+	} else if v == 3 {
+		return "REJECTED"
+	} else if v == 6 {
+		return "COMPLETED"
+	}
+	return ""
+}

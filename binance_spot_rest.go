@@ -373,3 +373,32 @@ func (bn *Binance) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 
 	return dl, nil
 }
+func (bn *Binance) SpotGetTradeFee(symbol string) (SpotTradeFee, error) {
+	params := "&symbol=" + symbol
+	var f SpotTradeFee
+	url := bnSpotEndpoint + "/api/v3/account/commission?" + bn.httpQuerySign(params)
+	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	if err != nil {
+		return f, errors.New(bn.Name() + " net error! " + err.Error())
+	}
+	ret := struct {
+		Symbol string `json:"symbol,omitempty"` // BTCUSDT
+		F      struct {
+			Maker decimal.Decimal `json:"maker"`
+			Taker decimal.Decimal `json:"taker"`
+		} `json:"standardCommission"`
+		D struct {
+			Discount      decimal.Decimal `json:"discount"`
+			DiscountAsset string          `json:"discountAsset"`
+		} `json:"discount"`
+	}{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return f, errors.New(bn.Name() + " Unmarshal err! " + err.Error())
+	}
+
+	return SpotTradeFee{
+		Maker:    ret.F.Maker,
+		Taker:    ret.F.Taker,
+		Discount: ret.D.Discount,
+	}, nil
+}

@@ -165,11 +165,11 @@ func (bo *Bigone) fromStdChainName(c string) string {
 }
 func (bo *Bigone) toStdWithdrawStatus(c string) string {
 	if c == "COMPLETED" {
-		return "DONE"
+		return "COMPLETED"
 	} else if c == "FAILED" {
 		return "FAILED"
 	} else if c == "CANCELLED" {
-		return "CANCELLED"
+		return "CANCELED"
 	} else if c == "PENDING" {
 		return "PENDING"
 	}

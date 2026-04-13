@@ -13,12 +13,18 @@ import (
 
 func testRest(cexObj cex.Exchanger) {
 	ilog.Rinfo("rest api test...")
+	//cexObj.MarginGetAssetInfo("AXS")
 	accInfo, err := cexObj.MarginGetCrossAccountInfo()
 	if err != nil {
 		ilog.Rinfo("get accont err: " + err.Error())
 		return
 	}
 	ilog.Rinfo("margin acc: %v", *accInfo)
+	for _, ua := range accInfo.UserAssets {
+		ilog.Rinfo("user assets: %v", *ua)
+	}
+	return
+	//cexObj.MarginRepay("BTC", decimal.NewFromFloat(0.00148002), false)
 	marginMaxBorrowable, err := cexObj.MarginGetMaxBorrowable("BTC")
 	if err != nil {
 		ilog.Rinfo("get max borrowable err: " + err.Error())
@@ -32,6 +38,7 @@ func testRest(cexObj cex.Exchanger) {
 	}
 	price := bba.AskPrice.Mul(decimal.NewFromFloat(1.05))
 	qty := marginMaxBorrowable.Amount.Mul(decimal.NewFromFloat(0.8))
+	qty = decimal.NewFromFloat(0.00148)
 	if exRule := cex.SpotGetExPairRule(cexObj.Name(), "BTCUSDT"); exRule != nil {
 		price = exRule.AdjustPrice(price)
 		qty = exRule.AdjustQty(price, qty)
@@ -39,8 +46,8 @@ func testRest(cexObj cex.Exchanger) {
 	}
 	cltId := gutils.RandomStr(24)
 	placeTime := time.Now().UnixMilli()
-	orderId, err := cexObj.MarginPlaceOrder("BTCUSDT", cltId, price, decimal.Zero, qty,
-		"SELL", "GTC", "LIMIT", "MARGIN_BUY", false)
+	orderId, _, _, err := cexObj.MarginPlaceOrder("BTCUSDT", cltId, price, decimal.Zero, qty,
+		"SELL", "GTC", "MARKET", "MARGIN_BUY", false)
 	if err != nil {
 		ilog.Rinfo("place order fail: %s", err.Error())
 	} else {

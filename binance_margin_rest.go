@@ -20,8 +20,16 @@ func (bn *Binance) MarginGetCrossAccountInfo() (*MarginCrossAccountInfo, error) 
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
 	recv := struct {
-		Code int    `json:"code,omitempty"`
-		Msg  string `json:"msg,omitempty"`
+		Code                       int             `json:"code,omitempty"`
+		Msg                        string          `json:"msg,omitempty"`
+		Created                    bool            `json:"created"`
+		AccountType                string          `json:"accountType"`
+		BorrowEnabled              bool            `json:"borrowEnabled"`
+		MarginLevel                decimal.Decimal `json:"marginLevel"`
+		TotalCollateralValueInUSDT decimal.Decimal `json:"totalCollateralValueInUSDT"`
+		TradeEnabled               bool            `json:"tradeEnabled"`
+		TransferInEnabled          bool            `json:"transferInEnabled"`
+		TransferOutEnabled         bool            `json:"transferOutEnabled"`
 
 		UserAssets []struct {
 			Symbol   string          `json:"asset"`
@@ -39,8 +47,17 @@ func (bn *Binance) MarginGetCrossAccountInfo() (*MarginCrossAccountInfo, error) 
 		return nil, errors.New(bn.Name() + " api err! " + recv.Msg)
 	}
 
-	mac := MarginCrossAccountInfo{}
-	mac.UserAssets = make([]*MarginCrossAccountUserAsset, 0, 4)
+	mac := MarginCrossAccountInfo{
+		Type:                       recv.AccountType,
+		Created:                    recv.Created,
+		BorrowEnabled:              recv.BorrowEnabled,
+		MarginLevel:                recv.MarginLevel,
+		TradeEnabled:               recv.TradeEnabled,
+		TransferInEnabled:          recv.TransferInEnabled,
+		TransferOutEnabled:         recv.TransferOutEnabled,
+		TotalCollateralValueInUSDT: recv.TotalCollateralValueInUSDT,
+	}
+	mac.UserAssets = make(map[string]*MarginCrossAccountUserAsset, 4)
 	for _, v := range recv.UserAssets {
 		if v.Borrowed.IsZero() && v.Free.IsZero() &&
 			v.Locked.IsZero() && v.Interest.IsZero() &&
@@ -55,7 +72,7 @@ func (bn *Binance) MarginGetCrossAccountInfo() (*MarginCrossAccountInfo, error) 
 			Locked:   v.Locked,
 			NetAsset: v.NetAsset,
 		}
-		mac.UserAssets = append(mac.UserAssets, &as)
+		mac.UserAssets[as.Symbol] = &as
 	}
 	return &mac, nil
 }
@@ -91,12 +108,12 @@ func (bn *Binance) MarginGetMaxBorrowable(symbol string) (MarginMaxBorrowable, e
 }
 func (bn *Binance) MarginPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 	price, amt, qty decimal.Decimal,
-	side, timeInForce, orderType, sideEffectType string, isIsolated bool) (string, error) {
+	side, timeInForce, orderType, sideEffectType string, isIsolated bool) (string, decimal.Decimal, string, error) {
 	isIsolateds := "FALSE"
 	if isIsolated {
 		isIsolateds = "TRUE"
 	}
-	params := fmt.Sprintf("&newOrderRespType=ACK&symbol=%s&side=%s&type=%s&isIsolated=%s",
+	params := fmt.Sprintf("&newOrderRespType=FULL&symbol=%s&side=%s&type=%s&isIsolated=%s",
 		symbol, side, orderType, isIsolateds)
 	if cltId != "" {
 		params += "&newClientOrderId=" + cltId
@@ -114,32 +131,34 @@ func (bn *Binance) MarginPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 			params += "&quantity=" + qty.String()
 		}
 	} else {
-		return "", errors.New("not support order type:" + orderType)
+		return "", decimal.Zero, "", errors.New("not support order type:" + orderType)
 	}
 	url := bnMarginEndpoint + "/sapi/v1/margin/order?" + bn.httpQuerySign(params)
 	headers := map[string]string{"X-MBX-APIKEY": bn.apikey}
 	_, resp, err := ihttp.Post(url, nil, bnApiDeadline, headers)
 	if err != nil {
-		return "", errors.New(bn.Name() + " net error! " + err.Error())
+		return "", decimal.Zero, "", errors.New(bn.Name() + " net error! " + err.Error())
 	}
 
 	ret := struct {
 		Code int    `json:"code,omitempty"`
 		Msg  string `json:"msg,omitempty"`
 
-		Symbol   string `json:"symbol,omitempty"` // BTCUSDT
-		OrderId  int64  `json:"orderId,omitempty"`
-		ClientId string `json:"clientOrderId,omitempty"`
-		Time     int64  `json:"transactTime,omitempty"`
+		Symbol        string          `json:"symbol,omitempty"` // BTCUSDT
+		OrderId       int64           `json:"orderId,omitempty"`
+		ClientId      string          `json:"clientOrderId,omitempty"`
+		Time          int64           `json:"transactTime,omitempty"`
+		Borrowed      decimal.Decimal `json:"marginBuyBorrowAmount"`
+		BorrowedAsset string          `json:"marginBuyBorrowAsset"`
 	}{}
 	if err = json.Unmarshal(resp, &ret); err != nil {
-		return "", errors.New(bn.Name() + " unmarshal fail! " + err.Error())
+		return "", decimal.Zero, "", errors.New(bn.Name() + " unmarshal fail! " + err.Error())
 	}
 	if ret.Code != 0 {
-		return "", errors.New(bn.Name() + " api err! " + ret.Msg)
+		return "", decimal.Zero, "", errors.New(bn.Name() + " api err! " + ret.Msg)
 	}
 
-	return strconv.FormatInt(ret.OrderId, 10), nil
+	return strconv.FormatInt(ret.OrderId, 10), ret.Borrowed, ret.BorrowedAsset, nil
 }
 func (bn *Binance) MarginCancelOrder(symbol string, /*BTCUSDT*/
 	orderId, cltId string, isIsolated bool) error {
@@ -277,4 +296,64 @@ func (bn *Binance) MarginGetTrades(symbol, orderId string, isIsolated bool) ([]*
 		})
 	}
 	return ret, nil
+}
+func (bn *Binance) MarginRepay(symbol string, qty decimal.Decimal, isIsolated bool) error {
+	isIsolateds := "FALSE"
+	if isIsolated {
+		isIsolateds = "TRUE"
+	}
+	params := fmt.Sprintf("&asset=%s&amount=%s&isIsolated=%s&type=%s",
+		symbol, qty.String(), isIsolateds, "REPAY")
+	url := bnMarginEndpoint + "/sapi/v1/margin/borrow-repay?" + bn.httpQuerySign(params)
+	headers := map[string]string{"X-MBX-APIKEY": bn.apikey}
+	_, resp, err := ihttp.Post(url, nil, bnApiDeadline, headers)
+	if err != nil {
+		return errors.New(bn.Name() + " net error! " + err.Error())
+	}
+
+	ret := struct {
+		Code int    `json:"code,omitempty"`
+		Msg  string `json:"msg,omitempty"`
+
+		TranId int64 `json:"tranId,omitempty"`
+	}{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return errors.New(bn.Name() + " unmarshal fail! " + err.Error())
+	}
+	if ret.Code != 0 {
+		return errors.New(bn.Name() + " api err! " + ret.Msg)
+	}
+
+	return nil
+}
+func (bn *Binance) MarginGetAssetInfo(symbol string) (MarginAssetInfo, error) {
+	info := MarginAssetInfo{}
+	url := bnMarginEndpoint + "/sapi/v1/margin/allAssets?asset=" + symbol
+	headers := map[string]string{"X-MBX-APIKEY": bn.apikey}
+	_, resp, err := ihttp.Get(url, bnApiDeadline, headers)
+	if err != nil {
+		return info, errors.New(bn.Name() + " net error! " + err.Error())
+	}
+	if resp[0] != '[' {
+		return info, bn.handleExceptionResp("MarginGetAssetInfo", resp)
+	}
+
+	ret := []struct {
+		IsBorrowable   bool            `json:"isBorrowable"`
+		IsMortgageable bool            `json:"isMortgageable"`
+		UserMinBorrow  decimal.Decimal `json:"userMinBorrow"`
+		DelistTime     int64           `json:"delistTime"`
+	}{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return info, errors.New(bn.Name() + " unmarshal fail! " + err.Error())
+	}
+	if len(ret) == 0 {
+		return info, errors.New(bn.Name() + " not found!")
+	}
+	info.Symbol = symbol
+	info.IsBorrowable = ret[0].IsBorrowable
+	info.IsMortgageable = ret[0].IsMortgageable
+	info.UserMinBorrow = ret[0].UserMinBorrow
+	info.DelistTime = ret[0].DelistTime
+	return info, nil
 }

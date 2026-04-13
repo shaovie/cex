@@ -164,6 +164,13 @@ type PublicTrade struct {
 	Qty    decimal.Decimal
 }
 
+type SpotTradeFee struct {
+	Symbol   string          // BTCUSDT
+	Maker    decimal.Decimal // 挂单方
+	Taker    decimal.Decimal // 吃单方
+	Discount decimal.Decimal // 折扣
+}
+
 type SpotOrder struct {
 	RequestId string // for ws 不要超过28, 在SpotWsPlaceOrder成功后返回
 	Err       string // for ws
@@ -299,14 +306,19 @@ type KLine struct {
 }
 
 type WithdrawReturn struct {
-	WId    string          // USDT
-	Symbol string          // USDT
-	Qty    decimal.Decimal //
-	Status string          // PENDING/DONE/FAILED/CANCELLED
+	WId    string // withdrawal ID
+	Symbol string // USDT
 	Txid   string
-	Addr   string
-	Chain  string
-	Memo   string
+}
+type WithdrawResult struct {
+	WId      string // withdrawal ID
+	Symbol   string // USDT
+	Status   string // PENDING/COMPLETED/FAILED/REJECTED/CANCELED
+	Txid     string
+	Info     string          // 失败原因
+	Qty      decimal.Decimal //
+	Fee      decimal.Decimal //
+	DoneTime int64           // second 完成时间
 }
 type FuturesLeverageBracket struct {
 	Bracket          int64           // 层级
@@ -327,19 +339,22 @@ type FuturesProfitLossHistory struct {
 
 type MarginCrossAccountUserAsset struct {
 	Symbol   string          `json:"asset"`
-	Borrowed decimal.Decimal `json:"borrowed"`
-	Free     decimal.Decimal `json:"free"`
-	Interest decimal.Decimal `json:"interest"`
-	Locked   decimal.Decimal `json:"locked"`
-	NetAsset decimal.Decimal `json:"netAsset"`
+	Borrowed decimal.Decimal `json:"borrowed"` // 正数
+	Free     decimal.Decimal `json:"free"`     // 可用余额
+	Interest decimal.Decimal `json:"interest"` // 利息
+	Locked   decimal.Decimal `json:"locked"`   // 冻结（持仓）
+	NetAsset decimal.Decimal `json:"netAsset"` // 负的表示有借款 = Free - (Borrowed + Interest) + Locked
 }
 type MarginCrossAccountInfo struct {
-	Type                       string          // accountType:MARGIN_1 全仓Classic模式账户, MARGIN_2 全仓Pro模式账户
-	Created                    bool            // true 表示已开户, false 表示未开户
-	BorrowEnabled              bool            //
+	Type                       string // accountType:MARGIN_1 全仓Classic模式账户, MARGIN_2 全仓Pro模式账户
+	Created                    bool   // true 表示已开户, false 表示未开户
+	BorrowEnabled              bool   //
+	TradeEnabled               bool
+	TransferInEnabled          bool
+	TransferOutEnabled         bool
 	MarginLevel                decimal.Decimal //
 	TotalCollateralValueInUSDT decimal.Decimal
-	UserAssets                 []*MarginCrossAccountUserAsset
+	UserAssets                 map[string]*MarginCrossAccountUserAsset
 }
 type MarginMaxBorrowable struct {
 	Amount      decimal.Decimal
@@ -372,4 +387,19 @@ type MarginTrade struct {
 	Fee      decimal.Decimal
 	FeeAsset string
 	Time     int64 // msec
+}
+type MarginAssetInfo struct {
+	Symbol         string // BTC
+	IsBorrowable   bool
+	IsMortgageable bool // 抵押
+	UserMinBorrow  decimal.Decimal
+	DelistTime     int64 // sec
+}
+
+// 资金账户资产
+type FundingAsset struct {
+	Symbol string          // BTC
+	Total  decimal.Decimal // 总共
+	Avail  decimal.Decimal // 可用
+	Locked decimal.Decimal
 }

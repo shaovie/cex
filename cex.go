@@ -32,6 +32,7 @@ type Exchanger interface {
 	// orderId, cltId 二选一
 	SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error)
 	SpotGetOpenOrders(symbol string) ([]*SpotOrder, error)
+	SpotGetTradeFee(symbol string) (SpotTradeFee, error)
 
 	//= ws public
 	// cex object 如果closed需要重新连接时，请不要复用，一定要创建新的obj
@@ -78,13 +79,17 @@ type Exchanger interface {
 	MarginGetMaxBorrowable(symbol /*BTC*/ string) (MarginMaxBorrowable, error)
 	// 市价 amt/qty任选1(优先amt) binance全支持
 	// 限价 只能qty=base qty, 参数涵义参考 struct MarginOrder
+	// sideEffectType: NO_SIDE_EFFECT,MARGIN_BUY,AUTO_REPAY,AUTO_BORROW_REPAY
 	MarginPlaceOrder(symbol, cltId string, price, amt, qty decimal.Decimal,
-		side, timeInForce, orderType, sideEffectType string, isIsolated bool) (string, error)
+		side, timeInForce, orderType, sideEffectType string, isIsolated bool) (string, decimal.Decimal, string, error)
 	// orderId, cltId 二选一
 	MarginCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId string, isIsolated bool) error
 	// orderId, cltId 二选一
 	MarginGetOrder(symbol, orderId, cltId string, isIsolated bool) (*MarginOrder, error)
 	MarginGetTrades(symbol, orderId string, isIsolated bool) ([]*MarginTrade, error)
+	// 全仓杠杆账户还款
+	MarginRepay(symbol string, qty decimal.Decimal, isIsolated bool) error
+	MarginGetAssetInfo(symbol /*BTC*/ string) (MarginAssetInfo, error)
 
 	//= futures, typ=UM,U本位 typ=CM,币本位
 	FuturesSupported(typ string) bool
@@ -168,10 +173,12 @@ type Exchanger interface {
 	//= wallet
 	// chain: TRX/MOB
 	Withdrawal(symbol, addr, memo, chain string, qty decimal.Decimal) (*WithdrawReturn, error)
-	CancelWithdrawal(wid string) error
-	//GetWithdrawalResult(symbol, addr, memo, chain string, qty decimal.Decimal) (*WithdrawReturn, error)
-	// from,to:FUNDING,SPOT,UM_FUTURE,CM_FUTURE,UNIFIED
-	Transfer(symbol, from, to string, qty decimal.Decimal) error
+	GetWithdrawalHistory(symbol string) ([]WithdrawResult, error)
+	// from,to:FUNDING,SPOT,UM_FUTURE,CM_FUTURE,UNIFIED,MARGIN
+	// typ: NORMAL, MASTER_TO_SUB, SUB_TO_MASTER, SUB_INTERNAL
+	Transfer(symbol, from, to, typ, subAccount string, qty decimal.Decimal) error
+	// 资金账户获取资产
+	FundingGetAsset(symbol string) (FundingAsset, error)
 }
 
 var (
@@ -246,17 +253,9 @@ func New(cexName, account, apikey, secretkey, passwd string) (Exchanger, error) 
 			apikey:    apikey,
 			secretkey: secretkey,
 		}
-	} /*else if cexName == "bitget" {
-		cexObj = &Bitget{
-			name:      cexName,
-			account:   account,
-			apikey:    apikey,
-			secretkey: secretkey,
-			passwd:    passwd,
-		}
 	} else {
 		return nil, errors.New("unknown cex platform : " + cexName)
-	}*/
+	}
 	if err := cexObj.Init(); err != nil {
 		return nil, errors.New(cexObj.Name() + " init failed! " + err.Error())
 	}

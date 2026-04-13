@@ -77,6 +77,7 @@ func (bo *Bigone) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error
 			Base:          base,
 			Quote:         quote,
 			Time:          now,
+			MinNotional:   pair.MinNotional,
 			QtyStep:       PowOneTenth(pair.BaseScale),
 			PriceTickSize: PowOneTenth(pair.QuoteScale),
 			MaxPrice:      decimal.NewFromFloat(999999999),
@@ -331,4 +332,41 @@ func (bo *Bigone) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 		dl = append(dl, &so)
 	}
 	return dl, nil
+}
+func (bo *Bigone) SpotGetTradeFee(symbol string) (SpotTradeFee, error) {
+	symbolS := boSpotSymbolMap[symbol]
+	var f SpotTradeFee
+	url := boSpotEndpoint + "/viewer/trading_fees?asset_pair_names=" + symbolS
+	jwt := "Bearer " + bo.jwt()
+	_, resp, err := ihttp.Get(url, boApiDeadline, map[string]string{"Authorization": jwt})
+	if err != nil {
+		return f, errors.New(bo.Name() + " error! " + err.Error())
+	}
+	ret := struct {
+		Code int    `json:"code,omitempty"`
+		Msg  string `json:"message,omitempty"`
+		L    []struct {
+			Symbol string          `json:"asset_pair_name,omitempty"`
+			Maker  decimal.Decimal `json:"maker_fee_rate"`
+			Taker  decimal.Decimal `json:"taker_fee_rate"`
+		} `json:"data,omitempty"`
+	}{}
+	err = json.Unmarshal(resp, &ret)
+	if err != nil {
+		return f, errors.New(bo.Name() + " unmarshal fail! " + err.Error())
+	}
+	if ret.Code != 0 {
+		return f, errors.New(bo.Name() + " get trade fee fail! " + ret.Msg)
+	}
+
+	for i := range ret.L {
+		if ret.L[i].Symbol == symbolS {
+			return SpotTradeFee{
+				Maker:    ret.L[i].Maker,
+				Taker:    ret.L[i].Taker,
+				Discount: decimal.NewFromFloat(1.0),
+			}, nil
+		}
+	}
+	return f, errors.New("not found")
 }

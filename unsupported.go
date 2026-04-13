@@ -37,6 +37,9 @@ func (us *Unsupported) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, 
 func (us *Unsupported) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 	return nil, errors.New("not support")
 }
+func (us *Unsupported) SpotGetTradeFee(symbol string) (SpotTradeFee, error) {
+	return SpotTradeFee{}, errors.New("not support")
+}
 
 func (us *Unsupported) SpotWsPublicOpen() error                   { return errors.New("not support") }
 func (us *Unsupported) SpotWsPublicSubscribe(channels []string)   {}
@@ -70,8 +73,8 @@ func (us *Unsupported) MarginGetMaxBorrowable(s string) (MarginMaxBorrowable, er
 	return MarginMaxBorrowable{}, nil
 }
 func (us *Unsupported) MarginPlaceOrder(symbol, cltId string, price, amt, qty decimal.Decimal,
-	side, timeInForce, orderType, sideEffectType string, isIsolated bool) (string, error) {
-	return "", errors.New("not support")
+	side, timeInForce, orderType, sideEffectType string, isIsolated bool) (string, decimal.Decimal, string, error) {
+	return "", decimal.Zero, "", errors.New("not support")
 }
 func (us *Unsupported) MarginCancelOrder(symbol, orderId, cltId string, isIsolated bool) error {
 	return errors.New("not support")
@@ -81,6 +84,12 @@ func (us *Unsupported) MarginGetOrder(symbol, orderId, cltId string, isIsolated 
 }
 func (us *Unsupported) MarginGetTrades(symbol, orderId string, isIsolated bool) ([]*MarginTrade, error) {
 	return nil, errors.New("not support")
+}
+func (us *Unsupported) MarginRepay(symbol string, amt decimal.Decimal, isIsolated bool) error {
+	return errors.New("not support")
+}
+func (us *Unsupported) MarginGetAssetInfo(symbol string) (MarginAssetInfo, error) {
+	return MarginAssetInfo{}, errors.New("not support")
 }
 
 // = futrures
@@ -187,7 +196,12 @@ func (us *Unsupported) UnifiedWsIsClosed() bool              { return true }
 func (us *Unsupported) Withdrawal(symbol, addr, memo, chain string, qty decimal.Decimal) (*WithdrawReturn, error) {
 	return nil, errors.New("not support")
 }
-func (us *Unsupported) CancelWithdrawal(wid string) error { return errors.New("not support") }
-func (us *Unsupported) Transfer(symbol, from, to string, qty decimal.Decimal) error {
+func (us *Unsupported) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error) {
+	return nil, errors.New("not support")
+}
+func (us *Unsupported) Transfer(symbol, from, to, typ, subAccount string, qty decimal.Decimal) error {
 	return errors.New("not support")
+}
+func (us *Unsupported) FundingGetAsset(symbol string) (FundingAsset, error) {
+	return FundingAsset{}, errors.New("not support")
 }
