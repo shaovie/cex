@@ -27,6 +27,8 @@ type Exchanger interface {
 	// 限价 只能qty=base qty, 参数涵义参考 struct SpotOrder
 	SpotPlaceOrder(symbol, cltId string, price, amt, qty decimal.Decimal,
 		side, timeInForce, orderType string, postOnly bool) (string, error)
+	// only bigone
+	SpotPlaceOrderMultiple([]SpotPostOrder) error
 	// orderId, cltId 二选一
 	SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId string) error
 	// orderId, cltId 二选一
@@ -179,6 +181,8 @@ type Exchanger interface {
 	Transfer(symbol, from, to, typ, subAccount string, qty decimal.Decimal) error
 	// 资金账户获取资产
 	FundingGetAsset(symbol string) (FundingAsset, error)
+	// network is optional
+	GetDepositAddress(symbol, network string) ([]DepositAddress, error)
 }
 
 var (

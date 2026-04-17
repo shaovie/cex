@@ -133,6 +133,64 @@ func (bo *Bigone) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 	}
 	return assetsMap, nil
 }
+func (bo *Bigone) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
+	type PostOrder struct {
+		Symbol string `json:"asset_pair_name"`
+		Side string `json:"side"`
+		Type string `json:"typ"`
+		ClientId string `json:"client_order_id,omitempty"`
+		PostOnly bool `json:"post_only,omitempty"`
+		Price string `json:"price,omitempty"`
+		Qty decimal.Decimal `json:"amount"`
+	}
+	poL := make([]PostOrder, 0, len(orders))
+	for i := range orders {
+		symbolS := boSpotSymbolMap[orders[i].Symbol]
+		po := PostOrder {
+			PostOnly: orders[i].PostOnly,
+			Symbol: symbolS,
+			Side: bo.fromStdSide(orders[i].Side),
+			Qty: orders[i].Qty,
+			Type: bo.fromStdOrderType(orders[i].Type),
+			ClientId: orders[i].ClientId,
+		}
+		if orders[i].Type == "LIMIT" {
+			po.Price = orders[i].Price.String()
+		}
+		poL = append(poL, po)
+	}
+	url := boSpotEndpoint + "/viewer/orders/multi"
+	jwt := "Bearer " + bo.jwt()
+	payload, _ := json.Marshal(poL)
+	header := map[string]string{
+		"Content-Type":  "application/json",
+		"Authorization": jwt,
+	}
+	_, resp, err := ihttp.Post(url, payload, boApiDeadline, header)
+	if err != nil {
+		return errors.New(bo.Name() + " net error! " + err.Error())
+	}
+	ret := struct {
+		Code int    `json:"code,omitempty"`
+		Msg  string `json:"message,omitempty"`
+		/*
+		Data []struct {
+			OrderId int64  `json:"id,omitempty"`
+			ClientId string `json:"client_order_id"`
+			Status  string `json:"state,omitempty"`
+		} `json:"data"`
+		*/
+	}{}
+	err = json.Unmarshal(resp, &ret)
+	if err != nil {
+		return errors.New(bo.Name() + " unmarshal fail! " + err.Error() + ", "+ string(resp))
+	}
+	if ret.Code != 0 {
+		return errors.New(bo.Name() + " fail! msg=" + ret.Msg)
+	}
+
+	return nil
+}
 func (bo *Bigone) SpotPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 	price, amt, qty decimal.Decimal,
 	side, timeInForce, orderType string, postOnly bool) (string, error) {
@@ -173,7 +231,7 @@ func (bo *Bigone) SpotPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 	}{}
 	err = json.Unmarshal(resp, &ret)
 	if err != nil {
-		return "", errors.New(bo.Name() + " unmarshal fail! " + err.Error())
+		return "", errors.New(bo.Name() + " unmarshal fail! " + err.Error() + ", "+ string(resp))
 	}
 	if ret.Code != 0 {
 		return "", errors.New(bo.Name() + " fail! msg=" + ret.Msg)
@@ -196,7 +254,7 @@ func (bo *Bigone) SpotCancelOrder(symbol, orderId, cltId string) error {
 		"Content-Type":  "application/json",
 		"Authorization": jwt,
 	}
-	_, resp, err := ihttp.Post(url, []byte(payload), boApiDeadline, header)
+	respCode, resp, err := ihttp.Post(url, []byte(payload), boApiDeadline, header)
 	if err != nil {
 		return errors.New(bo.Name() + " net error! " + err.Error())
 	}
@@ -209,7 +267,7 @@ func (bo *Bigone) SpotCancelOrder(symbol, orderId, cltId string) error {
 	}{}
 	err = json.Unmarshal(resp, &ret)
 	if err != nil {
-		return errors.New(bo.Name() + " cancel order unmarshal fail! " + err.Error())
+		return errors.New(bo.Name() + " cancel order unmarshal fail! " + err.Error()+strconv.FormatInt(int64(respCode), 10))
 	}
 	if ret.Code != 0 {
 		return errors.New(bo.Name() + " cancel order fail! " + ret.Msg)

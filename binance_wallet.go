@@ -178,3 +178,35 @@ func (bn *Binance) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error)
 	}
 	return res, nil
 }
+func (bn *Binance) GetDepositAddress(symbol, network string) ([]DepositAddress, error) {
+	query := fmt.Sprintf("&coin=%s", symbol)
+	if network != "" {
+		query += "&network="+network
+	}
+	url := bnWalletEndpoint + "/sapi/v1/capital/deposit/address/list?" + bn.httpQuerySign(query)
+	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	if err != nil {
+		return nil, errors.New(bn.Name() + " net error! " + err.Error())
+	}
+	if resp[0] != '[' {
+		return nil, bn.handleExceptionResp("GetDepositAddress", resp)
+	}
+	ret := []struct {
+		Network  string          `json:"coin"`
+		Addr     string          `json:"address"`
+		Memo     string          `json:"tag"`
+	}{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return nil, errors.New(bn.Name() + " unmarshal error! " + err.Error())
+	}
+	daL := make([]DepositAddress, 0, 4)
+	for i := range ret {
+		daL = append(daL, DepositAddress{
+			Network: ret[i].Network,
+			Addr: ret[i].Addr,
+			Memo: ret[i].Memo,
+		})
+	}
+
+	return daL, nil
+}

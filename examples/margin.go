@@ -13,7 +13,22 @@ import (
 
 func testRest(cexObj cex.Exchanger) {
 	ilog.Rinfo("rest api test...")
-	//cexObj.MarginGetAssetInfo("AXS")
+	//cexObj.GetWithdrawalHistory("USDT")
+	marginMaxBorrowable, err := cexObj.MarginGetMaxBorrowable("AXS")
+	if err != nil {
+		ilog.Rinfo("get max borrowable err: " + err.Error())
+		return
+	}
+	ilog.Rinfo("max borrowable: %v", marginMaxBorrowable)
+	return
+	daL, err := cexObj.GetDepositAddress("USDT", "TRX")
+	if err != nil {
+		ilog.Rinfo("get deposit addr err: " + err.Error())
+	}
+	for _, ua := range daL {
+		ilog.Rinfo("deposit addr: %v", ua)
+	}
+	return
 	accInfo, err := cexObj.MarginGetCrossAccountInfo()
 	if err != nil {
 		ilog.Rinfo("get accont err: " + err.Error())
@@ -25,12 +40,6 @@ func testRest(cexObj cex.Exchanger) {
 	}
 	return
 	//cexObj.MarginRepay("BTC", decimal.NewFromFloat(0.00148002), false)
-	marginMaxBorrowable, err := cexObj.MarginGetMaxBorrowable("BTC")
-	if err != nil {
-		ilog.Rinfo("get max borrowable err: " + err.Error())
-		return
-	}
-	ilog.Rinfo("max borrowable: %v", marginMaxBorrowable)
 	bba, err := cexObj.SpotGetBBO("BTCUSDT")
 	if err != nil {
 		ilog.Rinfo("get bba err: " + err.Error())

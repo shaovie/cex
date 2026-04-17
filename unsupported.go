@@ -28,6 +28,9 @@ func (us *Unsupported) SpotPlaceOrder(symbol, cltId string, price, amt, qty deci
 	side, timeInForce, orderType string, postOnly bool) (string, error) {
 	return "", errors.New("not support")
 }
+func (us *Unsupported) SpotPlaceOrderMultiple([]SpotPostOrder) error {
+	return errors.New("not support")
+}
 func (us *Unsupported) SpotCancelOrder(symbol, orderId, cltId string) error {
 	return errors.New("not support")
 }
@@ -204,4 +207,7 @@ func (us *Unsupported) Transfer(symbol, from, to, typ, subAccount string, qty de
 }
 func (us *Unsupported) FundingGetAsset(symbol string) (FundingAsset, error) {
 	return FundingAsset{}, errors.New("not support")
+}
+func (us *Unsupported) GetDepositAddress(symbol, network string) ([]DepositAddress, error) {
+	return nil, errors.New("not support")
 }

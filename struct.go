@@ -165,12 +165,22 @@ type PublicTrade struct {
 }
 
 type SpotTradeFee struct {
-	Symbol   string          // BTCUSDT
-	Maker    decimal.Decimal // 挂单方
-	Taker    decimal.Decimal // 吃单方
-	Discount decimal.Decimal // 折扣
+	Maker    decimal.Decimal `json:"maker,omitempty"` // 挂单方
+	Taker    decimal.Decimal `json:"taker,omitempty"`// 吃单方
+	Discount decimal.Decimal `json:"discount,omitempty"`// 折扣
 }
 
+type SpotPostOrder struct {
+	PostOnly bool
+	Symbol   string // BTCUSDT
+	ClientId string
+	Side        string
+	Type        string
+	TimeInForce string
+	Price decimal.Decimal
+	Qty   decimal.Decimal
+	Amt   decimal.Decimal
+}
 type SpotOrder struct {
 	RequestId string // for ws 不要超过28, 在SpotWsPlaceOrder成功后返回
 	Err       string // for ws
@@ -402,4 +412,10 @@ type FundingAsset struct {
 	Total  decimal.Decimal // 总共
 	Avail  decimal.Decimal // 可用
 	Locked decimal.Decimal
+}
+
+type DepositAddress struct {
+	Addr string
+	Network string
+	Memo string
 }

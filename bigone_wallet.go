@@ -204,3 +204,39 @@ func (bo *Bigone) FundingGetAsset(symbol string) (FundingAsset, error) {
 		Total:  ret.Data.Balance.Add(ret.Data.Locked),
 	}, nil
 }
+func (bo *Bigone) GetDepositAddress(symbol, network string) ([]DepositAddress, error) {
+	url := boSpotEndpoint + "/viewer/assets/" + symbol + "/address"
+	jwt := "Bearer " + bo.jwt()
+	_, resp, err := ihttp.Get(url, boApiDeadline, map[string]string{"Authorization": jwt})
+	if err != nil {
+		return nil, errors.New(bo.Name() + " net error! " + err.Error())
+	}
+	ret := struct {
+		Code int    `json:"code,omitempty"`
+		Msg  string `json:"message,omitempty"`
+		Data []struct {
+			Chain  string          `json:"chain"`
+			Addr  string          `json:"value"`
+			Memo  string `json:"memo"`
+		} `json:"data"`
+	}{}
+	err = json.Unmarshal(resp, &ret)
+	if err != nil {
+		return nil, errors.New(bo.Name() + " unmarshal fail! " + err.Error())
+	}
+	if ret.Code != 0 {
+		return nil, errors.New(bo.Name() + " get deposit addr fail! msg=" + ret.Msg)
+	}
+	daL := make([]DepositAddress, 0, len(ret.Data))
+	for i := range ret.Data {
+		if network != "" && ret.Data[i].Chain != network {
+			continue
+		}
+		daL = append(daL, DepositAddress{
+			Network: ret.Data[i].Chain,
+			Addr: ret.Data[i].Addr,
+			Memo: ret.Data[i].Memo,
+		})
+	}
+	return daL, nil
+}
