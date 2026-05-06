@@ -62,7 +62,7 @@ func (bo *Bigone) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error
 		return nil, errors.New(bo.Name() + " unmarshal error! " + err.Error())
 	}
 	if recv.Code != 0 {
-		return nil, errors.New(recv.Msg)
+		return nil, errors.New(bo.Name() + " " + recv.Msg)
 	}
 	all := make(map[string]*SpotExchangePairRule)
 	now := time.Now().Unix()
@@ -135,23 +135,23 @@ func (bo *Bigone) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 }
 func (bo *Bigone) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
 	type PostOrder struct {
-		Symbol string `json:"asset_pair_name"`
-		Side string `json:"side"`
-		Type string `json:"typ"`
-		ClientId string `json:"client_order_id,omitempty"`
-		PostOnly bool `json:"post_only,omitempty"`
-		Price string `json:"price,omitempty"`
-		Qty decimal.Decimal `json:"amount"`
+		Symbol   string          `json:"asset_pair_name"`
+		Side     string          `json:"side"`
+		Type     string          `json:"typ"`
+		ClientId string          `json:"client_order_id,omitempty"`
+		PostOnly bool            `json:"post_only,omitempty"`
+		Price    string          `json:"price,omitempty"`
+		Qty      decimal.Decimal `json:"amount"`
 	}
 	poL := make([]PostOrder, 0, len(orders))
 	for i := range orders {
 		symbolS := boSpotSymbolMap[orders[i].Symbol]
-		po := PostOrder {
+		po := PostOrder{
 			PostOnly: orders[i].PostOnly,
-			Symbol: symbolS,
-			Side: bo.fromStdSide(orders[i].Side),
-			Qty: orders[i].Qty,
-			Type: bo.fromStdOrderType(orders[i].Type),
+			Symbol:   symbolS,
+			Side:     bo.fromStdSide(orders[i].Side),
+			Qty:      orders[i].Qty,
+			Type:     bo.fromStdOrderType(orders[i].Type),
 			ClientId: orders[i].ClientId,
 		}
 		if orders[i].Type == "LIMIT" {
@@ -174,16 +174,16 @@ func (bo *Bigone) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
 		Code int    `json:"code,omitempty"`
 		Msg  string `json:"message,omitempty"`
 		/*
-		Data []struct {
-			OrderId int64  `json:"id,omitempty"`
-			ClientId string `json:"client_order_id"`
-			Status  string `json:"state,omitempty"`
-		} `json:"data"`
+			Data []struct {
+				OrderId int64  `json:"id,omitempty"`
+				ClientId string `json:"client_order_id"`
+				Status  string `json:"state,omitempty"`
+			} `json:"data"`
 		*/
 	}{}
 	err = json.Unmarshal(resp, &ret)
 	if err != nil {
-		return errors.New(bo.Name() + " unmarshal fail! " + err.Error() + ", "+ string(resp))
+		return errors.New(bo.Name() + " unmarshal fail! " + err.Error() + ", " + string(resp))
 	}
 	if ret.Code != 0 {
 		return errors.New(bo.Name() + " fail! msg=" + ret.Msg)
@@ -231,7 +231,7 @@ func (bo *Bigone) SpotPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 	}{}
 	err = json.Unmarshal(resp, &ret)
 	if err != nil {
-		return "", errors.New(bo.Name() + " unmarshal fail! " + err.Error() + ", "+ string(resp))
+		return "", errors.New(bo.Name() + " unmarshal fail! " + err.Error() + ", " + string(resp))
 	}
 	if ret.Code != 0 {
 		return "", errors.New(bo.Name() + " fail! msg=" + ret.Msg)
@@ -267,7 +267,7 @@ func (bo *Bigone) SpotCancelOrder(symbol, orderId, cltId string) error {
 	}{}
 	err = json.Unmarshal(resp, &ret)
 	if err != nil {
-		return errors.New(bo.Name() + " cancel order unmarshal fail! " + err.Error()+strconv.FormatInt(int64(respCode), 10))
+		return errors.New(bo.Name() + " cancel order unmarshal fail! " + err.Error() + strconv.FormatInt(int64(respCode), 10))
 	}
 	if ret.Code != 0 {
 		return errors.New(bo.Name() + " cancel order fail! " + ret.Msg)

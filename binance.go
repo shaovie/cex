@@ -114,6 +114,7 @@ func (bn *Binance) Init() error {
 	bn.futuresWsPrivateApiClosed = true
 
 	bn.unifiedWsConnClosed = true
+	bn.debug = false
 
 	return nil
 }

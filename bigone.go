@@ -142,9 +142,9 @@ func (bo *Bigone) toStdOrderType(orderType string) string {
 	return ""
 }
 func (bo *Bigone) toStdOrderStatus(status string) string {
-	if status == "PENDING" || status == "OPENING" {
+	if status == "PENDING" {
 		return "NEW"
-	} else if status == "NONE_FILLED" {
+	} else if status == "OPENING" || status == "NONE_FILLED" {
 		return "PARTIALLY_FILLED"
 	} else if status == "FILLED" {
 		return "FILLED"

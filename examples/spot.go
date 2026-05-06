@@ -169,11 +169,11 @@ func testRest(cexObj cex.Exchanger) {
 		ilog.Rinfo("test get public 24hticker: %v", allTickers["BTCUSDT"])
 	}
 	transferQty := decimal.NewFromFloat(10.233444)
-	err = cexObj.Transfer("USDT", "SPOT", "UNIFIED", transferQty)
+	err = cexObj.Transfer("USDT", "SPOT", "UNIFIED", "NORMAL", "", transferQty)
 	if err == nil {
 		ilog.Rinfo("transfer ok")
 		time.Sleep(time.Second)
-		err = cexObj.Transfer("USDT", "UNIFIED", "SPOT", transferQty)
+		err = cexObj.Transfer("USDT", "UNIFIED", "SPOT", "NORMAL", "", transferQty)
 		if err == nil {
 			ilog.Rinfo("transfer back ok")
 		} else {
@@ -236,6 +236,13 @@ func main() {
 	ilog.Rinfo("spot api:ws test. cex = %s", cexName)
 	// ok,gate,bybit,binance
 	cexObj, _ := cex.New(cexName, "", apiKey, secretKey, passphrase)
+	order, err := cexObj.MarginGetOrder("AXSUSDT", "", "mmPB1dDMsPXmMIkJDmc4", false)
+	if err != nil {
+		ilog.Rinfo("get order err %s ", err.Error())
+	} else {
+		ilog.Rinfo("get order %v ", *order)
+	}
+	return
 	testRest(cexObj)
 	testPrivWs(cexObj)
 	testPubWs(cexObj)

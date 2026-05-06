@@ -215,8 +215,8 @@ func (bo *Bigone) GetDepositAddress(symbol, network string) ([]DepositAddress, e
 		Code int    `json:"code,omitempty"`
 		Msg  string `json:"message,omitempty"`
 		Data []struct {
-			Chain  string          `json:"chain"`
-			Addr  string          `json:"value"`
+			Chain string `json:"chain"`
+			Addr  string `json:"value"`
 			Memo  string `json:"memo"`
 		} `json:"data"`
 	}{}
@@ -234,8 +234,8 @@ func (bo *Bigone) GetDepositAddress(symbol, network string) ([]DepositAddress, e
 		}
 		daL = append(daL, DepositAddress{
 			Network: ret.Data[i].Chain,
-			Addr: ret.Data[i].Addr,
-			Memo: ret.Data[i].Memo,
+			Addr:    ret.Data[i].Addr,
+			Memo:    ret.Data[i].Memo,
 		})
 	}
 	return daL, nil

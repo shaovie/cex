@@ -651,6 +651,12 @@ func (bo *Bigone) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
 				so.FeeAsset = arr[0]
 			}
 		}
+		if so.FilledQty.IsPositive() && so.Status == "NEW" {
+			so.Status = "PARTIALLY_FILLED"
+		}
+		if so.FilledQty.IsPositive() {
+			ilog.Rinfo("%s %v", string(data), *so)
+		}
 		ch <- so
 	}
 }

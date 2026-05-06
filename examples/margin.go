@@ -13,7 +13,8 @@ import (
 
 func testRest(cexObj cex.Exchanger) {
 	ilog.Rinfo("rest api test...")
-	//cexObj.GetWithdrawalHistory("USDT")
+	cexObj.GetWithdrawalHistory("AXS")
+	return
 	marginMaxBorrowable, err := cexObj.MarginGetMaxBorrowable("AXS")
 	if err != nil {
 		ilog.Rinfo("get max borrowable err: " + err.Error())
