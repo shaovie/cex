@@ -35,6 +35,15 @@ func (v *GateWsSpotPubMsg) reset() {
 	v.Data = nil
 }
 
+type GateSpotBBO struct {
+	Symbol   string          `json:"s"`
+	BidPrice decimal.Decimal `json:"b"`
+	BidQty   decimal.Decimal `json:"B"`
+	AskPrice decimal.Decimal `json:"a"`
+	AskQty   decimal.Decimal `json:"A"`
+	Time     int64           `json:"t"`
+}
+
 type GateWsContractPubMsg struct {
 	Channel string          `json:"channel,omitempty"`
 	Event   string          `json:"event,omitempty"`

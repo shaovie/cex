@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"strconv"
 	"sync"
 	"time"
@@ -38,7 +39,8 @@ type BbSubscribeArg struct {
 }
 
 var (
-	bbWsPubMsgPool sync.Pool
+	bbWsPubMsgPool  sync.Pool
+	bbWsPrivMsgPool sync.Pool
 )
 
 const bbUniEndpoint = "https://api.bybit.com"
@@ -50,8 +52,22 @@ func init() {
 			return &BybitWsPubMsg{}
 		},
 	}
+	bbWsPrivMsgPool = sync.Pool{
+		New: func() any {
+			return &BybitWsPrivMsg{}
+		},
+	}
 }
 
+func NewBybit(account, apikey, secretkey string) *Bybit {
+	cexObj := &Bybit{
+		name:      "bybit",
+		account:   account,
+		apikey:    apikey,
+		secretkey: secretkey,
+	}
+	return cexObj
+}
 func (bb *Bybit) Name() string {
 	return bb.name
 }
@@ -83,6 +99,9 @@ func (bb *Bybit) sign(params string) string {
 	h := hmac.New(sha256.New, []byte(bb.secretkey))
 	h.Write([]byte(params))
 	return hex.EncodeToString(h.Sum(nil))
+}
+func (bb *Bybit) wsSign(expires int64) string {
+	return bb.sign(fmt.Sprintf("GET/realtime%d", expires))
 }
 func (bb *Bybit) toStdSide(side string) string {
 	if side == "Buy" {
@@ -135,4 +154,16 @@ func (bb *Bybit) fromStdCategory(v string) string {
 		return "inverse"
 	}
 	return "linear"
+}
+func (bb *Bybit) toStdWithdrawStatus(v string) string {
+	if v == "SecurityCheck" || v == "Pending" || v == "BlockchainConfirmed" {
+		return "PENDING"
+	} else if v == "success" {
+		return "COMPLETED"
+	} else if v == "Reject" || v == "Fail" {
+		return "FAILED"
+	} else if v == "CancelByUser" {
+		return "CANCELED"
+	}
+	return ""
 }

@@ -183,18 +183,25 @@ func (bn *Binance) FuturesWsPublicLoop(ch chan<- any) {
 		bn.futuresWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
-	go func() {
+	pingExit := make(chan struct{})
+	defer close(pingExit)
+	go func(exitChan <-chan struct{}) {
 		ticker := time.NewTicker(pingInterval)
 		defer ticker.Stop()
-		for range ticker.C {
-			if bn.FuturesWsPublicIsClosed() {
-				break
+		for {
+			select {
+			case <-exitChan:
+				return
+			case <-ticker.C:
+				if bn.FuturesWsPublicIsClosed() {
+					break
+				}
+				bn.futuresWsPublicConnMtx.Lock()
+				bn.futuresWsPublicConn.WriteMessage(websocket.PingMessage, nil)
+				bn.futuresWsPublicConnMtx.Unlock()
 			}
-			bn.futuresWsPublicConnMtx.Lock()
-			bn.futuresWsPublicConn.WriteMessage(websocket.PingMessage, nil)
-			bn.futuresWsPublicConnMtx.Unlock()
 		}
-	}()
+	}(pingExit)
 
 	l := 0
 	for {
@@ -459,16 +466,23 @@ func (bn *Binance) futuresWsPrivateLoop(ch chan<- any, wg *sync.WaitGroup) {
 		bn.futuresWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
+	exitChan := make(chan struct{})
+	defer close(exitChan)
 	go func() {
 		ticker := time.NewTicker(pingInterval)
 		defer ticker.Stop()
-		for range ticker.C {
-			if bn.futuresWsPrivateIsClosed() {
-				break
+		for {
+			select {
+			case <-exitChan:
+				return
+			case <-ticker.C:
+				if bn.futuresWsPrivateIsClosed() {
+					break
+				}
+				bn.futuresWsPrivateConnMtx.Lock()
+				bn.futuresWsPrivateConn.WriteMessage(websocket.PingMessage, nil)
+				bn.futuresWsPrivateConnMtx.Unlock()
 			}
-			bn.futuresWsPrivateConnMtx.Lock()
-			bn.futuresWsPrivateConn.WriteMessage(websocket.PingMessage, nil)
-			bn.futuresWsPrivateConnMtx.Unlock()
 		}
 	}()
 
@@ -613,18 +627,25 @@ func (bn *Binance) futuresWsPrivateApiLoop(ch chan<- any, wg *sync.WaitGroup) {
 		bn.futuresWsPrivateApiConn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
-	go func() {
+	pingExit := make(chan struct{})
+	defer close(pingExit)
+	go func(exitChan <-chan struct{}) {
 		ticker := time.NewTicker(pingInterval)
 		defer ticker.Stop()
-		for range ticker.C {
-			if bn.futuresWsPrivateApiIsClosed() {
-				break
+		for {
+			select {
+			case <-exitChan:
+				return
+			case <-ticker.C:
+				if bn.futuresWsPrivateApiIsClosed() {
+					break
+				}
+				bn.futuresWsPrivateApiConnMtx.Lock()
+				bn.futuresWsPrivateApiConn.WriteMessage(websocket.PingMessage, nil)
+				bn.futuresWsPrivateApiConnMtx.Unlock()
 			}
-			bn.futuresWsPrivateApiConnMtx.Lock()
-			bn.futuresWsPrivateApiConn.WriteMessage(websocket.PingMessage, nil)
-			bn.futuresWsPrivateApiConnMtx.Unlock()
 		}
-	}()
+	}(pingExit)
 
 	type Msg struct {
 		Id     string          `json:"Id,omitempty"`

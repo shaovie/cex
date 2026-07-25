@@ -17,11 +17,13 @@ type Exchanger interface {
 	//= spot
 	// rest api
 	SpotSupported() bool
-	SpotServerTime() (int64, error)
+	SpotServerTime() (int64, error) // millisecond
 	SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error)
 	SpotGetAll24hTicker() (map[string]Pub24hTicker, error) // bigone 不支持
+	// 获取订单簿买1/卖1挂单数据
 	SpotGetBBO(symbol string) (BestBidAsk, error)
 	SpotGetAllAssets() (map[string]*SpotAsset, error)
+	IsXStock(symbol /*AAPLxUSD*/ string) bool
 
 	// 市价 amt/qty任选1(优先amt) binance全支持, bigone只qty, gate,okx只amt
 	// 限价 只能qty=base qty, 参数涵义参考 struct SpotOrder
@@ -31,16 +33,17 @@ type Exchanger interface {
 	SpotPlaceOrderMultiple([]SpotPostOrder) error
 	// orderId, cltId 二选一
 	SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId string) error
-	// orderId, cltId 二选一
+	// orderId, cltId 二选一 (kraken 不支持cltId)
 	SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error)
 	SpotGetOpenOrders(symbol string) ([]*SpotOrder, error)
+	SpotGetFilledOrders(symbol string) ([]*SpotOrder, error)
 	SpotGetTradeFee(symbol string) (SpotTradeFee, error)
 
 	//= ws public
 	// cex object 如果closed需要重新连接时，请不要复用，一定要创建新的obj
 	SpotWsPublicOpen() error
 	// channels: orderbook5@symbolA,symbolB (5档)
-	//           bbo@symbolA,symbolB     // 最优买卖价 只binance,bybit,bbo,okx实现
+	//           bbo@symbolA,symbolB     // 最优买卖价 只binance,bybit,bbo,okx,gate实现
 	//           ticker@symbolA,symbolB     // bigone不支持
 	//           trades@symbolA,symbolB // 仅限bigone,binance
 	// 每个交易所支持的参数数量不同
@@ -64,6 +67,8 @@ type Exchanger interface {
 	SpotWsPrivateSubscribe(channels []string)
 	// Loop结束时会close(ch)
 	SpotWsPrivateLoop(ch chan<- any)
+	// 返回参数1:上次pong的时间(0表示还没收到pong)，参数2:期望的pong时间(0表示还没开始ping), 参3:ping周期
+	SpotWsPrivateLastPong() (int64, int64, int64)
 	SpotWsPrivateClose()
 	SpotWsPrivateIsClosed() bool
 	// 市价 amt/qty任选1(优先amt) binance全支持, bigone只qty, gate,okx只amt
@@ -174,15 +179,19 @@ type Exchanger interface {
 
 	//= wallet
 	// chain: TRX/MOB
+	// memo is key at Kraken
 	Withdrawal(symbol, addr, memo, chain string, qty decimal.Decimal) (*WithdrawReturn, error)
 	GetWithdrawalHistory(symbol string) ([]WithdrawResult, error)
 	// from,to:FUNDING,SPOT,UM_FUTURE,CM_FUTURE,UNIFIED,MARGIN
 	// typ: NORMAL, MASTER_TO_SUB, SUB_TO_MASTER, SUB_INTERNAL
 	Transfer(symbol, from, to, typ, subAccount string, qty decimal.Decimal) error
 	// 资金账户获取资产
+	FundingGetAllAssets() (map[string]*FundingAsset, error)
 	FundingGetAsset(symbol string) (FundingAsset, error)
 	// network is optional
 	GetDepositAddress(symbol, network string) ([]DepositAddress, error)
+	// only bigone
+	GetWalletAllAssetInfo() (map[string]*WalletAssetInfo, error)
 }
 
 var (
@@ -203,8 +212,10 @@ func init() {
 	CexList["okx"] = "Okx"
 	CexList["bigone"] = "BigONE"
 	CexList["bybit"] = "Bybit"
+	CexList["kraken"] = "Kraken"
+	CexList["ktx"] = "Ktx"
 	//CexList["mexc"] = "Mexc"
-	//CexList["bitget"] 	= "Bitget"
+	//CexList["bitget"]= "Bitget"
 
 	CexSXList = make(map[string]string)
 	CexSXList["binance"] = "BN"
@@ -212,7 +223,9 @@ func init() {
 	CexSXList["okx"] = "OK"
 	CexSXList["bybit"] = "BY"
 	CexSXList["bigone"] = "BO"
+	CexSXList["kraken"] = "KK"
 	CexSXList["mexc"] = "MC"
+	CexSXList["ktx"] = "KTX"
 
 	CexFeeCoinMap = make(map[string]string)
 	CexFeeCoinMap["gate"] = "GT"
@@ -221,46 +234,28 @@ func init() {
 
 func New(cexName, account, apikey, secretkey, passwd string) (Exchanger, error) {
 	var cexObj Exchanger
+	var err error
 	if cexName == "binance" {
-		cexObj = &Binance{
-			name:      cexName,
-			account:   account,
-			apikey:    apikey,
-			secretkey: secretkey,
-		}
+		cexObj = NewBinance(account, apikey, secretkey)
 	} else if cexName == "gate" {
-		cexObj = &Gate{
-			name:      cexName,
-			account:   account,
-			apikey:    apikey,
-			secretkey: secretkey,
-		}
+		cexObj, err = NewGate(account, apikey, secretkey, "")
 	} else if cexName == "okx" {
-		cexObj = &Okx{
-			name:      cexName,
-			account:   account,
-			apikey:    apikey,
-			secretkey: secretkey,
-			passwd:    passwd,
-		}
+		cexObj = NewOkx(account, apikey, secretkey, passwd)
 	} else if cexName == "bigone" {
-		cexObj = &Bigone{
-			name:      cexName,
-			account:   account,
-			apikey:    apikey,
-			secretkey: secretkey,
-		}
+		cexObj, err = NewBigone(account, apikey, secretkey, "")
 	} else if cexName == "bybit" {
-		cexObj = &Bybit{
-			name:      cexName,
-			account:   account,
-			apikey:    apikey,
-			secretkey: secretkey,
-		}
+		cexObj = NewBybit(account, apikey, secretkey)
+	} else if cexName == "ktx" {
+		cexObj = NewKtx()
+	} else if cexName == "kraken" {
+		cexObj = NewKraken(account, apikey, secretkey)
 	} else {
 		return nil, errors.New("unknown cex platform : " + cexName)
 	}
-	if err := cexObj.Init(); err != nil {
+	if err != nil {
+		return nil, errors.New(cexObj.Name() + " create failed! " + err.Error())
+	}
+	if err = cexObj.Init(); err != nil {
 		return nil, errors.New(cexObj.Name() + " init failed! " + err.Error())
 	}
 	return cexObj, nil

@@ -41,6 +41,7 @@ type SpotExchangePairRule struct {
 	Symbol        string          // BTCUSDT
 	Base          string          // BTC
 	Quote         string          // USDT
+	Status        string          // online,post_only,offline (只针对某些交易所有意义)
 	MinPrice      decimal.Decimal // MUST
 	MaxPrice      decimal.Decimal // MUST
 	PriceTickSize decimal.Decimal // MUST 价格最小变动单位
@@ -196,6 +197,7 @@ type SpotOrder struct {
 
 	FilledQty decimal.Decimal // 交易的订单数量
 	FilledAmt decimal.Decimal // 累计交易的金额
+	AvgPrice  decimal.Decimal // 可选，只有部分交易所有
 
 	Status      string          // NEW/PARTIALLY_FILLED/FILLED/CANCELED/REJECTED/EXPIRED
 	Type        string          // LIMIT/MARKET
@@ -381,6 +383,7 @@ type MarginOrder struct {
 
 	FilledQty decimal.Decimal // 交易的订单数量
 	FilledAmt decimal.Decimal // 累计交易的金额
+	AvgPrice  decimal.Decimal // 可选，只有部分交易所有
 
 	Status      string // NEW/PARTIALLY_FILLED/FILLED/CANCELED/REJECTED/EXPIRED
 	Type        string // LIMIT/MARKET
@@ -418,4 +421,19 @@ type DepositAddress struct {
 	Addr    string
 	Network string
 	Memo    string
+}
+
+type WalletAssetInfo struct {
+	Symbol            string // BTC
+	IsTransferEnabled bool
+	TransferScale     int32 // 划转精度
+	BindNetworks      map[string]*WalletAssetBindNetworkInfo
+}
+type WalletAssetBindNetworkInfo struct {
+	IsWithdrawalEnabled bool
+	IsDepositEnabled    bool
+	WithdrawScale       int32           // 提现精度
+	WithdrawFee         decimal.Decimal // 提现Fee
+	MinWithdrawalAmount decimal.Decimal
+	MinDepositAmount    decimal.Decimal
 }

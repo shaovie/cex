@@ -76,6 +76,38 @@ func (bn *Binance) Transfer(symbol, from, to, typ, subAccount string, qty decima
 	}
 	return nil
 }
+func (bn *Binance) FundingGetAllAssets() (map[string]*FundingAsset, error) {
+	url := bnWalletEndpoint + "/sapi/v1/asset/get-funding-asset?" + bn.httpQuerySign("")
+	_, resp, err := ihttp.Post(url, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	if err != nil {
+		return nil, errors.New(bn.Name() + " net error! " + err.Error())
+	}
+	if resp[0] != '[' {
+		return nil, bn.handleExceptionResp("FundingGetAsset", resp)
+	}
+	recv := []struct {
+		Symbol      string          `json:"asset"`
+		Free        decimal.Decimal `json:"free"`
+		Locked      decimal.Decimal `json:"locked"`
+		Freeze      decimal.Decimal `json:"freeze"`
+		Withdrawing decimal.Decimal `json:"withdrawing"`
+	}{}
+	if err = json.Unmarshal(resp, &recv); err != nil {
+		return nil, errors.New(bn.Name() + " unmarshal error! " + err.Error())
+	}
+
+	assetsMap := make(map[string]*FundingAsset)
+	for _, v := range recv {
+		fa := FundingAsset{
+			Symbol: v.Symbol,
+			Avail:  v.Free,
+			Locked: v.Locked,
+			Total:  v.Free.Add(v.Locked).Add(v.Freeze).Add(v.Withdrawing),
+		}
+		assetsMap[v.Symbol] = &fa
+	}
+	return assetsMap, nil
+}
 func (bn *Binance) FundingGetAsset(symbol string) (FundingAsset, error) {
 	query := fmt.Sprintf("&asset=%s", symbol)
 	query = ""

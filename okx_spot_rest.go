@@ -85,6 +85,7 @@ func (ok *Okx) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 			Symbol:   pair.Base + pair.Quote,
 			Base:     pair.Base,
 			Quote:    pair.Quote,
+			Status:   "online",
 			MaxPrice: decimal.NewFromFloat(999999999.99),
 			Time:     now,
 		}

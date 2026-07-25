@@ -180,18 +180,25 @@ func (bn *Binance) SpotWsPublicLoop(ch chan<- any) {
 		bn.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
-	go func() {
+	pingExit := make(chan struct{})
+	defer close(pingExit)
+	go func(exitChan <-chan struct{}) {
 		ticker := time.NewTicker(pingInterval)
 		defer ticker.Stop()
-		for range ticker.C {
-			if bn.SpotWsPublicIsClosed() {
-				break
+		for {
+			select {
+			case <-exitChan:
+				return
+			case <-ticker.C:
+				if bn.SpotWsPublicIsClosed() {
+					break
+				}
+				bn.spotWsPublicConnMtx.Lock()
+				bn.spotWsPublicConn.WriteMessage(websocket.PingMessage, nil)
+				bn.spotWsPublicConnMtx.Unlock()
 			}
-			bn.spotWsPublicConnMtx.Lock()
-			bn.spotWsPublicConn.WriteMessage(websocket.PingMessage, nil)
-			bn.spotWsPublicConnMtx.Unlock()
 		}
-	}()
+	}(pingExit)
 
 	l := 0
 	for {
@@ -213,10 +220,10 @@ func (bn *Binance) SpotWsPublicLoop(ch chan<- any) {
 			goto END
 		}
 		l = len(msg.Stream)
-		if l > 13 && msg.Stream[l-13:l] == "@depth5@100ms" {
-			bn.spotWsHandleOrderBook5(strings.ToUpper(msg.Stream[0:l-13]), msg.Data, ch)
-		} else if l > 11 && msg.Stream[l-11:l] == "@bookTicker" {
+		if l > 11 && msg.Stream[l-11:l] == "@bookTicker" {
 			bn.spotWsHandleBBO(msg.Data, ch)
+		} else if l > 13 && msg.Stream[l-13:l] == "@depth5@100ms" {
+			bn.spotWsHandleOrderBook5(strings.ToUpper(msg.Stream[0:l-13]), msg.Data, ch)
 		} else if l > 11 && msg.Stream[l-11:l] == "@miniTicker" {
 			bn.spotWsHandle24hTickers(msg.Data, ch)
 		} else if l > 9 && msg.Stream[l-9:l] == "@aggTrade" {
@@ -414,18 +421,25 @@ func (bn *Binance) SpotWsPrivateLoop(ch chan<- any) {
 		bn.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
-	go func() {
+	pingExit := make(chan struct{})
+	defer close(pingExit)
+	go func(exitChan <-chan struct{}) {
 		ticker := time.NewTicker(pingInterval)
 		defer ticker.Stop()
-		for range ticker.C {
-			if bn.SpotWsPrivateIsClosed() {
-				break
+		for {
+			select {
+			case <-exitChan:
+				return
+			case <-ticker.C:
+				if bn.SpotWsPrivateIsClosed() {
+					break
+				}
+				bn.spotWsPrivateConnMtx.Lock()
+				bn.spotWsPrivateConn.WriteMessage(websocket.PingMessage, nil)
+				bn.spotWsPrivateConnMtx.Unlock()
 			}
-			bn.spotWsPrivateConnMtx.Lock()
-			bn.spotWsPrivateConn.WriteMessage(websocket.PingMessage, nil)
-			bn.spotWsPrivateConnMtx.Unlock()
 		}
-	}()
+	}(pingExit)
 
 	for {
 		_, recv, err := bn.spotWsPrivateConn.ReadMessage()

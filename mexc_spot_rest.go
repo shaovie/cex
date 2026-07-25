@@ -60,6 +60,7 @@ func (mc *Mexc) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) 
 			Symbol: pair.Symbol,
 			Base:   pair.Base,
 			Quote:  pair.Quote,
+			Status: "online",
 			Time:   now,
 		}
 		ep.MinPrice = decimal.NewFromFloat(0.000000001)

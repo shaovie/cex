@@ -3,3 +3,5 @@ $GOPATH/bin/easyjson -all gate_struct.go
 $GOPATH/bin/easyjson -all okx_struct.go
 $GOPATH/bin/easyjson -all bigone_struct.go
 $GOPATH/bin/easyjson -all bybit_struct.go
+$GOPATH/bin/easyjson -all kraken_struct.go
+$GOPATH/bin/easyjson -all ktx_struct.go

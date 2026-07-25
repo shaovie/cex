@@ -32,8 +32,10 @@ func spotPubWs(cexObj cex.Exchanger) {
 	}
 	ilog.Rinfo("test load exchange rule: %v", len(arr) > 0)
 	allSymbols := strings.Join(arr, ",")
-	cexObj.SpotWsPublicSubscribe([]string{"ticker@" + allSymbols,
-		"orderbook5@ETHUSDT,BTCUSDT", "orderbook5@SOLUSDT", "bbo@BTCUSDT", "trades@BTCUSDT"})
+	//cexObj.SpotWsPublicSubscribe([]string{"ticker@" + allSymbols,
+	//"orderbook5@ETHUSDT,BTCUSDT", "orderbook5@SOLUSDT", "bbo@SPCXXUSDT", "trades@BTCUSDT"})
+	_ = allSymbols
+	cexObj.SpotWsPublicSubscribe([]string{"bbo@PRLUSDT"})
 	go cexObj.SpotWsPublicLoop(ch)
 	go func() {
 		time.Sleep(30 * time.Second)
@@ -128,22 +130,14 @@ func testPubWs(cexObj cex.Exchanger) {
 }
 func testPrivWs(cexObj cex.Exchanger) {
 	price := decimal.NewFromFloat(60990.238)
-	qty := decimal.NewFromFloat(0.00032486)
+	qty := decimal.NewFromFloat(0.000324863)
 	if exRule := cex.SpotGetExPairRule(cexObj.Name(), "BTCUSDT"); exRule != nil {
 		price = exRule.AdjustPrice(price)
 		qty = exRule.AdjustQty(price, qty)
 	}
-	allAssets, err := cexObj.SpotGetAllAssets()
-	if err != nil {
-		ilog.Rinfo("get all asset fail: " + err.Error())
-	} else {
-		for symbol, as := range allAssets {
-			ilog.Rinfo(cexObj.Name() + " " + symbol + " avail: " + as.Avail.String())
-		}
-	}
 	go spotPrivWs(cexObj)
 	time.Sleep(2 * time.Second)
-	cltId := gutils.RandomStr(24)
+	cltId := gutils.RandomStr(18)
 	placeTime := time.Now().UnixMilli()
 	ilog.Rinfo("to palce order: price=%s qty=%s at %d", price.String(), qty.String(), placeTime)
 	reqId, err := cexObj.SpotWsPlaceOrder("BTCUSDT", cltId, price, decimal.Zero, qty, "BUY", "GTC", "LIMIT", false)
@@ -160,8 +154,17 @@ func testRest(cexObj cex.Exchanger) {
 	if err != nil {
 		ilog.Rinfo("SpotServerTime fail: %s", err.Error())
 	} else {
-		ilog.Rinfo("local - server diff time: %d", time.Now().UnixMilli()-serverTime)
+		ilog.Rinfo("local - server diff time: %dms", time.Now().UnixMilli()-serverTime)
 	}
+	allAssets, err := cexObj.SpotGetAllAssets()
+	if err != nil {
+		ilog.Rinfo("get all asset fail: " + err.Error())
+	} else {
+		for symbol, as := range allAssets {
+			ilog.Rinfo(cexObj.Name() + " " + symbol + " avail: " + as.Avail.String())
+		}
+	}
+	return
 	allTickers, err := cexObj.SpotGetAll24hTicker()
 	if err != nil {
 		ilog.Rinfo("SpotGetAll24hTicker fail: %s", err.Error())
@@ -183,27 +186,28 @@ func testRest(cexObj cex.Exchanger) {
 		ilog.Rinfo("transfer fail: " + err.Error())
 	}
 
-	price := decimal.NewFromFloat(60990.238)
-	qty := decimal.NewFromFloat(0.00032486)
-	if exRule := cex.SpotGetExPairRule(cexObj.Name(), "BTCUSDT"); exRule != nil {
+	symbol := "AAPLxUSD"
+	price := decimal.NewFromFloat(202.34)
+	qty := decimal.NewFromFloat(0.02465)
+	if exRule := cex.SpotGetExPairRule(cexObj.Name(), symbol); exRule != nil {
 		price = exRule.AdjustPrice(price)
 		qty = exRule.AdjustQty(price, qty)
 		ilog.Rinfo("to palce order: price=%s qty=%s", price.String(), qty.String())
 	}
-	cltId := gutils.RandomStr(24)
+	cltId := gutils.RandomStr(18)
 	placeTime := time.Now().UnixMilli()
-	orderId, err := cexObj.SpotPlaceOrder("BTCUSDT", cltId, price, decimal.Zero, qty, "BUY", "GTC", "LIMIT", false)
+	orderId, err := cexObj.SpotPlaceOrder(symbol, cltId, price, decimal.Zero, qty, "BUY", "GTC", "LIMIT", false)
 	if err != nil {
 		ilog.Rinfo("place order fail: %s", err.Error())
 	} else {
 		ilog.Rinfo("place order ok, new order:%s at %d", orderId, placeTime)
-		order, err := cexObj.SpotGetOrder("BTCUSDT", orderId, "")
+		order, err := cexObj.SpotGetOrder(symbol, orderId, "")
 		if err != nil {
 			ilog.Rinfo("get order fail: ", err.Error())
 		} else {
 			ilog.Rinfo("get order: %v", *order)
 		}
-		orderL, err := cexObj.SpotGetOpenOrders("BTCUSDT")
+		orderL, err := cexObj.SpotGetOpenOrders(symbol)
 		if err != nil {
 			ilog.Rinfo("get open orders fail: ", err.Error())
 		} else {
@@ -211,7 +215,7 @@ func testRest(cexObj cex.Exchanger) {
 				ilog.Rinfo("get open orders: %v", *o)
 			}
 		}
-		err = cexObj.SpotCancelOrder("BTCUSDT", orderId, "")
+		err = cexObj.SpotCancelOrder(symbol, orderId, "")
 		if err != nil {
 			ilog.Rinfo("cancel order fail: %s", err.Error())
 		} else {
@@ -236,16 +240,48 @@ func main() {
 	ilog.Rinfo("spot api:ws test. cex = %s", cexName)
 	// ok,gate,bybit,binance
 	cexObj, _ := cex.New(cexName, "", apiKey, secretKey, passphrase)
-	order, err := cexObj.MarginGetOrder("AXSUSDT", "", "mmPB1dDMsPXmMIkJDmc4", false)
-	if err != nil {
-		ilog.Rinfo("get order err %s ", err.Error())
-	} else {
-		ilog.Rinfo("get order %v ", *order)
+	cexObj.Debug(true)
+	orders, _ := cexObj.SpotGetFilledOrders("ICNTUSDT")
+	for _, order := range orders {
+		ilog.Rinfo("%s, %v", order.Symbol, *order)
+		order1, err := cexObj.SpotGetOrder(order.Symbol, order.OrderId, "")
+		if err != nil {
+			ilog.Rinfo("get order %s err:%s", order.OrderId, err.Error())
+			break
+		}
+		if order1 != nil {
+			ilog.Rinfo("%v", *order1)
+		}
+		break
 	}
+	//order, err := cexObj.SpotGetOrder("AMDxUSD", "OG7HA3-I656I-VH7MX7", "")
+	//ilog.Rinfo("%v", *order)
+	//testRest(cexObj)
 	return
-	testRest(cexObj)
-	testPrivWs(cexObj)
+	/*
+		_, err = cexObj.Withdrawal("USDT", "asfdsafdsdf", "232323", "", decimal.NewFromFloat(1000))
+		if err != nil {
+			ilog.Rinfo("Withdrawal%s", err.Error())
+		}*/
+	wh, err := cexObj.GetWithdrawalHistory("SPCXx")
+	if err != nil {
+		ilog.Rinfo("GetWithdrawalHistory %s", err.Error())
+	}
+	for _, v := range wh {
+		ilog.Rinfo("%v", v)
+	}
+	wh2, err := cexObj.GetDepositAddress("USDT", "")
+	if err != nil {
+		ilog.Rinfo("GetDepositAddress %s", err.Error())
+	}
+	for _, v := range wh2 {
+		ilog.Rinfo("%v", v)
+	}
 	testPubWs(cexObj)
+	//testPrivWs(cexObj)
+	//go spotPrivWs(cexObj)
+	//time.Sleep(2 * time.Second)
+	//testRest(cexObj)
 
 	time.Sleep(300 * time.Second)
 

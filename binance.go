@@ -90,6 +90,15 @@ func init() {
 		},
 	}
 }
+func NewBinance(account, apikey, secretkey string) *Binance {
+	cexObj := &Binance{
+		name:      "binance",
+		account:   account,
+		apikey:    apikey,
+		secretkey: secretkey,
+	}
+	return cexObj
+}
 func (bn *Binance) Name() string {
 	return bn.name
 }

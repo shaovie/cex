@@ -17,6 +17,7 @@ import (
 
 type Gate struct {
 	Unsupported
+	Http
 	name      string
 	account   string
 	apikey    string
@@ -70,10 +71,10 @@ type GateSubscribeArg struct {
 
 var (
 	gtSpotSymbolMap    map[string]string
-	gtSpotSymbolMapMtx sync.Mutex
+	gtSpotSymbolMapMtx sync.RWMutex
 
 	gtContractSymbolMap    map[string]string
-	gtContractSymbolMapMtx sync.Mutex
+	gtContractSymbolMapMtx sync.RWMutex
 )
 
 const gtUniEndpoint = "https://api.gateio.ws"
@@ -82,6 +83,22 @@ const gtApiDeadline = 1500 * time.Millisecond
 func init() {
 	gtSpotSymbolMap = make(map[string]string)
 	gtContractSymbolMap = make(map[string]string)
+}
+func NewGate(account, apikey, secretkey, localIP string) (*Gate, error) {
+	client, err := NewClientWithLocalIP(localIP)
+	if err != nil {
+		return nil, err
+	}
+	cexObj := &Gate{
+		Http: Http{
+			client: client,
+		},
+		name:      "gate",
+		account:   account,
+		apikey:    apikey,
+		secretkey: secretkey,
+	}
+	return cexObj, nil
 }
 func (gt *Gate) Name() string {
 	return gt.name
@@ -103,18 +120,22 @@ func (gt *Gate) Init() error {
 	gt.wsContractPrivChannelClosed = true
 	gt.wsUnifiedChannelClosed = true
 
-	gt.spotWsPublicTickerInnerPool = &sync.Pool{
-		New: func() any {
-			return &GateSpot24hTicker{}
-		},
+	if gt.spotWsPublicTickerInnerPool == nil {
+		gt.spotWsPublicTickerInnerPool = &sync.Pool{
+			New: func() any {
+				return &GateSpot24hTicker{}
+			},
+		}
 	}
-	gt.spotWsPublicOrderBookInnerPool = &sync.Pool{
-		New: func() any {
-			return &GateSpotOrderBook{
-				Bids: make([][2]decimal.Decimal, 0, 5),
-				Asks: make([][2]decimal.Decimal, 0, 5),
-			}
-		},
+	if gt.spotWsPublicOrderBookInnerPool == nil {
+		gt.spotWsPublicOrderBookInnerPool = &sync.Pool{
+			New: func() any {
+				return &GateSpotOrderBook{
+					Bids: make([][2]decimal.Decimal, 0, 5),
+					Asks: make([][2]decimal.Decimal, 0, 5),
+				}
+			},
+		}
 	}
 	return nil
 }
@@ -130,13 +151,13 @@ func (gt *Gate) buildHeaders(method, path, params, body string) map[string]strin
 	return headers
 }
 func (gt *Gate) getSpotSymbol(symbol string) string {
-	gtSpotSymbolMapMtx.Lock()
-	defer gtSpotSymbolMapMtx.Unlock()
+	gtSpotSymbolMapMtx.RLock()
+	defer gtSpotSymbolMapMtx.RUnlock()
 	return gtSpotSymbolMap[symbol]
 }
 func (gt *Gate) getContractSymbol(symbol string) string {
-	gtContractSymbolMapMtx.Lock()
-	defer gtContractSymbolMapMtx.Unlock()
+	gtContractSymbolMapMtx.RLock()
+	defer gtContractSymbolMapMtx.RUnlock()
 	return gtContractSymbolMap[symbol]
 }
 func (gt *Gate) handleExceptionResp(api string, resp []byte) error {
@@ -234,6 +255,18 @@ func (gt *Gate) toStdOrderStatus(status string) string {
 		return "CANCELED"
 	} else if status == "partially_filled" {
 		return "PARTIALLY_FILLED"
+	}
+	return ""
+}
+func (gt *Gate) toStdWithdrawStatus(v string) string {
+	if v == "REQUEST" || v == "EXTPEND" || v == "MANUAL" || v == "FVERIFY" || v == "REVIEW" {
+		return "PENDING"
+	} else if v == "REJECT" {
+		return "REJECTED"
+	} else if v == "DONE" {
+		return "COMPLETED"
+	} else if v == "CANCEL" {
+		return "CANCELED"
 	}
 	return ""
 }

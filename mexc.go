@@ -50,18 +50,22 @@ func (mc *Mexc) ApiKey() string {
 }
 func (mc *Mexc) Init() error {
 	mc.spotWsPublicClosed = true
-	mc.spotWsPublicTickerInnerPool = &sync.Pool{
-		New: func() any {
-			return &MexcSpot24hTicker{}
-		},
+	if mc.spotWsPublicTickerInnerPool == nil {
+		mc.spotWsPublicTickerInnerPool = &sync.Pool{
+			New: func() any {
+				return &MexcSpot24hTicker{}
+			},
+		}
 	}
-	mc.spotWsPublicOrderBookInnerPool = &sync.Pool{
-		New: func() any {
-			return &MexcSpotOrderBook{
-				Bids: make([][2]decimal.Decimal, 0, 5),
-				Asks: make([][2]decimal.Decimal, 0, 5),
-			}
-		},
+	if mc.spotWsPublicOrderBookInnerPool == nil {
+		mc.spotWsPublicOrderBookInnerPool = &sync.Pool{
+			New: func() any {
+				return &MexcSpotOrderBook{
+					Bids: make([][2]decimal.Decimal, 0, 5),
+					Asks: make([][2]decimal.Decimal, 0, 5),
+				}
+			},
+		}
 	}
 	return nil
 }

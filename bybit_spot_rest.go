@@ -34,7 +34,7 @@ func (bb *Bybit) serverTime() (int64, error) {
 	return t / 1000000, nil
 }
 func (bb *Bybit) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
-	url := bbUniEndpoint + "/v5/market/instruments-info?category=spot"
+	url := bbUniEndpoint + "/v5/market/instruments-info?category=spot&limit=1000"
 	_, resp, err := ihttp.Get(url, bbApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(bb.Name() + " net error! " + err.Error())
@@ -80,6 +80,7 @@ func (bb *Bybit) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error)
 			Symbol:        pair.Symbol,
 			Base:          pair.Base,
 			Quote:         pair.Quote,
+			Status:        "online",
 			PriceTickSize: pair.PriceFilter.TickSize,
 			MaxOrderQty:   pair.LotSizeFilter.MaxQty,
 			MinOrderQty:   pair.LotSizeFilter.MinQty,
@@ -141,7 +142,9 @@ func (bb *Bybit) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 		Result struct {
 			List []struct {
 				Coin []struct {
+					Total  decimal.Decimal `json:"equity"`
 					Avail  decimal.Decimal `json:"walletBalance"`
+					Locked decimal.Decimal `json:"locked"`
 					Symbol string          `json:"coin,omitempty"`
 				} `json:"coin,omitempty"`
 			} `json:"list,omitempty"`
@@ -387,4 +390,42 @@ func (bb *Bybit) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 		dl = append(dl, o)
 	}
 	return dl, nil
+}
+func (bb *Bybit) SpotGetTradeFee(symbol string) (SpotTradeFee, error) {
+	query := "category=spot&symbol=" + symbol
+	url := bbUniEndpoint + "/v5/account/fee-rate?" + query
+	_, resp, err := ihttp.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
+	if err != nil {
+		return SpotTradeFee{}, errors.New(bb.Name() + " net error! " + err.Error())
+	}
+	recv := struct {
+		Code   int    `json:"retCode,omitempty"`
+		Msg    string `json:"retMsg,omitempty"`
+		Result struct {
+			List []struct {
+				Symbol   string          `json:"symbol"` // BTCUSDT
+				TakerFee decimal.Decimal `json:"takerFeeRate"`
+				MakerFee decimal.Decimal `json:"makerFeeRate"`
+			} `json:"list,omitempty"`
+		} `json:"result"`
+	}{}
+	if err = json.Unmarshal(resp, &recv); err != nil {
+		return SpotTradeFee{}, errors.New(bb.Name() + " unmarshal error! " + err.Error())
+	}
+	if recv.Code != 0 {
+		return SpotTradeFee{}, errors.New(bb.Name() + " api err! " + recv.Msg)
+	}
+	if len(recv.Result.List) == 0 {
+		return SpotTradeFee{}, errors.New(bb.Name() + " resp empty")
+	}
+	for _, v := range recv.Result.List {
+		if v.Symbol == symbol {
+			return SpotTradeFee{
+				Maker:    v.MakerFee,
+				Taker:    v.TakerFee,
+				Discount: decimal.NewFromFloat(1.0),
+			}, nil
+		}
+	}
+	return SpotTradeFee{}, errors.New("not found")
 }

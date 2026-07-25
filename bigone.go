@@ -15,10 +15,12 @@ import (
 
 type Bigone struct {
 	Unsupported
+	Http
 	name      string
 	account   string
 	apikey    string
 	secretkey string
+	localIP   string
 	debug     bool
 
 	// spot websocket
@@ -41,10 +43,13 @@ type Bigone struct {
 
 var (
 	boSpotSymbolMap    map[string]string
-	boSpotSymbolMapMtx sync.Mutex
+	boSpotSymbolMapMtx sync.RWMutex
+
+	boXStocksSymbolMap    map[string]string
+	boXStocksSymbolMapMtx sync.RWMutex
 
 	boFuturesSymbolMap    map[string]string
-	boFuturesSymbolMapMtx sync.Mutex
+	boFuturesSymbolMapMtx sync.RWMutex
 )
 
 const boSpotEndpoint = "https://big.one/api/v3"
@@ -52,7 +57,25 @@ const boApiDeadline = 1500 * time.Millisecond
 
 func init() {
 	boSpotSymbolMap = make(map[string]string)
+	boXStocksSymbolMap = make(map[string]string)
 	boFuturesSymbolMap = make(map[string]string)
+}
+func NewBigone(account, apikey, secretkey, localIP string) (*Bigone, error) {
+	client, err := NewClientWithLocalIP(localIP)
+	if err != nil {
+		return nil, err
+	}
+	cexObj := &Bigone{
+		Http: Http{
+			client: client,
+		},
+		name:      "bigone",
+		account:   account,
+		apikey:    apikey,
+		secretkey: secretkey,
+		localIP:   localIP,
+	}
+	return cexObj, nil
 }
 func (bo *Bigone) Name() string {
 	return bo.name
@@ -74,15 +97,17 @@ func (bo *Bigone) Init() error {
 	bo.spotWsOrderBookSeqId = make(map[string]string, 16)
 	bo.spotWsBBOCache = make(map[string]*BestBidAsk, 16)
 
-	bo.spotWsPublicOrderBookInnerPool = &sync.Pool{
-		New: func() any {
-			return &BigoneSpotOrderBook{
-				Depth: BigoneSpotOrderBookDepth{
-					Bids: make([]BigoneSpotOrderBookItem, 0, 5),
-					Asks: make([]BigoneSpotOrderBookItem, 0, 5),
-				},
-			}
-		},
+	if bo.spotWsPublicOrderBookInnerPool == nil {
+		bo.spotWsPublicOrderBookInnerPool = &sync.Pool{
+			New: func() any {
+				return &BigoneSpotOrderBook{
+					Depth: BigoneSpotOrderBookDepth{
+						Bids: make([]BigoneSpotOrderBookItem, 0, 5),
+						Asks: make([]BigoneSpotOrderBookItem, 0, 5),
+					},
+				}
+			},
+		}
 	}
 	return nil
 }
@@ -99,13 +124,13 @@ func (bo *Bigone) jwt() string {
 	return params + "." + base64.RawURLEncoding.EncodeToString(h.Sum(nil))
 }
 func (bo *Bigone) getSpotSymbol(symbol string) string {
-	boSpotSymbolMapMtx.Lock()
-	defer boSpotSymbolMapMtx.Unlock()
+	boSpotSymbolMapMtx.RLock()
+	defer boSpotSymbolMapMtx.RUnlock()
 	return boSpotSymbolMap[symbol]
 }
 func (bo *Bigone) getFuturesSymbol(symbol string) string {
-	boFuturesSymbolMapMtx.Lock()
-	defer boFuturesSymbolMapMtx.Unlock()
+	boFuturesSymbolMapMtx.RLock()
+	defer boFuturesSymbolMapMtx.RUnlock()
 	return boFuturesSymbolMap[symbol]
 }
 

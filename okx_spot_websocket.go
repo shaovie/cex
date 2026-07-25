@@ -183,19 +183,26 @@ func (ok *Okx) SpotWsPublicLoop(ch chan<- any) {
 		ok.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
-	go func() {
+	pingExit := make(chan struct{})
+	defer close(pingExit)
+	go func(exitChan <-chan struct{}) {
 		ticker := time.NewTicker(pingInterval)
 		defer ticker.Stop()
 		var pingMsg = []byte("ping")
-		for range ticker.C {
-			if ok.SpotWsPublicIsClosed() {
-				break
+		for {
+			select {
+			case <-exitChan:
+				return
+			case <-ticker.C:
+				if ok.SpotWsPublicIsClosed() {
+					break
+				}
+				ok.spotWsPublicConnMtx.Lock()
+				ok.spotWsPublicConn.WriteMessage(websocket.TextMessage, pingMsg)
+				ok.spotWsPublicConnMtx.Unlock()
 			}
-			ok.spotWsPublicConnMtx.Lock()
-			ok.spotWsPublicConn.WriteMessage(websocket.TextMessage, pingMsg)
-			ok.spotWsPublicConnMtx.Unlock()
 		}
-	}()
+	}(pingExit)
 
 	for {
 		_, recv, err := ok.spotWsPublicConn.ReadMessage()
@@ -450,19 +457,26 @@ func (ok *Okx) SpotWsPrivateLoop(ch chan<- any) {
 		ok.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
-	go func() {
+	pingExit := make(chan struct{})
+	defer close(pingExit)
+	go func(exitChan <-chan struct{}) {
 		ticker := time.NewTicker(pingInterval)
 		defer ticker.Stop()
 		var pingMsg = []byte("ping")
-		for range ticker.C {
-			if ok.SpotWsPrivateIsClosed() {
-				break
+		for {
+			select {
+			case <-exitChan:
+				return
+			case <-ticker.C:
+				if ok.SpotWsPrivateIsClosed() {
+					break
+				}
+				ok.spotWsPrivateConnMtx.Lock()
+				ok.spotWsPrivateConn.WriteMessage(websocket.TextMessage, pingMsg)
+				ok.spotWsPrivateConnMtx.Unlock()
 			}
-			ok.spotWsPrivateConnMtx.Lock()
-			ok.spotWsPrivateConn.WriteMessage(websocket.TextMessage, pingMsg)
-			ok.spotWsPrivateConnMtx.Unlock()
 		}
-	}()
+	}(pingExit)
 
 	for {
 		_, recv, err := ok.spotWsPrivateConn.ReadMessage()

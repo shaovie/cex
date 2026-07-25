@@ -440,7 +440,135 @@ func (v *GateSpotOrderBook) UnmarshalJSON(data []byte) error {
 func (v *GateSpotOrderBook) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjsonC89930e1DecodeGithubComShaovieCex2(l, v)
 }
-func easyjsonC89930e1DecodeGithubComShaovieCex3(in *jlexer.Lexer, out *GateSpot24hTicker) {
+func easyjsonC89930e1DecodeGithubComShaovieCex3(in *jlexer.Lexer, out *GateSpotBBO) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		switch key {
+		case "s":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Symbol = string(in.String())
+			}
+		case "b":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.BidPrice).UnmarshalJSON(data))
+				}
+			}
+		case "B":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.BidQty).UnmarshalJSON(data))
+				}
+			}
+		case "a":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.AskPrice).UnmarshalJSON(data))
+				}
+			}
+		case "A":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.AskQty).UnmarshalJSON(data))
+				}
+			}
+		case "t":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Time = int64(in.Int64())
+			}
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjsonC89930e1EncodeGithubComShaovieCex3(out *jwriter.Writer, in GateSpotBBO) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"s\":"
+		out.RawString(prefix[1:])
+		out.String(string(in.Symbol))
+	}
+	{
+		const prefix string = ",\"b\":"
+		out.RawString(prefix)
+		out.Raw((in.BidPrice).MarshalJSON())
+	}
+	{
+		const prefix string = ",\"B\":"
+		out.RawString(prefix)
+		out.Raw((in.BidQty).MarshalJSON())
+	}
+	{
+		const prefix string = ",\"a\":"
+		out.RawString(prefix)
+		out.Raw((in.AskPrice).MarshalJSON())
+	}
+	{
+		const prefix string = ",\"A\":"
+		out.RawString(prefix)
+		out.Raw((in.AskQty).MarshalJSON())
+	}
+	{
+		const prefix string = ",\"t\":"
+		out.RawString(prefix)
+		out.Int64(int64(in.Time))
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v GateSpotBBO) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjsonC89930e1EncodeGithubComShaovieCex3(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v GateSpotBBO) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjsonC89930e1EncodeGithubComShaovieCex3(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *GateSpotBBO) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjsonC89930e1DecodeGithubComShaovieCex3(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *GateSpotBBO) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjsonC89930e1DecodeGithubComShaovieCex3(l, v)
+}
+func easyjsonC89930e1DecodeGithubComShaovieCex4(in *jlexer.Lexer, out *GateSpot24hTicker) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -494,7 +622,7 @@ func easyjsonC89930e1DecodeGithubComShaovieCex3(in *jlexer.Lexer, out *GateSpot2
 		in.Consumed()
 	}
 }
-func easyjsonC89930e1EncodeGithubComShaovieCex3(out *jwriter.Writer, in GateSpot24hTicker) {
+func easyjsonC89930e1EncodeGithubComShaovieCex4(out *jwriter.Writer, in GateSpot24hTicker) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -524,27 +652,27 @@ func easyjsonC89930e1EncodeGithubComShaovieCex3(out *jwriter.Writer, in GateSpot
 // MarshalJSON supports json.Marshaler interface
 func (v GateSpot24hTicker) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjsonC89930e1EncodeGithubComShaovieCex3(&w, v)
+	easyjsonC89930e1EncodeGithubComShaovieCex4(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v GateSpot24hTicker) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjsonC89930e1EncodeGithubComShaovieCex3(w, v)
+	easyjsonC89930e1EncodeGithubComShaovieCex4(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *GateSpot24hTicker) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjsonC89930e1DecodeGithubComShaovieCex3(&r, v)
+	easyjsonC89930e1DecodeGithubComShaovieCex4(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *GateSpot24hTicker) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjsonC89930e1DecodeGithubComShaovieCex3(l, v)
+	easyjsonC89930e1DecodeGithubComShaovieCex4(l, v)
 }
-func easyjsonC89930e1DecodeGithubComShaovieCex4(in *jlexer.Lexer, out *GateFundingRate) {
+func easyjsonC89930e1DecodeGithubComShaovieCex5(in *jlexer.Lexer, out *GateFundingRate) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -594,7 +722,7 @@ func easyjsonC89930e1DecodeGithubComShaovieCex4(in *jlexer.Lexer, out *GateFundi
 		in.Consumed()
 	}
 }
-func easyjsonC89930e1EncodeGithubComShaovieCex4(out *jwriter.Writer, in GateFundingRate) {
+func easyjsonC89930e1EncodeGithubComShaovieCex5(out *jwriter.Writer, in GateFundingRate) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -624,27 +752,27 @@ func easyjsonC89930e1EncodeGithubComShaovieCex4(out *jwriter.Writer, in GateFund
 // MarshalJSON supports json.Marshaler interface
 func (v GateFundingRate) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjsonC89930e1EncodeGithubComShaovieCex4(&w, v)
+	easyjsonC89930e1EncodeGithubComShaovieCex5(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v GateFundingRate) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjsonC89930e1EncodeGithubComShaovieCex4(w, v)
+	easyjsonC89930e1EncodeGithubComShaovieCex5(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *GateFundingRate) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjsonC89930e1DecodeGithubComShaovieCex4(&r, v)
+	easyjsonC89930e1DecodeGithubComShaovieCex5(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *GateFundingRate) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjsonC89930e1DecodeGithubComShaovieCex4(l, v)
+	easyjsonC89930e1DecodeGithubComShaovieCex5(l, v)
 }
-func easyjsonC89930e1DecodeGithubComShaovieCex5(in *jlexer.Lexer, out *GateContractOrderBookTick) {
+func easyjsonC89930e1DecodeGithubComShaovieCex6(in *jlexer.Lexer, out *GateContractOrderBookTick) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -684,7 +812,7 @@ func easyjsonC89930e1DecodeGithubComShaovieCex5(in *jlexer.Lexer, out *GateContr
 		in.Consumed()
 	}
 }
-func easyjsonC89930e1EncodeGithubComShaovieCex5(out *jwriter.Writer, in GateContractOrderBookTick) {
+func easyjsonC89930e1EncodeGithubComShaovieCex6(out *jwriter.Writer, in GateContractOrderBookTick) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -704,27 +832,27 @@ func easyjsonC89930e1EncodeGithubComShaovieCex5(out *jwriter.Writer, in GateCont
 // MarshalJSON supports json.Marshaler interface
 func (v GateContractOrderBookTick) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjsonC89930e1EncodeGithubComShaovieCex5(&w, v)
+	easyjsonC89930e1EncodeGithubComShaovieCex6(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v GateContractOrderBookTick) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjsonC89930e1EncodeGithubComShaovieCex5(w, v)
+	easyjsonC89930e1EncodeGithubComShaovieCex6(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *GateContractOrderBookTick) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjsonC89930e1DecodeGithubComShaovieCex5(&r, v)
+	easyjsonC89930e1DecodeGithubComShaovieCex6(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *GateContractOrderBookTick) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjsonC89930e1DecodeGithubComShaovieCex5(l, v)
+	easyjsonC89930e1DecodeGithubComShaovieCex6(l, v)
 }
-func easyjsonC89930e1DecodeGithubComShaovieCex6(in *jlexer.Lexer, out *GateContractOrderBook) {
+func easyjsonC89930e1DecodeGithubComShaovieCex7(in *jlexer.Lexer, out *GateContractOrderBook) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -814,7 +942,7 @@ func easyjsonC89930e1DecodeGithubComShaovieCex6(in *jlexer.Lexer, out *GateContr
 		in.Consumed()
 	}
 }
-func easyjsonC89930e1EncodeGithubComShaovieCex6(out *jwriter.Writer, in GateContractOrderBook) {
+func easyjsonC89930e1EncodeGithubComShaovieCex7(out *jwriter.Writer, in GateContractOrderBook) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -878,27 +1006,27 @@ func easyjsonC89930e1EncodeGithubComShaovieCex6(out *jwriter.Writer, in GateCont
 // MarshalJSON supports json.Marshaler interface
 func (v GateContractOrderBook) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjsonC89930e1EncodeGithubComShaovieCex6(&w, v)
+	easyjsonC89930e1EncodeGithubComShaovieCex7(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v GateContractOrderBook) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjsonC89930e1EncodeGithubComShaovieCex6(w, v)
+	easyjsonC89930e1EncodeGithubComShaovieCex7(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *GateContractOrderBook) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjsonC89930e1DecodeGithubComShaovieCex6(&r, v)
+	easyjsonC89930e1DecodeGithubComShaovieCex7(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *GateContractOrderBook) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjsonC89930e1DecodeGithubComShaovieCex6(l, v)
+	easyjsonC89930e1DecodeGithubComShaovieCex7(l, v)
 }
-func easyjsonC89930e1DecodeGithubComShaovieCex7(in *jlexer.Lexer, out *GateContract24hTicker) {
+func easyjsonC89930e1DecodeGithubComShaovieCex8(in *jlexer.Lexer, out *GateContract24hTicker) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -952,7 +1080,7 @@ func easyjsonC89930e1DecodeGithubComShaovieCex7(in *jlexer.Lexer, out *GateContr
 		in.Consumed()
 	}
 }
-func easyjsonC89930e1EncodeGithubComShaovieCex7(out *jwriter.Writer, in GateContract24hTicker) {
+func easyjsonC89930e1EncodeGithubComShaovieCex8(out *jwriter.Writer, in GateContract24hTicker) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -982,23 +1110,23 @@ func easyjsonC89930e1EncodeGithubComShaovieCex7(out *jwriter.Writer, in GateCont
 // MarshalJSON supports json.Marshaler interface
 func (v GateContract24hTicker) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjsonC89930e1EncodeGithubComShaovieCex7(&w, v)
+	easyjsonC89930e1EncodeGithubComShaovieCex8(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v GateContract24hTicker) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjsonC89930e1EncodeGithubComShaovieCex7(w, v)
+	easyjsonC89930e1EncodeGithubComShaovieCex8(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *GateContract24hTicker) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjsonC89930e1DecodeGithubComShaovieCex7(&r, v)
+	easyjsonC89930e1DecodeGithubComShaovieCex8(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *GateContract24hTicker) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjsonC89930e1DecodeGithubComShaovieCex7(l, v)
+	easyjsonC89930e1DecodeGithubComShaovieCex8(l, v)
 }

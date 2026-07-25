@@ -18,14 +18,20 @@ import (
 )
 
 var (
-	gtWsPubMsgPool  sync.Pool
-	gtWsPrivMsgPool sync.Pool
+	gtWsPubMsgPool             sync.Pool
+	gtSpotWsPublicBBOInnerPool sync.Pool
+	gtWsPrivMsgPool            sync.Pool
 )
 
 func init() {
 	gtWsPubMsgPool = sync.Pool{
 		New: func() any {
 			return &GateWsSpotPubMsg{}
+		},
+	}
+	gtSpotWsPublicBBOInnerPool = sync.Pool{
+		New: func() any {
+			return &GateSpotBBO{}
 		},
 	}
 	gtWsPrivMsgPool = sync.Pool{
@@ -50,6 +56,16 @@ func (gt *Gate) SpotWsPublicOpen() error {
 	gt.spotWsPublicClosedMtx.Unlock()
 	return nil
 }
+func (gt *Gate) parseSymbols(str string) []string {
+	symbolArr := strings.Split(str, ",")
+	symbolList := make([]string, 0, len(symbolArr))
+	for _, v := range symbolArr {
+		if sym := gt.getSpotSymbol(v); sym != "" {
+			symbolList = append(symbolList, sym)
+		}
+	}
+	return symbolList
+}
 func (gt *Gate) SpotWsPublicSubscribe(channels []string) {
 	if len(channels) == 0 {
 		return
@@ -73,26 +89,29 @@ func (gt *Gate) SpotWsPublicSubscribe(channels []string) {
 					gt.spotWsPublicConnMtx.Unlock()
 				}
 			}
-		} else if arr[0] == "ticker" {
-			var symbolArr []string
+		} else if arr[0] == "bbo" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr = strings.Split(arr[1], ",")
-			} else {
-				continue
-			}
-			symbolList := make([]string, 0, len(symbolArr))
-			for _, v := range symbolArr {
-				if sym := gt.getSpotSymbol(v); sym != "" {
-					symbolList = append(symbolList, sym)
+				symbolList := gt.parseSymbols(arr[1])
+				arg.Channel = "spot.book_ticker"
+				arg.Payload = symbolList
+				if len(arg.Payload) > 0 {
+					req, _ := json.Marshal(&arg)
+					gt.spotWsPublicConnMtx.Lock()
+					gt.spotWsPublicConn.WriteMessage(websocket.TextMessage, req)
+					gt.spotWsPublicConnMtx.Unlock()
 				}
 			}
-			arg.Channel = "spot.tickers"
-			arg.Payload = symbolList
-			if len(arg.Payload) > 0 {
-				req, _ := json.Marshal(&arg)
-				gt.spotWsPublicConnMtx.Lock()
-				gt.spotWsPublicConn.WriteMessage(websocket.TextMessage, req)
-				gt.spotWsPublicConnMtx.Unlock()
+		} else if arr[0] == "ticker" {
+			if len(arr) > 1 && len(arr[1]) > 0 {
+				symbolList := gt.parseSymbols(arr[1])
+				arg.Channel = "spot.tickers"
+				arg.Payload = symbolList
+				if len(arg.Payload) > 0 {
+					req, _ := json.Marshal(&arg)
+					gt.spotWsPublicConnMtx.Lock()
+					gt.spotWsPublicConn.WriteMessage(websocket.TextMessage, req)
+					gt.spotWsPublicConnMtx.Unlock()
+				}
 			}
 		}
 	}
@@ -120,26 +139,29 @@ func (gt *Gate) SpotWsPublicUnsubscribe(channels []string) {
 					gt.spotWsPublicConnMtx.Unlock()
 				}
 			}
-		} else if arr[0] == "ticker" {
-			var symbolArr []string
+		} else if arr[0] == "bbo" {
 			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr = strings.Split(arr[1], ",")
-			} else {
-				continue
-			}
-			symbolList := make([]string, 0, len(symbolArr))
-			for _, v := range symbolArr {
-				if sym := gt.getSpotSymbol(v); sym != "" {
-					symbolList = append(symbolList, sym)
+				symbolList := gt.parseSymbols(arr[1])
+				arg.Channel = "spot.book_ticker"
+				arg.Payload = symbolList
+				if len(arg.Payload) > 0 {
+					req, _ := json.Marshal(&arg)
+					gt.spotWsPublicConnMtx.Lock()
+					gt.spotWsPublicConn.WriteMessage(websocket.TextMessage, req)
+					gt.spotWsPublicConnMtx.Unlock()
 				}
 			}
-			arg.Channel = "spot.tickers"
-			arg.Payload = symbolList
-			if len(arg.Payload) > 0 {
-				req, _ := json.Marshal(&arg)
-				gt.spotWsPublicConnMtx.Lock()
-				gt.spotWsPublicConn.WriteMessage(websocket.TextMessage, req)
-				gt.spotWsPublicConnMtx.Unlock()
+		} else if arr[0] == "ticker" {
+			if len(arr) > 1 && len(arr[1]) > 0 {
+				symbolList := gt.parseSymbols(arr[1])
+				arg.Channel = "spot.tickers"
+				arg.Payload = symbolList
+				if len(arg.Payload) > 0 {
+					req, _ := json.Marshal(&arg)
+					gt.spotWsPublicConnMtx.Lock()
+					gt.spotWsPublicConn.WriteMessage(websocket.TextMessage, req)
+					gt.spotWsPublicConnMtx.Unlock()
+				}
 			}
 		}
 	}
@@ -157,19 +179,26 @@ func (gt *Gate) SpotWsPublicLoop(ch chan<- any) {
 	pingInterval := 21 * time.Second
 	pongWait := pingInterval + 2*time.Second
 	gt.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
-	go func() {
+	pingExit := make(chan struct{})
+	defer close(pingExit)
+	go func(exitChan <-chan struct{}) {
 		ticker := time.NewTicker(pingInterval)
 		defer ticker.Stop()
-		for range ticker.C {
-			if gt.SpotWsPublicIsClosed() {
-				break
+		for {
+			select {
+			case <-exitChan:
+				return
+			case <-ticker.C:
+				if gt.SpotWsPublicIsClosed() {
+					break
+				}
+				s := fmt.Sprintf(`{"time":%d,"channel":"spot.ping"}`, time.Now().Unix())
+				gt.spotWsPublicConnMtx.Lock()
+				gt.spotWsPublicConn.WriteMessage(websocket.TextMessage, []byte(s))
+				gt.spotWsPublicConnMtx.Unlock()
 			}
-			s := fmt.Sprintf(`{"time":%d,"channel":"spot.ping"}`, time.Now().Unix())
-			gt.spotWsPublicConnMtx.Lock()
-			gt.spotWsPublicConn.WriteMessage(websocket.TextMessage, []byte(s))
-			gt.spotWsPublicConnMtx.Unlock()
 		}
-	}()
+	}(pingExit)
 
 	for {
 		_, recv, err := gt.spotWsPublicConn.ReadMessage()
@@ -186,7 +215,11 @@ func (gt *Gate) SpotWsPublicLoop(ch chan<- any) {
 			goto END
 		}
 
-		if msg.Channel == "spot.order_book" {
+		if msg.Channel == "spot.book_ticker" {
+			if msg.Event == "update" {
+				gt.spotWsHandleBBO(msg.Data, ch)
+			}
+		} else if msg.Channel == "spot.order_book" {
 			if msg.Event == "update" {
 				gt.spotWsHandleOrderBook(msg.Data, ch)
 			}
@@ -244,6 +277,20 @@ func (gt *Gate) spotWsHandleOrderBook(data json.RawMessage, ch chan<- any) {
 		ch <- obd
 	}
 }
+func (gt *Gate) spotWsHandleBBO(data json.RawMessage, ch chan<- any) {
+	bbo := gtSpotWsPublicBBOInnerPool.Get().(*GateSpotBBO)
+	defer gtSpotWsPublicBBOInnerPool.Put(bbo)
+	if err := easyjson.Unmarshal(data, bbo); err == nil {
+		obd := wsPublicBBOPool.Get().(*BestBidAsk)
+		obd.Symbol = strings.ReplaceAll(bbo.Symbol, "_", "")
+		obd.Time = bbo.Time // msec
+		obd.BidPrice = bbo.BidPrice
+		obd.BidQty = bbo.BidQty
+		obd.AskPrice = bbo.AskPrice
+		obd.AskQty = bbo.AskQty
+		ch <- obd
+	}
+}
 func (gt *Gate) spotWsHandle24hTickers(data json.RawMessage, ch chan<- any) {
 	ticker := gt.spotWsPublicTickerInnerPool.Get().(*GateSpot24hTicker)
 	defer gt.spotWsPublicTickerInnerPool.Put(ticker)
@@ -258,6 +305,9 @@ func (gt *Gate) spotWsHandle24hTickers(data json.RawMessage, ch chan<- any) {
 }
 
 // = priv channel
+func (gt *Gate) SpotWsPrivateSupported() bool {
+	return true
+}
 func (gt *Gate) SpotWsPrivateOpen() error {
 	url := "wss://api.gateio.ws/ws/v4/"
 	var err error
@@ -407,19 +457,26 @@ func (gt *Gate) SpotWsPrivateLoop(ch chan<- any) {
 	pingInterval := 23 * time.Second
 	pongWait := pingInterval + 2*time.Second
 	gt.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
-	go func() {
+	pingExit := make(chan struct{})
+	defer close(pingExit)
+	go func(exitChan <-chan struct{}) {
 		ticker := time.NewTicker(pingInterval)
 		defer ticker.Stop()
-		for range ticker.C {
-			if gt.SpotWsPrivateIsClosed() {
-				break
+		for {
+			select {
+			case <-exitChan:
+				return
+			case <-ticker.C:
+				if gt.SpotWsPrivateIsClosed() {
+					break
+				}
+				s := fmt.Sprintf(`{"time":%d,"channel":"spot.ping"}`, time.Now().Unix())
+				gt.spotWsPrivateConnMtx.Lock()
+				gt.spotWsPrivateConn.WriteMessage(websocket.TextMessage, []byte(s))
+				gt.spotWsPrivateConnMtx.Unlock()
 			}
-			s := fmt.Sprintf(`{"time":%d,"channel":"spot.ping"}`, time.Now().Unix())
-			gt.spotWsPrivateConnMtx.Lock()
-			gt.spotWsPrivateConn.WriteMessage(websocket.TextMessage, []byte(s))
-			gt.spotWsPrivateConnMtx.Unlock()
 		}
-	}()
+	}(pingExit)
 
 	for {
 		_, recv, err := gt.spotWsPrivateConn.ReadMessage()

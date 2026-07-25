@@ -68,6 +68,16 @@ func init() {
 	okxSpotSymbolMap = make(map[string]string)
 	okxContractSymbolMap = make(map[string]string)
 }
+func NewOkx(account, apikey, secretkey, passwd string) *Okx {
+	cexObj := &Okx{
+		name:      "okx",
+		account:   account,
+		apikey:    apikey,
+		secretkey: secretkey,
+		passwd:    passwd,
+	}
+	return cexObj
+}
 func (ok *Okx) Name() string {
 	return ok.name
 }
@@ -88,10 +98,12 @@ func (ok *Okx) Init() error {
 	ok.wsContractPrivChannelClosed = true
 	ok.wsUnifiedChannelClosed = true
 
-	ok.spotWsPublicTickerInnerPool = &sync.Pool{
-		New: func() any {
-			return make([]Okx24hTicker, 0, 2)
-		},
+	if ok.spotWsPublicTickerInnerPool == nil {
+		ok.spotWsPublicTickerInnerPool = &sync.Pool{
+			New: func() any {
+				return make([]Okx24hTicker, 0, 2)
+			},
+		}
 	}
 	return nil
 }

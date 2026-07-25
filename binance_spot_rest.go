@@ -74,6 +74,7 @@ func (bn *Binance) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, erro
 			Symbol: pair.Symbol,
 			Base:   pair.Base,
 			Quote:  pair.Quote,
+			Status: "online",
 			Time:   now,
 		}
 		for _, flt := range pair.Filters {

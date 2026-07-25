@@ -2,9 +2,11 @@ package cex
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -54,6 +56,19 @@ func (bo *Bigone) SpotWsPublicOpen() error {
 	dialer := websocket.Dialer{
 		EnableCompression: true, // 启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
+	}
+	if bo.localIP != "" {
+		localAddr := &net.TCPAddr{
+			IP:   net.ParseIP(bo.localIP),
+			Port: 0, // 0 表示随机可用端口
+		}
+		dialer.NetDialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			d := net.Dialer{
+				LocalAddr: localAddr,
+				Timeout:   2 * time.Second,
+			}
+			return d.DialContext(ctx, network, addr)
+		}
 	}
 	bo.spotWsPublicConn, _, err = dialer.Dial(url, http.Header{
 		"Sec-WebSocket-Protocol": []string{"json"},
@@ -653,9 +668,6 @@ func (bo *Bigone) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
 		}
 		if so.FilledQty.IsPositive() && so.Status == "NEW" {
 			so.Status = "PARTIALLY_FILLED"
-		}
-		if so.FilledQty.IsPositive() {
-			ilog.Rinfo("%s %v", string(data), *so)
 		}
 		ch <- so
 	}

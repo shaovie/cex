@@ -37,29 +37,36 @@ func (us *Unsupported) SpotCancelOrder(symbol, orderId, cltId string) error {
 func (us *Unsupported) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error) {
 	return nil, errors.New("not support")
 }
+func (us *Unsupported) SpotGetFilledOrders(symbol string) ([]*SpotOrder, error) {
+	return nil, errors.New("not support")
+}
 func (us *Unsupported) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 	return nil, errors.New("not support")
 }
 func (us *Unsupported) SpotGetTradeFee(symbol string) (SpotTradeFee, error) {
 	return SpotTradeFee{}, errors.New("not support")
 }
+func (us *Unsupported) IsXStock(symbol string) bool {
+	return false
+}
 
-func (us *Unsupported) SpotWsPublicOpen() error                   { return errors.New("not support") }
-func (us *Unsupported) SpotWsPublicSubscribe(channels []string)   {}
-func (us *Unsupported) SpotWsPublicUnsubscribe(channels []string) {}
-func (us *Unsupported) SpotWsPublicTickerPoolPut(v any)           {}
-func (us *Unsupported) SpotWsPublicOrderBook5PoolPut(v any)       {}
-func (us *Unsupported) SpotWsPublicBBOPoolPut(v any)              {}
-func (us *Unsupported) SpotWsPublicTradePoolPut(v any)            {}
-func (us *Unsupported) SpotWsPublicLoop(ch chan<- any)            {}
-func (us *Unsupported) SpotWsPublicClose()                        {}
-func (us *Unsupported) SpotWsPublicIsClosed() bool                { return true }
-func (us *Unsupported) SpotWsPrivateSupported() bool              { return false }
-func (us *Unsupported) SpotWsPrivateOpen() error                  { return errors.New("not support") }
-func (us *Unsupported) SpotWsPrivateSubscribe(channels []string)  {}
-func (us *Unsupported) SpotWsPrivateLoop(ch chan<- any)           {}
-func (us *Unsupported) SpotWsPrivateClose()                       {}
-func (us *Unsupported) SpotWsPrivateIsClosed() bool               { return true }
+func (us *Unsupported) SpotWsPublicOpen() error                      { return errors.New("not support") }
+func (us *Unsupported) SpotWsPublicSubscribe(channels []string)      {}
+func (us *Unsupported) SpotWsPublicUnsubscribe(channels []string)    {}
+func (us *Unsupported) SpotWsPublicTickerPoolPut(v any)              {}
+func (us *Unsupported) SpotWsPublicOrderBook5PoolPut(v any)          {}
+func (us *Unsupported) SpotWsPublicBBOPoolPut(v any)                 {}
+func (us *Unsupported) SpotWsPublicTradePoolPut(v any)               {}
+func (us *Unsupported) SpotWsPublicLoop(ch chan<- any)               {}
+func (us *Unsupported) SpotWsPublicClose()                           {}
+func (us *Unsupported) SpotWsPublicIsClosed() bool                   { return true }
+func (us *Unsupported) SpotWsPrivateSupported() bool                 { return false }
+func (us *Unsupported) SpotWsPrivateOpen() error                     { return errors.New("not support") }
+func (us *Unsupported) SpotWsPrivateSubscribe(channels []string)     {}
+func (us *Unsupported) SpotWsPrivateLoop(ch chan<- any)              {}
+func (us *Unsupported) SpotWsPrivateLastPong() (int64, int64, int64) { return 0, 0, 0 }
+func (us *Unsupported) SpotWsPrivateClose()                          {}
+func (us *Unsupported) SpotWsPrivateIsClosed() bool                  { return true }
 func (us *Unsupported) SpotWsPlaceOrder(symbol, cltId string, price, amt, qty decimal.Decimal,
 	side, timeInForce, orderType string, postOnly bool) (string, error) {
 	return "", errors.New("not support")
@@ -205,9 +212,15 @@ func (us *Unsupported) GetWithdrawalHistory(symbol string) ([]WithdrawResult, er
 func (us *Unsupported) Transfer(symbol, from, to, typ, subAccount string, qty decimal.Decimal) error {
 	return errors.New("not support")
 }
+func (us *Unsupported) FundingGetAllAssets() (map[string]*FundingAsset, error) {
+	return nil, errors.New("not support")
+}
 func (us *Unsupported) FundingGetAsset(symbol string) (FundingAsset, error) {
 	return FundingAsset{}, errors.New("not support")
 }
 func (us *Unsupported) GetDepositAddress(symbol, network string) ([]DepositAddress, error) {
+	return nil, errors.New("not support")
+}
+func (us *Unsupported) GetWalletAllAssetInfo() (map[string]*WalletAssetInfo, error) {
 	return nil, errors.New("not support")
 }

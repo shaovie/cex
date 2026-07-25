@@ -8,7 +8,6 @@ import (
 
 	"github.com/shopspring/decimal"
 
-	"github.com/shaovie/gutils/ihttp"
 	"github.com/shaovie/gutils/ilog"
 )
 
@@ -18,7 +17,7 @@ func (gt *Gate) SpotSupported() bool {
 func (gt *Gate) SpotServerTime() (int64, error) {
 	path := "/api/v4/spot/time"
 	url := gtUniEndpoint + path
-	_, resp, err := ihttp.Get(url, gtApiDeadline, nil)
+	_, resp, err := gt.Get(url, gtApiDeadline, nil)
 	if err != nil {
 		return 0, errors.New(gt.Name() + " net error! " + err.Error())
 	}
@@ -34,7 +33,7 @@ func (gt *Gate) SpotServerTime() (int64, error) {
 func (gt *Gate) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	path := "/api/v4/spot/currency_pairs"
 	url := gtUniEndpoint + path
-	_, resp, err := ihttp.Get(url, gtApiDeadline, nil)
+	_, resp, err := gt.Get(url, gtApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(gt.Name() + " net error! " + err.Error())
 	}
@@ -66,6 +65,7 @@ func (gt *Gate) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) 
 			Symbol:      pair.Base + pair.Quote,
 			Base:        pair.Base,
 			Quote:       pair.Quote,
+			Status:      "online",
 			Time:        now,
 			MinNotional: pair.MinNotional,
 		}
@@ -86,7 +86,7 @@ func (gt *Gate) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) 
 func (gt *Gate) SpotGetAll24hTicker() (map[string]Pub24hTicker, error) {
 	path := "/api/v4/spot/tickers"
 	url := gtUniEndpoint + path
-	_, resp, err := ihttp.Get(url, gtApiDeadline, nil)
+	_, resp, err := gt.Get(url, gtApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(gt.Name() + " net error! " + err.Error())
 	}
@@ -117,7 +117,7 @@ func (gt *Gate) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 	path := "/api/v4/spot/accounts"
 	url := gtUniEndpoint + path
 	headers := gt.buildHeaders("GET", path, "", "")
-	_, resp, err := ihttp.Get(url, gtApiDeadline, headers)
+	_, resp, err := gt.Get(url, gtApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(gt.Name() + " net error! " + err.Error())
 	}
@@ -148,6 +148,41 @@ func (gt *Gate) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 	}
 	return assetsMap, nil
 }
+func (gt *Gate) SpotGetBBO(symbol string) (BestBidAsk, error) {
+	symbolS := gt.getSpotSymbol(symbol)
+	path := "/api/v4/spot/order_book?limit=1&currency_pair=" + symbolS
+	url := gtUniEndpoint + path
+	headers := gt.buildHeaders("GET", path, "", "")
+	_, resp, err := gt.Get(url, gtApiDeadline, headers)
+	if err != nil {
+		return BestBidAsk{}, errors.New(gt.Name() + " net error! " + err.Error())
+	}
+	ret := struct {
+		Label string               `json:"label"`
+		Msg   string               `json:"message"`
+		Asks  [][2]decimal.Decimal `json:"asks"`
+		Bids  [][2]decimal.Decimal `json:"bids"`
+	}{}
+	err = json.Unmarshal(resp, &ret)
+	if err != nil {
+		return BestBidAsk{}, errors.New(gt.Name() + " unmarshal error! " + err.Error())
+	}
+
+	if ret.Label != "" {
+		return BestBidAsk{}, errors.New(gt.Name() + " request fail! err=" + ret.Msg)
+	}
+	if len(ret.Asks) == 0 || len(ret.Bids) == 0 {
+		return BestBidAsk{}, errors.New(gt.Name() + " resp is empty!")
+	}
+
+	return BestBidAsk{
+		Symbol:   symbol,
+		BidPrice: ret.Bids[0][0],
+		BidQty:   ret.Bids[0][1],
+		AskPrice: ret.Asks[0][0],
+		AskQty:   ret.Asks[0][1],
+	}, nil
+}
 func (gt *Gate) SpotPlaceOrder(symbol, clientId string,
 	price, amt, qty decimal.Decimal,
 	side, timeInForce, orderType string, postOnly bool) (string, error) {
@@ -175,15 +210,15 @@ func (gt *Gate) SpotPlaceOrder(symbol, clientId string,
 		`,"type":"` + gt.fromStdOrderType(orderType) + `"` + // LIMIT/MARKET
 		`}`
 	headers := gt.buildHeaders("POST", path, "", payload)
-	_, resp, err := ihttp.Post(url, []byte(payload), gtApiDeadline, headers)
+	_, resp, err := gt.Post(url, []byte(payload), gtApiDeadline, headers)
 	if err != nil {
 		return "", errors.New(gt.Name() + " net error! " + err.Error())
 	}
 	ret := struct {
-		Label   string `json:"label,omitempty"`
-		Msg     string `json:"message,omitempty"`
-		OrderId string `json:"id,omitempty"`
-		Status  string `json:"status,omitempty"`
+		Label   string `json:"label"`
+		Msg     string `json:"message"`
+		OrderId string `json:"id"`
+		Status  string `json:"status"`
 	}{}
 	err = json.Unmarshal(resp, &ret)
 	if err != nil {
@@ -208,16 +243,16 @@ func (gt *Gate) SpotCancelOrder(symbol string, orderId, cltId string) error {
 	params := "currency_pair=" + symbolS
 	headers := gt.buildHeaders("DELETE", path, params, "")
 	url := gtUniEndpoint + path + "?" + params
-	_, resp, err := ihttp.Delete(url, gtApiDeadline, headers)
+	_, resp, err := gt.Delete(url, gtApiDeadline, headers)
 	if err != nil {
 		return errors.New(gt.Name() + " net error! " + err.Error())
 	}
 
 	ret := struct {
-		Label string `json:"label,omitempty"`
-		Msg   string `json:"message,omitempty"`
+		Label string `json:"label"`
+		Msg   string `json:"message"`
 
-		Status string `json:"status,omitempty"`
+		Status string `json:"status"`
 	}{}
 	err = json.Unmarshal(resp, &ret)
 	if err != nil {
@@ -241,33 +276,33 @@ func (gt *Gate) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error) 
 	params := "currency_pair=" + symbolS
 	headers := gt.buildHeaders("GET", path, params, "")
 	url := gtUniEndpoint + path + "?" + params
-	_, resp, err := ihttp.Get(url, gtApiDeadline, headers)
+	_, resp, err := gt.Get(url, gtApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(gt.Name() + " net error! " + err.Error())
 	}
 	order := struct {
-		Label string `json:"label,omitempty"`
-		Msg   string `json:"message,omitempty"`
+		Label string `json:"label"`
+		Msg   string `json:"message"`
 
-		Symbol       string          `json:"currency_pair,omitempty"`
-		OrderId      string          `json:"id,omitempty"`
-		ClientId     string          `json:"text,omitempty"`
+		Symbol       string          `json:"currency_pair"`
+		OrderId      string          `json:"id"`
+		ClientId     string          `json:"text"`
 		Price        decimal.Decimal `json:"price"`
 		Qty          decimal.Decimal `json:"amount"`
 		ExecutedQty  decimal.Decimal `json:"filled_amount"`
 		CummQuoteQty decimal.Decimal `json:"filled_total"`
 		Left         decimal.Decimal `json:"left"`
-		Status       string          `json:"status,omitempty"`
-		Type         string          `json:"type,omitempty"`
-		TimeInForce  string          `json:"time_in_force,omitempty"` // GTC/FOK/IOC
-		Side         string          `json:"side,omitempty"`
-		FeeCoin      string          `json:"fee_currency,omitempty"`
+		Status       string          `json:"status"`
+		Type         string          `json:"type"`
+		TimeInForce  string          `json:"time_in_force"` // GTC/FOK/IOC
+		Side         string          `json:"side"`
+		FeeCoin      string          `json:"fee_currency"`
 		FeeQty       decimal.Decimal `json:"fee"`
-		GtQty        decimal.Decimal `json:"gt_fee"`              //
-		Event        string          `json:"event,omitempty"`     //
-		FinishAs     string          `json:"finish_as,omitempty"` //
-		Time         int64           `json:"create_time_ms,omitempty"`
-		UTime        int64           `json:"update_time_ms,omitempty"`
+		GtQty        decimal.Decimal `json:"gt_fee"`    //
+		Event        string          `json:"event"`     //
+		FinishAs     string          `json:"finish_as"` //
+		Time         int64           `json:"create_time_ms"`
+		UTime        int64           `json:"update_time_ms"`
 	}{}
 	err = json.Unmarshal(resp, &order)
 	if err != nil {
@@ -327,7 +362,7 @@ func (gt *Gate) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 	path := "/api/v4/spot/open_orders"
 	url := gtUniEndpoint + path
 	headers := gt.buildHeaders("GET", path, "", "")
-	_, resp, err := ihttp.Get(url, gtApiDeadline, headers)
+	_, resp, err := gt.Get(url, gtApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(gt.Name() + " net error! " + err.Error())
 	}
@@ -336,26 +371,26 @@ func (gt *Gate) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 	}
 	orders := []struct {
 		L []struct {
-			Symbol       string          `json:"currency_pair,omitempty"`
-			OrderId      string          `json:"id,omitempty"`
-			ClientId     string          `json:"text,omitempty"`
+			Symbol       string          `json:"currency_pair"`
+			OrderId      string          `json:"id"`
+			ClientId     string          `json:"text"`
 			Price        decimal.Decimal `json:"price"`
 			Qty          decimal.Decimal `json:"amount"`
 			ExecutedQty  decimal.Decimal `json:"filled_amount"`
 			CummQuoteQty decimal.Decimal `json:"filled_total"`
 			Left         decimal.Decimal `json:"left"`
-			Status       string          `json:"status,omitempty"`
-			Type         string          `json:"type,omitempty"`
-			TimeInForce  string          `json:"time_in_force,omitempty"` // GTC/FOK/IOC
-			Side         string          `json:"side,omitempty"`
-			FeeCoin      string          `json:"fee_currency,omitempty"`
+			Status       string          `json:"status"`
+			Type         string          `json:"type"`
+			TimeInForce  string          `json:"time_in_force"` // GTC/FOK/IOC
+			Side         string          `json:"side"`
+			FeeCoin      string          `json:"fee_currency"`
 			FeeQty       decimal.Decimal `json:"fee"`
-			GtQty        decimal.Decimal `json:"gt_fee"`              //
-			Event        string          `json:"event,omitempty"`     //
-			FinishAs     string          `json:"finish_as,omitempty"` //
-			Time         int64           `json:"create_time_ms,omitempty"`
-			UTime        int64           `json:"update_time_ms,omitempty"`
-		} `json:"orders,omitempty"`
+			GtQty        decimal.Decimal `json:"gt_fee"`    //
+			Event        string          `json:"event"`     //
+			FinishAs     string          `json:"finish_as"` //
+			Time         int64           `json:"create_time_ms"`
+			UTime        int64           `json:"update_time_ms"`
+		} `json:"orders"`
 	}{}
 	err = json.Unmarshal(resp, &orders)
 	if err != nil {

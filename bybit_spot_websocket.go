@@ -3,6 +3,7 @@ package cex
 import (
 	"encoding/json"
 	"errors"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -134,23 +135,26 @@ func (bb *Bybit) SpotWsPublicLoop(ch chan<- any) {
 	pingInterval := 27 * time.Second
 	pongWait := pingInterval + 2*time.Second
 	bb.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
-	bb.spotWsPublicConn.SetPongHandler(func(string) error {
-		bb.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
-		return nil
-	})
-	go func() {
+	pingExit := make(chan struct{})
+	defer close(pingExit)
+	go func(exitChan <-chan struct{}) {
 		ticker := time.NewTicker(pingInterval)
 		defer ticker.Stop()
 		ping := `{"op":"ping"}`
-		for range ticker.C {
-			if bb.SpotWsPublicIsClosed() {
-				break
+		for {
+			select {
+			case <-exitChan:
+				return
+			case <-ticker.C:
+				if bb.SpotWsPublicIsClosed() {
+					break
+				}
+				bb.spotWsPublicConnMtx.Lock()
+				bb.spotWsPublicConn.WriteMessage(websocket.TextMessage, []byte(ping))
+				bb.spotWsPublicConnMtx.Unlock()
 			}
-			bb.spotWsPublicConnMtx.Lock()
-			bb.spotWsPublicConn.WriteMessage(websocket.TextMessage, []byte(ping))
-			bb.spotWsPublicConnMtx.Unlock()
 		}
-	}()
+	}(pingExit)
 
 	l := 0
 	for {
@@ -173,7 +177,9 @@ func (bb *Bybit) SpotWsPublicLoop(ch chan<- any) {
 		} else if l > 8 && msg.Topic[:8] == "tickers." {
 			bb.spotWsHandle24hTickers(msg, ch)
 		} else {
-			if msg.Op == "subscribe" || msg.Op == "unsubscribe" { // 订阅的响应
+			if msg.Op == "ping" {
+				bb.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
+			} else if msg.Op == "subscribe" || msg.Op == "unsubscribe" { // 订阅的响应
 				if strings.Index(string(recv), "false") != -1 {
 					ilog.Error(bb.Name() + " spot.ws.public recv subscribe err:" + string(recv))
 				}
@@ -251,5 +257,227 @@ func (bb *Bybit) spotWsHandle24hTickers(msg *BybitWsPubMsg, ch chan<- any) {
 		tk.Volume = ticker.Volume
 		tk.QuoteVolume = ticker.QuoteVolume
 		ch <- tk
+	}
+}
+
+// = priv channel
+func (bb *Bybit) SpotWsPrivateSupported() bool {
+	return true
+}
+func (bb *Bybit) SpotWsPrivateOpen() error {
+	url := "wss://stream.bybit.com/v5/private"
+	var err error
+	dialer := websocket.Dialer{
+		EnableCompression: true, // 启用压缩扩展
+		HandshakeTimeout:  2 * time.Second,
+	}
+	bb.spotWsPrivateConn, _, err = dialer.Dial(url, nil)
+	if err != nil {
+		return errors.New(bb.Name() + " connect failed! " + err.Error())
+	}
+	expires := time.Now().UnixMilli() + 3000
+	authMessage := map[string]interface{}{
+		"op":   "auth",
+		"args": []any{bb.apikey, expires, bb.wsSign(expires)},
+	}
+	req, _ := json.Marshal(authMessage)
+	bb.spotWsPrivateConn.WriteMessage(websocket.TextMessage, req)
+	_, msg, err := bb.spotWsPrivateConn.ReadMessage()
+	if err != nil {
+		bb.SpotWsPrivateClose()
+		return errors.New(bb.Name() + " spot.ws.priv recv auth resp err:" + err.Error())
+	}
+	resp := struct {
+		Result bool   `json:"success"`
+		Err    string `json:"ret_msg"`
+		Op     string `json:"op"`
+	}{}
+	if err = json.Unmarshal(msg, &resp); err != nil {
+		bb.SpotWsPrivateClose()
+		return errors.New(bb.Name() + " spot.ws.priv auth resp err:" + err.Error())
+	}
+	if resp.Op != "auth" || resp.Result != true {
+		bb.SpotWsPrivateClose()
+		return errors.New(bb.Name() + " spot.ws.priv auth fail:" + string(msg))
+	}
+
+	bb.spotWsPrivateClosedMtx.Lock()
+	bb.spotWsPrivateClosed = false
+	bb.spotWsPrivateClosedMtx.Unlock()
+	return nil
+}
+func (bb *Bybit) SpotWsPrivateSubscribe(channels []string) {
+	arg := BbSubscribeArg{Op: "subscribe"}
+	for _, c := range channels {
+		if c == "orders" {
+			arg.Args = append(arg.Args, "order.spot")
+		} else if c == "balance" {
+			arg.Args = append(arg.Args, "wallet")
+		}
+	}
+	if len(arg.Args) > 0 {
+		req, _ := json.Marshal(&arg)
+		bb.spotWsPrivateConnMtx.Lock()
+		if err := bb.spotWsPrivateConn.WriteMessage(websocket.TextMessage, req); err != nil {
+			ilog.Warning(bb.Name() + " spot.ws.priv subscribe net error! " + err.Error())
+		}
+		bb.spotWsPrivateConnMtx.Unlock()
+	}
+}
+func (bb *Bybit) SpotWsPrivateIsClosed() bool {
+	bb.spotWsPrivateClosedMtx.RLock()
+	defer bb.spotWsPrivateClosedMtx.RUnlock()
+	return bb.spotWsPrivateClosed
+}
+func (bb *Bybit) SpotWsPrivateClose() {
+	bb.spotWsPrivateClosedMtx.Lock()
+	defer bb.spotWsPrivateClosedMtx.Unlock()
+	if bb.spotWsPrivateClosed {
+		return
+	}
+	bb.spotWsPrivateClosed = true
+	bb.spotWsPrivateConn.Close()
+}
+
+type BybitWsPrivMsg struct {
+	Op    string          `json:"op"`
+	Topic string          `json:"topic"`
+	Data  json.RawMessage `json:"data"`
+}
+
+func (v *BybitWsPrivMsg) reset() {
+	v.Op = ""
+	v.Topic = ""
+	v.Data = nil
+}
+func (bb *Bybit) SpotWsPrivateLoop(ch chan<- any) {
+	defer bb.SpotWsPrivateClose()
+	defer close(ch)
+
+	pingInterval := 31 * time.Second
+	pongWait := pingInterval + 2*time.Second
+	bb.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
+	bb.spotWsPublicConn.SetPongHandler(func(message string) error {
+		bb.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
+	pingExit := make(chan struct{})
+	defer close(pingExit)
+	go func(exitChan <-chan struct{}) {
+		ticker := time.NewTicker(pingInterval)
+		defer ticker.Stop()
+		ping := `{"op":"ping"}`
+		for {
+			select {
+			case <-exitChan:
+				return
+			case <-ticker.C:
+				if bb.SpotWsPrivateIsClosed() {
+					break
+				}
+				bb.spotWsPrivateConnMtx.Lock()
+				bb.spotWsPrivateConn.WriteMessage(websocket.TextMessage, []byte(ping))
+				bb.spotWsPrivateConnMtx.Unlock()
+			}
+		}
+	}(pingExit)
+
+	for {
+		_, recv, err := bb.spotWsPrivateConn.ReadMessage()
+		if err != nil {
+			if !bb.SpotWsPrivateIsClosed() {
+				ilog.Warning(bb.Name() + " spot.ws.priv channel read: " + err.Error())
+			}
+			break
+		}
+		if bb.debug {
+			ilog.Rinfo(bb.Name() + " spot priv ws: " + string(recv))
+		}
+		msg := bbWsPrivMsgPool.Get().(*BybitWsPrivMsg)
+		msg.reset()
+		if err = json.Unmarshal(recv, msg); err != nil {
+			ilog.Error(bb.Name() + " spot.ws.priv recv invalid msg:" + string(recv))
+			goto END
+		}
+		if msg.Op == "ping" {
+			bb.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
+		} else if msg.Topic == "wallet" {
+			bb.spotWsHandleBalanceUpdate(msg.Data, ch)
+		} else if msg.Topic == "order.spot" {
+			bb.spotWsHandleOrder(msg.Data, ch)
+		} else {
+			if msg.Op == "subscribe" { // 订阅的响应
+				if strings.Index(string(recv), "false") != -1 {
+					ilog.Error(bb.Name() + " spot.ws.priv recv subscribe err:" + string(recv))
+				}
+			}
+		}
+	END:
+		bbWsPrivMsgPool.Put(msg)
+	}
+}
+func (bb *Bybit) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
+	orders := []struct {
+		Symbol       string            `json:"symbol"` // BTCUSDT
+		OrderId      string            `json:"orderId"`
+		ClientId     string            `json:"orderLinkId"`
+		Price        decimal.Decimal   `json:"price"`
+		Quantity     decimal.Decimal   `json:"qty"`         // 用户设置的原始订单数量
+		Type         string            `json:"orderType"`   // LIMIT/MARKET
+		TimeInForce  string            `json:"timeInForce"` // GTC/FOK/IOC
+		Side         string            `json:"side"`
+		ExecutedQty  decimal.Decimal   `json:"cumExecQty"`   // 交易的订单数量
+		CummQuoteQty decimal.Decimal   `json:"cumExecValue"` // 累计交易的金额
+		FeeQty       decimal.Decimal   `json:"cumExecFee"`
+		Status       string            `json:"orderStatus"`
+		Time         string            `json:"createdTime"` // msec
+		UTime        string            `json:"updatedTime"` // msec
+		FeeDetail    map[string]string `json:"cumFeeDetail"`
+	}{}
+	if err := json.Unmarshal(data, &orders); err == nil && len(orders) > 0 {
+		for i := range orders {
+			o := &SpotOrder{
+				Symbol:      orders[i].Symbol,
+				OrderId:     orders[i].OrderId,
+				ClientId:    orders[i].ClientId,
+				Price:       orders[i].Price,
+				Qty:         orders[i].Quantity,
+				FilledQty:   orders[i].ExecutedQty,
+				FilledAmt:   orders[i].CummQuoteQty,
+				Status:      bb.toStdOrderStatus(orders[i].Status),
+				Type:        bb.toStdOrderType(orders[i].Type),
+				TimeInForce: orders[i].TimeInForce,
+				Side:        bb.toStdSide(orders[i].Side),
+			}
+			o.CTime, _ = strconv.ParseInt(orders[i].Time, 10, 64)
+			o.UTime, _ = strconv.ParseInt(orders[i].UTime, 10, 64)
+			for k, v := range orders[i].FeeDetail {
+				o.FeeAsset = k
+				o.FeeQty, _ = decimal.NewFromString(v)
+				o.FeeQty = o.FeeQty.Neg() // 换成负数
+				break
+			}
+			ch <- o
+		}
+	}
+}
+func (bb *Bybit) spotWsHandleBalanceUpdate(data json.RawMessage, ch chan<- any) {
+	bls := []struct {
+		Coin struct {
+			Symbol string          `json:"coin"`
+			Total  decimal.Decimal `json:"equity"`
+			Avail  decimal.Decimal `json:"walletBalance"`
+			Locked decimal.Decimal `json:"locked"`
+		} `json:"coin"`
+	}{}
+	if err := json.Unmarshal(data, &bls); err == nil && len(bls) > 0 {
+		for i := range bls {
+			ch <- &SpotAsset{
+				Symbol: bls[i].Coin.Symbol,
+				Avail:  bls[i].Coin.Avail,
+				Locked: bls[i].Coin.Locked,
+				Total:  bls[i].Coin.Avail.Add(bls[i].Coin.Locked),
+			}
+		}
 	}
 }

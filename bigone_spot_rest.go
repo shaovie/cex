@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
-
-	"github.com/shaovie/gutils/ihttp"
 )
 
 func (bo *Bigone) SpotSupported() bool {
@@ -17,7 +15,7 @@ func (bo *Bigone) SpotSupported() bool {
 }
 func (bo *Bigone) SpotServerTime() (int64, error) {
 	url := boSpotEndpoint + "/ping"
-	_, resp, err := ihttp.Get(url, boApiDeadline, nil)
+	_, resp, err := bo.Get(url, boApiDeadline, nil)
 	if err != nil {
 		return 0, errors.New(bo.Name() + " net error! " + err.Error())
 	}
@@ -41,7 +39,7 @@ func (bo *Bigone) SpotServerTime() (int64, error) {
 }
 func (bo *Bigone) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	url := boSpotEndpoint + "/asset_pairs"
-	_, resp, err := ihttp.Get(url, boApiDeadline, nil)
+	_, resp, err := bo.Get(url, boApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(bo.Name() + " net error! " + err.Error())
 	}
@@ -54,6 +52,9 @@ func (bo *Bigone) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error
 			QuoteScale  int             `json:"quote_scale"`
 			BaseScale   int             `json:"base_scale"`
 			MinNotional decimal.Decimal `json:"min_quote_value"`
+			Base        struct {
+				Name string `json:"name"`
+			} `json:"base_asset,omitempty"`
 		} `json:"data,omitempty"`
 	}{}
 
@@ -67,6 +68,7 @@ func (bo *Bigone) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error
 	all := make(map[string]*SpotExchangePairRule)
 	now := time.Now().Unix()
 	tboSpotSymbolMap := make(map[string]string)
+	tboXStocksSymbolMap := make(map[string]string)
 	for _, pair := range recv.Data {
 		base, quote, ok := strings.Cut(pair.Symbol, "-")
 		if !ok {
@@ -76,6 +78,7 @@ func (bo *Bigone) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error
 			Symbol:        base + quote,
 			Base:          base,
 			Quote:         quote,
+			Status:        "online",
 			Time:          now,
 			MinNotional:   pair.MinNotional,
 			QtyStep:       PowOneTenth(pair.BaseScale),
@@ -87,16 +90,23 @@ func (bo *Bigone) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error
 		ep.MinOrderQty = ep.QtyStep
 		all[ep.Symbol] = ep
 		tboSpotSymbolMap[ep.Symbol] = pair.Symbol
+		if strings.Index(pair.Base.Name, "xStock") != -1 {
+			tboXStocksSymbolMap[ep.Symbol] = pair.Symbol
+		}
 	}
 	boSpotSymbolMapMtx.Lock()
 	boSpotSymbolMap = tboSpotSymbolMap
 	boSpotSymbolMapMtx.Unlock()
+
+	boXStocksSymbolMapMtx.Lock()
+	boXStocksSymbolMap = tboXStocksSymbolMap
+	boXStocksSymbolMapMtx.Unlock()
 	return all, nil
 }
 func (bo *Bigone) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 	url := boSpotEndpoint + "/viewer/accounts"
 	jwt := "Bearer " + bo.jwt()
-	_, resp, err := ihttp.Get(url, boApiDeadline, map[string]string{"Authorization": jwt})
+	_, resp, err := bo.Get(url, boApiDeadline, map[string]string{"Authorization": jwt})
 	if err != nil {
 		return nil, errors.New(bo.Name() + " net error! " + err.Error())
 	}
@@ -133,19 +143,58 @@ func (bo *Bigone) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 	}
 	return assetsMap, nil
 }
+func (bo *Bigone) SpotGetBBO(symbol string) (BestBidAsk, error) {
+	symbolS := bo.getSpotSymbol(symbol)
+	url := boSpotEndpoint + "/asset_pairs/" + symbolS + "/ticker"
+	_, resp, err := bo.Get(url, boApiDeadline, nil)
+	if err != nil {
+		return BestBidAsk{}, errors.New(bo.Name() + " net error! " + err.Error())
+	}
+
+	recv := struct {
+		Code int    `json:"code,omitempty"`
+		Msg  string `json:"message,omitempty"`
+		Data struct {
+			Bid struct {
+				Price decimal.Decimal `json:"price"`
+				Qty   decimal.Decimal `json:"quantity"`
+			} `json:"bid"`
+			Ask struct {
+				Price decimal.Decimal `json:"price"`
+				Qty   decimal.Decimal `json:"quantity"`
+			} `json:"ask"`
+		} `json:"data"`
+	}{}
+
+	err = json.Unmarshal(resp, &recv)
+	if err != nil {
+		return BestBidAsk{}, errors.New(bo.Name() + " unmarshal error! " + err.Error())
+	}
+	if recv.Code != 0 {
+		return BestBidAsk{}, errors.New(recv.Msg)
+	}
+	return BestBidAsk{
+		Symbol:   symbol,
+		BidPrice: recv.Data.Bid.Price,
+		BidQty:   recv.Data.Bid.Qty,
+		AskPrice: recv.Data.Ask.Price,
+		AskQty:   recv.Data.Ask.Qty,
+	}, nil
+}
 func (bo *Bigone) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
 	type PostOrder struct {
-		Symbol   string          `json:"asset_pair_name"`
-		Side     string          `json:"side"`
-		Type     string          `json:"typ"`
-		ClientId string          `json:"client_order_id,omitempty"`
-		PostOnly bool            `json:"post_only,omitempty"`
-		Price    string          `json:"price,omitempty"`
-		Qty      decimal.Decimal `json:"amount"`
+		Symbol            string          `json:"asset_pair_name"`
+		Side              string          `json:"side"`
+		Type              string          `json:"typ"`
+		ClientId          string          `json:"client_order_id,omitempty"`
+		ImmediateOrCancel bool            `json:"immediate_or_cancel,omitempty"`
+		PostOnly          bool            `json:"post_only,omitempty"`
+		Price             string          `json:"price,omitempty"`
+		Qty               decimal.Decimal `json:"amount"`
 	}
 	poL := make([]PostOrder, 0, len(orders))
 	for i := range orders {
-		symbolS := boSpotSymbolMap[orders[i].Symbol]
+		symbolS := bo.getSpotSymbol(orders[i].Symbol)
 		po := PostOrder{
 			PostOnly: orders[i].PostOnly,
 			Symbol:   symbolS,
@@ -155,6 +204,9 @@ func (bo *Bigone) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
 			ClientId: orders[i].ClientId,
 		}
 		if orders[i].Type == "LIMIT" {
+			if orders[i].TimeInForce == "IOC" {
+				po.ImmediateOrCancel = true
+			}
 			po.Price = orders[i].Price.String()
 		}
 		poL = append(poL, po)
@@ -166,7 +218,7 @@ func (bo *Bigone) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
 		"Content-Type":  "application/json",
 		"Authorization": jwt,
 	}
-	_, resp, err := ihttp.Post(url, payload, boApiDeadline, header)
+	_, resp, err := bo.Post(url, payload, boApiDeadline, header)
 	if err != nil {
 		return errors.New(bo.Name() + " net error! " + err.Error())
 	}
@@ -195,7 +247,7 @@ func (bo *Bigone) SpotPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 	price, amt, qty decimal.Decimal,
 	side, timeInForce, orderType string, postOnly bool) (string, error) {
 
-	symbolS := boSpotSymbolMap[symbol]
+	symbolS := bo.getSpotSymbol(symbol)
 	url := boSpotEndpoint + "/viewer/orders"
 	jwt := "Bearer " + bo.jwt()
 	payload := `{"asset_pair_name":"` + symbolS + `"`
@@ -207,6 +259,9 @@ func (bo *Bigone) SpotPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 		if postOnly {
 			payload += `,"post_only":true`
 		}
+		if timeInForce == "IOC" {
+			payload += `,"immediate_or_cancel":true`
+		}
 	}
 	payload += "" +
 		`,"amount":"` + qty.String() + `"` +
@@ -217,7 +272,7 @@ func (bo *Bigone) SpotPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 		"Content-Type":  "application/json",
 		"Authorization": jwt,
 	}
-	_, resp, err := ihttp.Post(url, []byte(payload), boApiDeadline, header)
+	_, resp, err := bo.Post(url, []byte(payload), boApiDeadline, header)
 	if err != nil {
 		return "", errors.New(bo.Name() + " net error! " + err.Error())
 	}
@@ -254,7 +309,7 @@ func (bo *Bigone) SpotCancelOrder(symbol, orderId, cltId string) error {
 		"Content-Type":  "application/json",
 		"Authorization": jwt,
 	}
-	respCode, resp, err := ihttp.Post(url, []byte(payload), boApiDeadline, header)
+	respCode, resp, err := bo.Post(url, []byte(payload), boApiDeadline, header)
 	if err != nil {
 		return errors.New(bo.Name() + " net error! " + err.Error())
 	}
@@ -284,7 +339,7 @@ func (bo *Bigone) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error
 		url = boSpotEndpoint + "/viewer/order?client_order_id=" + cltId
 	}
 	jwt := "Bearer " + bo.jwt()
-	_, resp, err := ihttp.Get(url, boApiDeadline, map[string]string{"Authorization": jwt})
+	_, resp, err := bo.Get(url, boApiDeadline, map[string]string{"Authorization": jwt})
 	if err != nil {
 		return nil, errors.New(bo.Name() + " net error! " + err.Error())
 	}
@@ -336,10 +391,66 @@ func (bo *Bigone) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error
 	}, nil
 }
 func (bo *Bigone) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
-	symbolS := boSpotSymbolMap[symbol]
+	symbolS := bo.getSpotSymbol(symbol)
 	url := boSpotEndpoint + "/viewer/orders?limit=200&state=PENDING&asset_pair_name=" + symbolS
 	jwt := "Bearer " + bo.jwt()
-	_, resp, err := ihttp.Get(url, boApiDeadline, map[string]string{"Authorization": jwt})
+	_, resp, err := bo.Get(url, boApiDeadline, map[string]string{"Authorization": jwt})
+	if err != nil {
+		return nil, errors.New(bo.Name() + " error! " + err.Error())
+	}
+	ret := struct {
+		Code int    `json:"code,omitempty"`
+		Msg  string `json:"message,omitempty"`
+		L    []struct {
+			Symbol      string          `json:"asset_pair_name,omitempty"`
+			Id          int64           `json:"id,omitempty"`
+			ClientId    string          `json:"client_order_id,omitempty"`
+			Price       decimal.Decimal `json:"price"`
+			Qty         decimal.Decimal `json:"amount"`
+			ExecutedQty decimal.Decimal `json:"filled_amount"`
+			AvgPrice    decimal.Decimal `json:"avg_deal_price"`
+			Status      string          `json:"state,omitempty"`
+			Type        string          `json:"type,omitempty"`
+			Side        string          `json:"side,omitempty"`
+			Time        string          `json:"created_at,omitempty"`
+			UTime       string          `json:"updated_at,omitempty"`
+		} `json:"data,omitempty"`
+	}{}
+	err = json.Unmarshal(resp, &ret)
+	if err != nil {
+		return nil, errors.New(bo.Name() + " unmarshal fail! " + err.Error())
+	}
+	if ret.Code != 0 {
+		return nil, errors.New(bo.Name() + " openorder fail! " + ret.Msg)
+	}
+
+	dl := make([]*SpotOrder, 0, len(ret.L))
+	for _, v := range ret.L {
+		ctime, _ := time.Parse(time.RFC3339, v.Time)
+		utime, _ := time.Parse(time.RFC3339, v.UTime)
+		so := SpotOrder{
+			Symbol:    symbol,
+			OrderId:   strconv.FormatInt(v.Id, 10),
+			ClientId:  v.ClientId,
+			Price:     v.Price,
+			Qty:       v.Qty,
+			FilledQty: v.ExecutedQty,
+			FilledAmt: v.ExecutedQty.Mul(v.AvgPrice),
+			Status:    bo.toStdOrderStatus(v.Status),
+			Type:      bo.toStdOrderType(v.Type),
+			Side:      bo.toStdSide(v.Side),
+			CTime:     ctime.UnixMilli(),
+			UTime:     utime.UnixMilli(),
+		}
+		dl = append(dl, &so)
+	}
+	return dl, nil
+}
+func (bo *Bigone) SpotGetFilledOrders(symbol string) ([]*SpotOrder, error) {
+	symbolS := bo.getSpotSymbol(symbol)
+	url := boSpotEndpoint + "/viewer/orders?limit=200&state=FILLED&asset_pair_name=" + symbolS
+	jwt := "Bearer " + bo.jwt()
+	_, resp, err := bo.Get(url, boApiDeadline, map[string]string{"Authorization": jwt})
 	if err != nil {
 		return nil, errors.New(bo.Name() + " error! " + err.Error())
 	}
@@ -392,11 +503,11 @@ func (bo *Bigone) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 	return dl, nil
 }
 func (bo *Bigone) SpotGetTradeFee(symbol string) (SpotTradeFee, error) {
-	symbolS := boSpotSymbolMap[symbol]
+	symbolS := bo.getSpotSymbol(symbol)
 	var f SpotTradeFee
 	url := boSpotEndpoint + "/viewer/trading_fees?asset_pair_names=" + symbolS
 	jwt := "Bearer " + bo.jwt()
-	_, resp, err := ihttp.Get(url, boApiDeadline, map[string]string{"Authorization": jwt})
+	_, resp, err := bo.Get(url, boApiDeadline, map[string]string{"Authorization": jwt})
 	if err != nil {
 		return f, errors.New(bo.Name() + " error! " + err.Error())
 	}
