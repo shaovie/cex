@@ -241,35 +241,22 @@ func main() {
 	// ok,gate,bybit,binance
 	cexObj, _ := cex.New(cexName, "", apiKey, secretKey, passphrase)
 	cexObj.Debug(true)
-	orders, _ := cexObj.SpotGetFilledOrders("ICNTUSDT")
-	for _, order := range orders {
-		ilog.Rinfo("%s, %v", order.Symbol, *order)
-		order1, err := cexObj.SpotGetOrder(order.Symbol, order.OrderId, "")
-		if err != nil {
-			ilog.Rinfo("get order %s err:%s", order.OrderId, err.Error())
-			break
-		}
-		if order1 != nil {
-			ilog.Rinfo("%v", *order1)
-		}
-		break
-	}
 	//order, err := cexObj.SpotGetOrder("AMDxUSD", "OG7HA3-I656I-VH7MX7", "")
 	//ilog.Rinfo("%v", *order)
 	//testRest(cexObj)
-	return
 	/*
 		_, err = cexObj.Withdrawal("USDT", "asfdsafdsdf", "232323", "", decimal.NewFromFloat(1000))
 		if err != nil {
 			ilog.Rinfo("Withdrawal%s", err.Error())
 		}*/
-	wh, err := cexObj.GetWithdrawalHistory("SPCXx")
+	wh, err := cexObj.GetWithdrawalHistory("USDT")
 	if err != nil {
 		ilog.Rinfo("GetWithdrawalHistory %s", err.Error())
 	}
 	for _, v := range wh {
 		ilog.Rinfo("%v", v)
 	}
+	return
 	wh2, err := cexObj.GetDepositAddress("USDT", "")
 	if err != nil {
 		ilog.Rinfo("GetDepositAddress %s", err.Error())

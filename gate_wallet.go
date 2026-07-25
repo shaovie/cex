@@ -58,7 +58,7 @@ func (gt *Gate) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error) {
 	if resp[0] != '[' {
 		return nil, gt.handleExceptionResp("GetWithdrawalHistory", resp)
 	}
-	ret := [][]struct {
+	ret := []struct {
 		Id       string          `json:"id"`
 		Symbol   string          `json:"currency"`
 		Qty      decimal.Decimal `json:"amount"`
@@ -73,20 +73,21 @@ func (gt *Gate) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error) {
 	}
 
 	res := make([]WithdrawResult, 0, 4)
-	for _, v1 := range ret {
-		for _, v2 := range v1 {
-			dtime, _ := strconv.ParseInt(v2.DoneTime, 10, 64)
-			a := WithdrawResult{
-				WId:      v2.Id,
-				Symbol:   v2.Symbol,
-				Status:   gt.toStdWithdrawStatus(v2.Status),
-				Qty:      v2.Qty,
-				Txid:     v2.Txid,
-				Fee:      v2.Fee,
-				DoneTime: dtime,
-			}
-			res = append(res, a)
+	for _, v2 := range ret {
+		dtime, _ := strconv.ParseInt(v2.DoneTime, 10, 64)
+		a := WithdrawResult{
+			WId:      v2.Id,
+			Symbol:   v2.Symbol,
+			Status:   gt.toStdWithdrawStatus(v2.Status),
+			Qty:      v2.Qty,
+			Txid:     v2.Txid,
+			Fee:      v2.Fee,
+			DoneTime: dtime,
 		}
+		if a.Status == "COMPLETED" {
+			a.Qty = a.Qty.Sub(a.Fee) // 计算到账数量
+		}
+		res = append(res, a)
 	}
 	return res, nil
 }

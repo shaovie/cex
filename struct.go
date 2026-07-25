@@ -328,7 +328,7 @@ type WithdrawResult struct {
 	Status   string // PENDING/COMPLETED/FAILED/REJECTED/CANCELED
 	Txid     string
 	Info     string          // 失败原因
-	Qty      decimal.Decimal //
+	Qty      decimal.Decimal // 到账数量
 	Fee      decimal.Decimal //
 	DoneTime int64           // second 完成时间
 }
