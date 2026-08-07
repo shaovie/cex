@@ -581,24 +581,25 @@ func (bn *Binance) futuresWsHandleOrder(data json.RawMessage, ch chan<- any) {
 }
 func (bn *Binance) futuresWsHandlePosition(data json.RawMessage, ch chan<- any, t int64) {
 	pl := struct {
-		Event string `json:"m,omitempty"`
+		Event string `json:"m"`
 		Pos   []struct {
-			Symbol           string          `json:"s,omitempty"`
+			Symbol           string          `json:"s"`
 			EntryPrice       decimal.Decimal `json:"ep"`
 			UnRealizedProfit decimal.Decimal `json:"up"`
 			Qty              decimal.Decimal `json:"pa"`
-			PositionMode     string          `json:"ps,omitempty"`
-			UTime            int64           `json:"time_ms,omitempty"`
-		} `json:"P,omitempty"`
+			PositionMode     string          `json:"ps"`
+			UTime            int64           `json:"time_ms"`
+		} `json:"P"`
 	}{}
 	if err := json.Unmarshal(data, &pl); err == nil && len(pl.Pos) > 0 {
 		for _, p := range pl.Pos {
-			if p.PositionMode != "BOTH" {
-				continue // 只支持单仓模式 目前不支持 双仓模式
-			}
 			side := "SELL"
-			if p.Qty.IsPositive() {
-				side = "BUY"
+			if p.PositionMode == "BOTH" { // 单仓模式
+				if p.Qty.IsPositive() {
+					side = "BUY"
+				}
+			} else {
+				side = bn.toStdSide(p.PositionMode)
 			}
 			if bn.futuresWsPrivateTyp == "CM" {
 				p.Symbol = strings.ReplaceAll(p.Symbol, "_PERP", "")

@@ -259,10 +259,12 @@ type FuturesOrder struct {
 	UTime    int64
 }
 type FuturesPosition struct {
-	Symbol      string // BTCUSDT
-	Side        string
+	Mode        int             // 0单仓,1双仓
+	Symbol      string          // BTCUSDT
+	Side        string          // SELL/BUY
 	PositionQty decimal.Decimal // 持仓数量  正数, 在CM中为张数
 	EntryPrice  decimal.Decimal // 开仓均价
+
 	// 以上必须
 	LiqPrice         decimal.Decimal // 强平价格
 	UnRealizedProfit decimal.Decimal // 未结盈亏
@@ -288,6 +290,73 @@ func (cp *FuturesPosition) Val(v *FuturesPosition) {
 	}
 	if v.UTime > 0 {
 		cp.UTime = v.UTime
+	}
+}
+
+// 为了支持双仓而增加的结构
+type FuturesPositionsData struct {
+	UTime      int64           // mill second
+	Side       string          // SELL/BUY
+	Qty        decimal.Decimal // 持仓数量  正数, 在CM中为张数
+	EntryPrice decimal.Decimal // 开仓均价
+
+	// 以上必须
+	LiqPrice         decimal.Decimal // 强平价格
+	UnRealizedProfit decimal.Decimal // 未结盈亏
+}
+
+type FuturesPositions struct {
+	Mode     int             // 0单仓,1双仓
+	Symbol   string          // BTCUSDT
+	Leverage decimal.Decimal // 杠杆  币安推送不带个值
+
+	Both FuturesPositionsData // 单仓
+	Buy  FuturesPositionsData // 双仓-BUY
+	Sell FuturesPositionsData // 双仓-SELL
+}
+
+func (fp *FuturesPositions) Val(v *FuturesPosition) {
+	fp.Mode = v.Mode
+	if v.Symbol != "" {
+		fp.Symbol = v.Symbol
+	}
+	if v.Leverage.IsPositive() {
+		fp.Leverage = v.Leverage
+	}
+
+	if fp.Mode == 0 { // BOTH
+		fp.Both.Side = v.Side
+		fp.Both.Qty = v.PositionQty
+		fp.Both.EntryPrice = v.EntryPrice
+		fp.Both.UnRealizedProfit = v.UnRealizedProfit
+		if !v.LiqPrice.IsNegative() {
+			fp.Both.LiqPrice = v.LiqPrice
+		}
+		if v.UTime > 0 {
+			fp.Both.UTime = v.UTime
+		}
+	} else if v.Side == "BUY" {
+		fp.Buy.Side = v.Side
+		fp.Buy.Qty = v.PositionQty
+		fp.Buy.EntryPrice = v.EntryPrice
+		fp.Buy.UnRealizedProfit = v.UnRealizedProfit
+		if !v.LiqPrice.IsNegative() {
+			fp.Buy.LiqPrice = v.LiqPrice
+		}
+		if v.UTime > 0 {
+			fp.Buy.UTime = v.UTime
+		}
+	} else if v.Side == "SELL" {
+		fp.Sell.Side = v.Side
+		fp.Sell.Qty = v.PositionQty
+		fp.Sell.EntryPrice = v.EntryPrice
+		fp.Sell.UnRealizedProfit = v.UnRealizedProfit
+		if !v.LiqPrice.IsNegative() {
+			fp.Sell.LiqPrice = v.LiqPrice
+		}
+		if v.UTime > 0 {
+			fp.Sell.UTime = v.UTime
+		}
 	}
 }
 

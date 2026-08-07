@@ -834,6 +834,83 @@ func (bn *Binance) FuturesMaintMargin(typ, symbol string) ([]*FuturesLeverageBra
 	}
 	return lbs, nil
 }
+func (bn *Binance) FuturesGetAllPositions(typ string) (map[string]*FuturesPositions, error) {
+	url := bnUMFuturesEndpoint + "/fapi/v2/positionRisk?" + bn.httpQuerySign("")
+	if typ == "CM" {
+		url = bnCMFuturesEndpoint + "/dapi/v1/positionRisk?" + bn.httpQuerySign("")
+	}
+	if bn.isUnified {
+		url = bnUnifiedEndpoint + "/papi/v1/um/positionRisk?" + bn.httpQuerySign("")
+		if typ == "CM" {
+			url = bnUnifiedEndpoint + "/papi/v1/cm/positionRisk?" + bn.httpQuerySign("")
+		}
+	}
+	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	if err != nil {
+		return nil, errors.New(bn.Name() + " net error! " + err.Error())
+	}
+
+	if resp[0] == '{' {
+		return nil, bn.handleExceptionResp("FuturesGetAllPositions", resp)
+	}
+	recv := []struct {
+		Symbol     string          `json:"symbol"`
+		EntryPrice decimal.Decimal `json:"entryPrice"`
+		Leverage   decimal.Decimal `json:"leverage"`
+		LiqPrice   decimal.Decimal `json:"liquidationPrice"`
+		//MarkPrice decimal.Decimal `json:"markPrice,omitempty"`
+		// 符号代表多空方向, 正数为多，负数为空
+		PositionQty   decimal.Decimal `json:"positionAmt"`
+		NotionalVal   decimal.Decimal `json:"notionalValue"` // for CM
+		Notional      decimal.Decimal `json:"notional"`      // for UM
+		UnrealisedPnl decimal.Decimal `json:"unRealizedProfit"`
+		Side          string          `json:"positionSide"` // BOTH/SELL/BUY
+
+		Time int64 `json:"updateTime"` // msec
+	}{}
+	if err = json.Unmarshal(resp, &recv); err != nil {
+		return nil, errors.New(bn.Name() + " unmarshal fail! " + err.Error())
+	}
+	positionM := make(map[string]*FuturesPositions)
+	for _, v := range recv {
+		fp := FuturesPositions{
+			Symbol:   strings.ReplaceAll(v.Symbol, "_PERP", ""), // BTCUSDT
+			Leverage: v.Leverage,
+		}
+		if v.Side == "BOTH" { // 单仓模式
+			fp.Mode = 0
+			fp.Both.Side = "SELL"
+			if v.PositionQty.IsPositive() {
+				fp.Both.Side = "BUY"
+			}
+			fp.Both.UTime = v.Time
+			fp.Both.Qty = v.PositionQty.Abs()
+			fp.Both.EntryPrice = v.EntryPrice
+			fp.Both.LiqPrice = v.LiqPrice
+			fp.Both.UnRealizedProfit = v.UnrealisedPnl
+		} else if v.Side == "LONG" { // 双仓模式
+			fp.Mode = 1
+			fp.Buy.Side = "BUY"
+			fp.Buy.UTime = v.Time
+			fp.Buy.Qty = v.PositionQty.Abs()
+			fp.Buy.EntryPrice = v.EntryPrice
+			fp.Buy.LiqPrice = v.LiqPrice
+			fp.Buy.UnRealizedProfit = v.UnrealisedPnl
+		} else if v.Side == "SHORT" {
+			fp.Mode = 1
+			fp.Sell.Side = "SELL"
+			fp.Sell.UTime = v.Time
+			fp.Sell.Qty = v.PositionQty.Abs()
+			fp.Sell.EntryPrice = v.EntryPrice
+			fp.Sell.LiqPrice = v.LiqPrice
+			fp.Sell.UnRealizedProfit = v.UnrealisedPnl
+		}
+
+		positionM[fp.Symbol] = &fp
+	}
+
+	return positionM, nil
+}
 func (bn *Binance) FuturesGetAllPositionList(typ string) (map[string]*FuturesPosition, error) {
 	url := bnUMFuturesEndpoint + "/fapi/v2/positionRisk?" + bn.httpQuerySign("")
 	if typ == "CM" {

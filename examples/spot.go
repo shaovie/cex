@@ -35,7 +35,7 @@ func spotPubWs(cexObj cex.Exchanger) {
 	//cexObj.SpotWsPublicSubscribe([]string{"ticker@" + allSymbols,
 	//"orderbook5@ETHUSDT,BTCUSDT", "orderbook5@SOLUSDT", "bbo@SPCXXUSDT", "trades@BTCUSDT"})
 	_ = allSymbols
-	cexObj.SpotWsPublicSubscribe([]string{"bbo@PRLUSDT"})
+	cexObj.SpotWsPublicSubscribe([]string{"bbo@CASHCATUSDT"})
 	go cexObj.SpotWsPublicLoop(ch)
 	go func() {
 		time.Sleep(30 * time.Second)
@@ -239,8 +239,10 @@ func main() {
 	passphrase := os.Getenv("PASSPHRASE")
 	ilog.Rinfo("spot api:ws test. cex = %s", cexName)
 	// ok,gate,bybit,binance
-	cexObj, _ := cex.New(cexName, "", apiKey, secretKey, passphrase)
+	cexObj, _ := cex.NewPrivate(cexName, "", apiKey, secretKey, passphrase)
 	cexObj.Debug(true)
+	bba, _ := cexObj.SpotGetBBO("CASHCATUSDT")
+	ilog.Rinfo("bba=%v", bba)
 	//order, err := cexObj.SpotGetOrder("AMDxUSD", "OG7HA3-I656I-VH7MX7", "")
 	//ilog.Rinfo("%v", *order)
 	//testRest(cexObj)
@@ -249,21 +251,23 @@ func main() {
 		if err != nil {
 			ilog.Rinfo("Withdrawal%s", err.Error())
 		}*/
-	wh, err := cexObj.GetWithdrawalHistory("USDT")
-	if err != nil {
-		ilog.Rinfo("GetWithdrawalHistory %s", err.Error())
-	}
-	for _, v := range wh {
-		ilog.Rinfo("%v", v)
-	}
-	return
-	wh2, err := cexObj.GetDepositAddress("USDT", "")
-	if err != nil {
-		ilog.Rinfo("GetDepositAddress %s", err.Error())
-	}
-	for _, v := range wh2 {
-		ilog.Rinfo("%v", v)
-	}
+	/*
+		wh, err := cexObj.GetWithdrawalHistory("USDT")
+		if err != nil {
+			ilog.Rinfo("GetWithdrawalHistory %s", err.Error())
+		}
+		for _, v := range wh {
+			ilog.Rinfo("%v", v)
+		}
+		return
+		wh2, err := cexObj.GetDepositAddress("USDT", "")
+		if err != nil {
+			ilog.Rinfo("GetDepositAddress %s", err.Error())
+		}
+		for _, v := range wh2 {
+			ilog.Rinfo("%v", v)
+		}
+	*/
 	testPubWs(cexObj)
 	//testPrivWs(cexObj)
 	//go spotPrivWs(cexObj)

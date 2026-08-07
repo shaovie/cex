@@ -85,7 +85,7 @@ func spotUpdateExPairRule() {
 		wg.Add(1)
 		go func(cexName string) {
 			defer wg.Done()
-			if co, _ := New(cexName, "", "", "", ""); co != nil {
+			if co, _ := New(cexName, "", "", "", "", ""); co != nil {
 				if ret, err := co.SpotLoadAllPairRule(); ret != nil {
 					spotExchangePairRuleMtx.Lock()
 					spotExchangePairRule[cexName] = ret
@@ -135,7 +135,7 @@ func futuresUpdateExPairRule() {
 		wg.Add(1)
 		go func(cexName string) {
 			defer wg.Done()
-			if co, _ := New(cexName, "", "", "", ""); co != nil {
+			if co, _ := New(cexName, "", "", "", "", ""); co != nil {
 				if co.FuturesSupported("UM") {
 					if ret, err := co.FuturesLoadAllPairRule("UM"); ret != nil {
 						futuresExchangePairRuleMtx.Lock()

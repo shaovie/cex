@@ -134,6 +134,9 @@ func (us *Unsupported) FuturesGetKLine(typ, symbol, interval string, startTime, 
 func (us *Unsupported) FuturesGetAllPositionList(typ string) (map[string]*FuturesPosition, error) {
 	return nil, errors.New("not support")
 }
+func (us *Unsupported) FuturesGetAllPositions(typ string) (map[string]*FuturesPositions, error) {
+	return nil, errors.New("not support")
+}
 func (us *Unsupported) FuturesSizeToQty(typ, symbol string, size decimal.Decimal) decimal.Decimal {
 	return decimal.Zero
 }

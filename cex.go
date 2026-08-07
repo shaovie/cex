@@ -114,6 +114,7 @@ type Exchanger interface {
 	// 返回顺序[11:15:00,11:16:00,11:17:00]
 	FuturesGetKLine(typ, symbol, interval string, startTime, endTime, lmt int64) ([]KLine, error)
 	FuturesGetAllPositionList(typ string) (map[string]*FuturesPosition, error)
+	FuturesGetAllPositions(typ string) (map[string]*FuturesPositions, error)
 	FuturesQtyToSize(typ, symbol string, qty decimal.Decimal) decimal.Decimal
 	// CM中 qty为合约张数
 	FuturesPlaceOrder(typ, symbol, clientId string,
@@ -214,6 +215,7 @@ func init() {
 	CexList["bybit"] = "Bybit"
 	CexList["kraken"] = "Kraken"
 	CexList["ktx"] = "Ktx"
+	CexList["kucoin"] = "Kucoin"
 	//CexList["mexc"] = "Mexc"
 	//CexList["bitget"]= "Bitget"
 
@@ -226,13 +228,23 @@ func init() {
 	CexSXList["kraken"] = "KK"
 	CexSXList["mexc"] = "MC"
 	CexSXList["ktx"] = "KTX"
+	CexSXList["kucoin"] = "KC"
 
 	CexFeeCoinMap = make(map[string]string)
 	CexFeeCoinMap["gate"] = "GT"
 	CexFeeCoinMap["binance"] = "BNB"
 }
 
-func New(cexName, account, apikey, secretkey, passwd string) (Exchanger, error) {
+func NewPublic(cexName string) (Exchanger, error) {
+	return New(cexName, "", "", "", "", "")
+}
+func NewPrivate(cexName, account, apikey, secretkey, passwd string) (Exchanger, error) {
+	return New(cexName, account, apikey, secretkey, passwd, "")
+}
+func NewPrivateWithLocalIP(cexName, account, apikey, secretkey, passwd, localIp string) (Exchanger, error) {
+	return New(cexName, account, apikey, secretkey, passwd, localIp)
+}
+func New(cexName, account, apikey, secretkey, passwd, localIp string) (Exchanger, error) {
 	var cexObj Exchanger
 	var err error
 	if cexName == "binance" {
@@ -247,6 +259,8 @@ func New(cexName, account, apikey, secretkey, passwd string) (Exchanger, error) 
 		cexObj = NewBybit(account, apikey, secretkey)
 	} else if cexName == "ktx" {
 		cexObj = NewKtx()
+	} else if cexName == "kucoin" {
+		cexObj = NewKucoin()
 	} else if cexName == "kraken" {
 		cexObj = NewKraken(account, apikey, secretkey)
 	} else {
