@@ -172,8 +172,8 @@ func (bb *Bybit) FuturesGetAllAssets(typ string) (map[string]*FuturesAsset, erro
 	return assetsMap, nil
 }
 func (bb *Bybit) FuturesPlaceOrder(typ, symbol, cltId string, /*BTCUSDT*/
-	price, qty decimal.Decimal, side, orderType, timeInForce string,
-	positionMode /*0单仓,1双仓*/, tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error) {
+	price, qty decimal.Decimal, side, orderType, timeInForce, positionMode string,
+	tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error) {
 	typ = bb.fromStdCategory(typ)
 	params := map[string]any{
 		"category":    typ,

@@ -499,6 +499,19 @@ func (bo *Bigone) SpotWsPrivateOpen() error {
 		EnableCompression: true, // 启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
 	}
+	if bo.localIP != "" {
+		localAddr := &net.TCPAddr{
+			IP:   net.ParseIP(bo.localIP),
+			Port: 0, // 0 表示随机可用端口
+		}
+		dialer.NetDialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			d := net.Dialer{
+				LocalAddr: localAddr,
+				Timeout:   2 * time.Second,
+			}
+			return d.DialContext(ctx, network, addr)
+		}
+	}
 	bo.spotWsPrivateConn, _, err = dialer.Dial(url, http.Header{
 		"Sec-WebSocket-Protocol": []string{"json"},
 	})

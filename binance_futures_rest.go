@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
-
-	"github.com/shaovie/gutils/ihttp"
 )
 
 func (bn *Binance) FuturesSupported(typ string) bool {
@@ -24,7 +22,7 @@ func (bn *Binance) FuturesServerTime(typ string) (int64, error) {
 	if typ == "CM" {
 		url = bnCMFuturesEndpoint + "/dapi/v1/time"
 	}
-	_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+	_, resp, err := bn.Get(url, bnApiDeadline, nil)
 	if err != nil {
 		return 0, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -47,7 +45,7 @@ func (bn *Binance) FuturesLoadAllPairRule(typ string) (map[string]*FuturesExchan
 	if typ == "CM" {
 		url = bnCMFuturesEndpoint + "/dapi/v1/exchangeInfo"
 	}
-	_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+	_, resp, err := bn.Get(url, bnApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(bn.Name() + " " + typ + " net error! " + err.Error())
 	}
@@ -123,7 +121,7 @@ func (bn *Binance) FuturesGetAll24hTicker(typ string) (map[string]Pub24hTicker, 
 	if typ == "CM" {
 		url = bnCMFuturesEndpoint + "/dapi/v1/ticker/24hr"
 	}
-	_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+	_, resp, err := bn.Get(url, bnApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -161,7 +159,7 @@ func (bn *Binance) FuturesGetAll24hTicker(typ string) (map[string]Pub24hTicker, 
 func (bn *Binance) FuturesGetBBO(typ, symbol string) (BestBidAsk, error) {
 	if typ == "UM" {
 		url := bnUMFuturesEndpoint + "/fapi/v1/ticker/bookTicker?symbol=" + symbol
-		_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+		_, resp, err := bn.Get(url, bnApiDeadline, nil)
 		if err != nil {
 			return BestBidAsk{}, errors.New(bn.Name() + " net error! " + err.Error())
 		}
@@ -188,7 +186,7 @@ func (bn *Binance) FuturesGetBBO(typ, symbol string) (BestBidAsk, error) {
 			symbol += "_PERP"
 		}
 		url := bnCMFuturesEndpoint + "/dapi/v1/ticker/bookTicker?symbol=" + symbol
-		_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+		_, resp, err := bn.Get(url, bnApiDeadline, nil)
 		if err != nil {
 			return BestBidAsk{}, errors.New(bn.Name() + " net error! " + err.Error())
 		}
@@ -221,7 +219,7 @@ func (bn *Binance) FuturesGetAllFundingRate(typ string) (map[string]FundingRate,
 	if typ == "CM" {
 		url = bnCMFuturesEndpoint + "/dapi/v1/premiumIndex"
 	}
-	_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+	_, resp, err := bn.Get(url, bnApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -266,7 +264,7 @@ func (bn *Binance) FuturesGetFundingRateHistory(typ, symbol string,
 	params := fmt.Sprintf("&symbol=%s&startTime=%d&endTime=%d&limit=1000",
 		symbol, startTime, endTime)
 	url = url + "?" + params
-	_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+	_, resp, err := bn.Get(url, bnApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -294,7 +292,7 @@ func (bn *Binance) FuturesGetFundingRateHistory(typ, symbol string,
 func (bn *Binance) FuturesGetFundingRateMarkPrice(typ, symbol string) (FundingRateMarkPrice, error) {
 	if typ == "UM" {
 		url := bnUMFuturesEndpoint + "/fapi/v1/premiumIndex?symbol=" + symbol
-		_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+		_, resp, err := bn.Get(url, bnApiDeadline, nil)
 		if err != nil {
 			return FundingRateMarkPrice{}, errors.New(bn.Name() + " net error! " + err.Error())
 		}
@@ -318,7 +316,7 @@ func (bn *Binance) FuturesGetFundingRateMarkPrice(typ, symbol string) (FundingRa
 			symbol += "_PERP"
 		}
 		url := bnCMFuturesEndpoint + "/dapi/v1/premiumIndex?symbol=" + symbol
-		_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+		_, resp, err := bn.Get(url, bnApiDeadline, nil)
 		if err != nil {
 			return FundingRateMarkPrice{}, errors.New(bn.Name() + " net error! " + err.Error())
 		}
@@ -352,7 +350,7 @@ func (bn *Binance) FuturesGetAllAssets(typ string) (map[string]*FuturesAsset, er
 		url = bnCMFuturesEndpoint + "/dapi/v1/balance"
 	}
 	url += "?" + bn.httpQuerySign("")
-	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -395,7 +393,7 @@ func (bn *Binance) FuturesGetKLine(typ, symbol, interval string,
 	if typ == "CM" {
 		url = bnCMFuturesEndpoint + "/dapi/v1/klines?" + params
 	}
-	_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+	_, resp, err := bn.Get(url, bnApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -423,8 +421,8 @@ func (bn *Binance) FuturesGetKLine(typ, symbol, interval string,
 	return all, nil
 }
 func (bn *Binance) FuturesPlaceOrder(typ, symbol, clientId string, /*BTCUSDT*/
-	price, qty decimal.Decimal, side, orderType, timeInForce string,
-	positionMode /*0单仓,1双仓*/, tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error) {
+	price, qty decimal.Decimal, side, orderType, timeInForce, positionMode string,
+	tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error) {
 	if typ == "CM" {
 		if strings.Index(symbol, "_") == -1 {
 			symbol += "_PERP"
@@ -445,9 +443,8 @@ func (bn *Binance) FuturesPlaceOrder(typ, symbol, clientId string, /*BTCUSDT*/
 	if clientId != "" {
 		query += "&newClientOrderId=" + clientId
 	}
-	if positionMode == 0 {
-		query += "&positionSide=" + "BOTH"
-	}
+	query += "&positionSide=" + positionMode
+
 	if reduceOnly == 1 {
 		query += "&reduceOnly=true" // 双开模式下不接受此参数
 	}
@@ -461,20 +458,20 @@ func (bn *Binance) FuturesPlaceOrder(typ, symbol, clientId string, /*BTCUSDT*/
 			link = bnUnifiedEndpoint + "/papi/v1/cm/order?" + bn.httpQuerySign(query)
 		}
 	}
-	_, resp, err := ihttp.Post(link, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Post(link, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return "", errors.New(bn.Name() + " net error! " + err.Error())
 	}
 	ret := struct {
-		Code    int    `json:"code,omitempty"`
-		Msg     string `json:"msg,omitempty"`
-		OrderId int64  `json:"orderId,omitempty"` //
+		Code    int    `json:"code"`
+		Msg     string `json:"msg"`
+		OrderId int64  `json:"orderId"` //
 	}{}
 	if err = json.Unmarshal(resp, &ret); err != nil {
 		return "", errors.New(bn.Name() + " unmarshal fail! " + err.Error())
 	}
 	if ret.Code != 0 {
-		return "", errors.New(bn.Name() + " futures order fail! " + ret.Msg + " " + link)
+		return "", errors.New(bn.Name() + " futures place order fail! " + ret.Msg)
 	}
 	return strconv.FormatInt(ret.OrderId, 10), nil
 }
@@ -498,7 +495,7 @@ func (bn *Binance) FuturesGetOrder(typ, symbol, orderId, cltId string) (*Futures
 		params = fmt.Sprintf("&symbol=%s&origClientOrderId=%s", symbol, cltId)
 	}
 	url += "?" + bn.httpQuerySign(params)
-	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -567,32 +564,32 @@ func (bn *Binance) FuturesGetOpenOrders(typ, symbol string) ([]*FuturesOrder, er
 		params = ""
 	}
 	url += "?" + bn.httpQuerySign(params)
-	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
+	if resp[0] == '{' {
+		return nil, bn.handleExceptionResp("FuturesGetOpenOrders", resp)
+	}
 
 	orders := []struct {
-		Symbol       string          `json:"symbol,omitempty"` // BTCUSDT
-		OrderId      int64           `json:"orderId,omitempty"`
-		ClientId     string          `json:"clientOrderId,omitempty"` // BTCUSDT
+		Symbol       string          `json:"symbol"` // BTCUSDT
+		OrderId      int64           `json:"orderId"`
+		ClientId     string          `json:"clientOrderId"` // BTCUSDT
 		Price        decimal.Decimal `json:"price"`
 		Quantity     decimal.Decimal `json:"origQty"`     // 用户设置的原始订单数量
 		ExecutedQty  decimal.Decimal `json:"executedQty"` // 交易的订单数量
 		CummQuoteQty decimal.Decimal `json:"cumQuote"`    // 累计交易的金额 for UM
 		CummBaseQty  decimal.Decimal `json:"cumBase"`     // 累计交易的金额(标地数量) for CM
-		Status       string          `json:"status,omitempty"`
-		Type         string          `json:"type,omitempty"`        // LIMIT/MARKET
-		TimeInForce  string          `json:"timeInForce,omitempty"` // GTC/FOK/IOC
-		Side         string          `json:"side,omitempty"`
-		Time         int64           `json:"time,omitempty"`
-		UTime        int64           `json:"updateTime,omitempty"`
+		Status       string          `json:"status"`
+		Type         string          `json:"type"`        // LIMIT/MARKET
+		TimeInForce  string          `json:"timeInForce"` // GTC/FOK/IOC
+		Side         string          `json:"side"`
+		Time         int64           `json:"time"`
+		UTime        int64           `json:"updateTime"`
 	}{}
 	if err = json.Unmarshal(resp, &orders); err != nil {
 		return nil, errors.New(bn.Name() + " unmarshal fail! " + err.Error())
-	}
-	if resp[0] == '{' {
-		return nil, bn.handleExceptionResp("FuturesGetOpenOrders", resp)
 	}
 	oL := make([]*FuturesOrder, 0, len(orders))
 	for _, order := range orders {
@@ -637,7 +634,7 @@ func (bn *Binance) FuturesCancelOrder(typ, symbol, orderId, cltId string) error 
 		params = "&symbol=" + symbol + "&origClientOrderId=" + cltId
 	}
 	url = url + "?" + bn.httpQuerySign(params)
-	_, resp, err := ihttp.Delete(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Delete(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -680,7 +677,7 @@ func (bn *Binance) FuturesSwitchPositionMode(typ string /*BTCUSDT*/, mode int) e
 	}
 	params := "&dualSidePosition=" + m
 	link += "?" + bn.httpQuerySign(params)
-	_, resp, err := ihttp.Post(link, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Post(link, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -724,7 +721,7 @@ func (bn *Binance) futuresSwitchTradeMode(typ, symbol string /*BTCUSDT*/, mode i
 	}
 	params := "&marginType=" + m + "&symbol=" + symbol
 	link += "?" + bn.httpQuerySign(params)
-	_, resp, err := ihttp.Post(link, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Post(link, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -761,7 +758,7 @@ func (bn *Binance) futuresSetLeverage(typ, symbol string /*BTCUSDT*/, leverage i
 	ls := strconv.FormatInt(int64(leverage), 10)
 	params := "&leverage=" + ls + "&symbol=" + symbol
 	link += "?" + bn.httpQuerySign(params)
-	_, resp, err := ihttp.Post(link, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Post(link, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -792,7 +789,7 @@ func (bn *Binance) FuturesMaintMargin(typ, symbol string) ([]*FuturesLeverageBra
 		symbol += "_PERP"
 	}
 	url = url + "?" + bn.httpQuerySign("&symbol="+symbol)
-	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -845,7 +842,7 @@ func (bn *Binance) FuturesGetAllPositions(typ string) (map[string]*FuturesPositi
 			url = bnUnifiedEndpoint + "/papi/v1/cm/positionRisk?" + bn.httpQuerySign("")
 		}
 	}
-	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -922,7 +919,7 @@ func (bn *Binance) FuturesGetAllPositionList(typ string) (map[string]*FuturesPos
 			url = bnUnifiedEndpoint + "/papi/v1/cm/positionRisk?" + bn.httpQuerySign("")
 		}
 	}
-	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -993,7 +990,7 @@ func (bn *Binance) FuturesGetProfitLossHistory(typ, symbol, plType string,
 	params := fmt.Sprintf("&symbol=%s&incomeType=%s&startTime=%d&endTime=%d&limit=1000",
 		symbol, plType, startTime, endTime)
 	url = url + "?" + bn.httpQuerySign(params)
-	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}

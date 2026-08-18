@@ -121,10 +121,11 @@ func (sa *SpotAsset) Val(v *SpotAsset) {
 		sa.Symbol = v.Symbol
 	}
 	sa.Avail = v.Avail
-	if !v.Total.Equals(decimal.NewFromInt(999999999)) {
+	v99 := decimal.NewFromInt(-999999999)
+	if !v.Total.Equals(v99) {
 		sa.Total = v.Total
 	}
-	if !v.Locked.Equals(decimal.NewFromInt(999999999)) {
+	if !v.Locked.Equals(v99) {
 		sa.Locked = v.Locked
 	}
 }
@@ -134,6 +135,22 @@ type FuturesAsset struct {
 	Total             decimal.Decimal // 账户余额/钱包余额
 	Avail             decimal.Decimal // 可用下单余额
 	MaxWithdrawAmount decimal.Decimal // for binance's rest api
+}
+
+func (fa *FuturesAsset) Val(v *FuturesAsset) {
+	if v.Symbol != "" {
+		fa.Symbol = v.Symbol
+	}
+	v99 := decimal.NewFromInt(-999999999)
+	if !v.Total.Equals(v99) {
+		fa.Total = v.Total
+	}
+	if !v.Avail.Equals(v99) {
+		fa.Avail = v.Avail
+	}
+	if !v.MaxWithdrawAmount.Equals(v99) {
+		fa.MaxWithdrawAmount = v.MaxWithdrawAmount
+	}
 }
 
 type UnifiedAsset struct {

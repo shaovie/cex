@@ -6,14 +6,13 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/shaovie/gutils/ihttp"
 	"github.com/shaovie/gutils/ilog"
 	"github.com/shopspring/decimal"
 )
 
 func (bn *Binance) UnifiedGetAssets() (map[string]*UnifiedAsset, error) {
 	url := bnUnifiedEndpoint + "/papi/v1/balance?" + bn.httpQuerySign("")
-	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -145,7 +144,7 @@ func (bn *Binance) UnifiedWsLoop(ch chan<- any) {
 }
 func (bn *Binance) unifiedWsHandleBalance(data json.RawMessage, ch chan<- any) {
 	bl := []struct {
-		Symbol string          `json:"a,omitempty"`
+		Symbol string          `json:"a"`
 		Avail  decimal.Decimal `json:"f"`
 		Locked decimal.Decimal `json:"l"`
 	}{}

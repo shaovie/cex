@@ -274,7 +274,7 @@ func main() {
 	//time.Sleep(2 * time.Second)
 	//testRest(cexObj)
 
-	time.Sleep(300 * time.Second)
+	time.Sleep(3000 * time.Second)
 
 	ilog.Rinfo("to close spot pub ws loop")
 	cexObj.SpotWsPublicClose()

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/shaovie/gutils/ihttp"
 	"github.com/shopspring/decimal"
 )
 
@@ -15,7 +14,7 @@ func (bn *Binance) MarginSupported() bool {
 }
 func (bn *Binance) MarginGetCrossAccountInfo() (*MarginCrossAccountInfo, error) {
 	url := bnMarginEndpoint + "/sapi/v1/margin/account?" + bn.httpQuerySign("")
-	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -79,7 +78,7 @@ func (bn *Binance) MarginGetCrossAccountInfo() (*MarginCrossAccountInfo, error) 
 func (bn *Binance) MarginGetMaxBorrowable(symbol string) (MarginMaxBorrowable, error) {
 	params := fmt.Sprintf("&asset=%s", symbol)
 	url := bnMarginEndpoint + "/sapi/v1/margin/maxBorrowable?" + bn.httpQuerySign(params)
-	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return MarginMaxBorrowable{}, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -135,7 +134,7 @@ func (bn *Binance) MarginPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 	}
 	url := bnMarginEndpoint + "/sapi/v1/margin/order?" + bn.httpQuerySign(params)
 	headers := map[string]string{"X-MBX-APIKEY": bn.apikey}
-	_, resp, err := ihttp.Post(url, nil, bnApiDeadline, headers)
+	_, resp, err := bn.Post(url, nil, bnApiDeadline, headers)
 	if err != nil {
 		return "", decimal.Zero, "", errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -176,7 +175,7 @@ func (bn *Binance) MarginCancelOrder(symbol string, /*BTCUSDT*/
 	}
 	url := bnMarginEndpoint + "/sapi/v1/margin/order?" + bn.httpQuerySign(params)
 	headers := map[string]string{"X-MBX-APIKEY": bn.apikey}
-	_, resp, err := ihttp.Delete(url, bnApiDeadline, headers)
+	_, resp, err := bn.Delete(url, bnApiDeadline, headers)
 	if err != nil {
 		return errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -213,7 +212,7 @@ func (bn *Binance) MarginGetOrder(symbol, orderId, cltId string, isIsolated bool
 	}
 	url := bnMarginEndpoint + "/sapi/v1/margin/order?" + bn.httpQuerySign(params)
 	headers := map[string]string{"X-MBX-APIKEY": bn.apikey}
-	_, resp, err := ihttp.Get(url, bnApiDeadline, headers)
+	_, resp, err := bn.Get(url, bnApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -267,7 +266,7 @@ func (bn *Binance) MarginGetTrades(symbol, orderId string, isIsolated bool) ([]*
 	params += "&orderId=" + orderId
 	url := bnMarginEndpoint + "/sapi/v1/margin/myTrades?" + bn.httpQuerySign(params)
 	headers := map[string]string{"X-MBX-APIKEY": bn.apikey}
-	_, resp, err := ihttp.Get(url, bnApiDeadline, headers)
+	_, resp, err := bn.Get(url, bnApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -306,7 +305,7 @@ func (bn *Binance) MarginRepay(symbol string, qty decimal.Decimal, isIsolated bo
 		symbol, qty.String(), isIsolateds, "REPAY")
 	url := bnMarginEndpoint + "/sapi/v1/margin/borrow-repay?" + bn.httpQuerySign(params)
 	headers := map[string]string{"X-MBX-APIKEY": bn.apikey}
-	_, resp, err := ihttp.Post(url, nil, bnApiDeadline, headers)
+	_, resp, err := bn.Post(url, nil, bnApiDeadline, headers)
 	if err != nil {
 		return errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -330,7 +329,7 @@ func (bn *Binance) MarginGetAssetInfo(symbol string) (MarginAssetInfo, error) {
 	info := MarginAssetInfo{}
 	url := bnMarginEndpoint + "/sapi/v1/margin/allAssets?asset=" + symbol
 	headers := map[string]string{"X-MBX-APIKEY": bn.apikey}
-	_, resp, err := ihttp.Get(url, bnApiDeadline, headers)
+	_, resp, err := bn.Get(url, bnApiDeadline, headers)
 	if err != nil {
 		return info, errors.New(bn.Name() + " net error! " + err.Error())
 	}

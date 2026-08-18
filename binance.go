@@ -18,10 +18,12 @@ import (
 
 type Binance struct {
 	Unsupported
+	Http
 	name      string
 	account   string
 	apikey    string
 	secretkey string
+	localIP   string
 	isUnified bool // 是否统一账户
 	debug     bool
 
@@ -90,14 +92,22 @@ func init() {
 		},
 	}
 }
-func NewBinance(account, apikey, secretkey string) *Binance {
+func NewBinance(account, apikey, secretkey, localIP string) (*Binance, error) {
+	client, err := NewClientWithLocalIP(localIP)
+	if err != nil {
+		return nil, err
+	}
 	cexObj := &Binance{
+		Http: Http{
+			client: client,
+		},
 		name:      "binance",
 		account:   account,
 		apikey:    apikey,
 		secretkey: secretkey,
+		localIP:   localIP,
 	}
-	return cexObj
+	return cexObj, nil
 }
 func (bn *Binance) Name() string {
 	return bn.name

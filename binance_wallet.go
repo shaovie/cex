@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/shaovie/gutils/ihttp"
 	"github.com/shopspring/decimal"
 )
 
@@ -53,7 +52,7 @@ func (bn *Binance) Transfer(symbol, from, to, typ, subAccount string, qty decima
 	}
 	query := fmt.Sprintf("&type=%s&asset=%s&amount=%s", t, symbol, qty.String())
 	url := bnWalletEndpoint + "/sapi/v1/asset/transfer?" + bn.httpQuerySign(query)
-	_, resp, err := ihttp.Post(url, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Post(url, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -78,7 +77,7 @@ func (bn *Binance) Transfer(symbol, from, to, typ, subAccount string, qty decima
 }
 func (bn *Binance) FundingGetAllAssets() (map[string]*FundingAsset, error) {
 	url := bnWalletEndpoint + "/sapi/v1/asset/get-funding-asset?" + bn.httpQuerySign("")
-	_, resp, err := ihttp.Post(url, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Post(url, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -113,7 +112,7 @@ func (bn *Binance) FundingGetAsset(symbol string) (FundingAsset, error) {
 	query = ""
 	url := bnWalletEndpoint + "/sapi/v1/asset/get-funding-asset?" + bn.httpQuerySign(query)
 	var fa FundingAsset
-	_, resp, err := ihttp.Post(url, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Post(url, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return fa, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -148,7 +147,7 @@ func (bn *Binance) Withdrawal(symbol, addr, memo, chain string, qty decimal.Deci
 	query := fmt.Sprintf("&coin=%s&network=%s&address=%s&addressTag=%s&amount=%s&walletType=%d",
 		symbol, chain, addr, memo, qty.String(), 1)
 	url := bnWalletEndpoint + "/sapi/v1/capital/withdraw/apply?" + bn.httpQuerySign(query)
-	_, resp, err := ihttp.Post(url, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Post(url, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -173,7 +172,7 @@ func (bn *Binance) Withdrawal(symbol, addr, memo, chain string, qty decimal.Deci
 func (bn *Binance) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error) {
 	query := fmt.Sprintf("&coin=%s", symbol)
 	url := bnWalletEndpoint + "/sapi/v1/capital/withdraw/history?" + bn.httpQuerySign(query)
-	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -216,7 +215,7 @@ func (bn *Binance) GetDepositAddress(symbol, network string) ([]DepositAddress, 
 		query += "&network=" + network
 	}
 	url := bnWalletEndpoint + "/sapi/v1/capital/deposit/address/list?" + bn.httpQuerySign(query)
-	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}

@@ -144,8 +144,8 @@ func (us *Unsupported) FuturesQtyToSize(typ, symbol string, qty decimal.Decimal)
 	return decimal.Zero
 }
 func (us *Unsupported) FuturesPlaceOrder(typ, symbol, clientId string,
-	price, qty decimal.Decimal, side, orderType, timeInForce string,
-	positionMode /*0单仓,1双仓*/, tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error) {
+	price, qty decimal.Decimal, side, orderType, timeInForce, positionMode string,
+	tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error) {
 	return "", errors.New("not support")
 }
 func (us *Unsupported) FuturesCancelOrder(typ, symbol, orderId, cltId string) error {
@@ -186,8 +186,8 @@ func (us *Unsupported) FuturesWsPrivateLoop(ch chan<- any)           {}
 func (us *Unsupported) FuturesWsPrivateClose()                       {}
 func (us *Unsupported) FuturesWsPrivateIsClosed() bool               { return true }
 func (us *Unsupported) FuturesWsPlaceOrder(symbol, cltId string,
-	price, qty decimal.Decimal, side, orderType, timeInForce string,
-	positionMode /*0单仓,1双仓*/, tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error) {
+	price, qty decimal.Decimal, side, orderType, timeInForce, positionMode string,
+	tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error) {
 	return "", errors.New("not support")
 }
 func (us *Unsupported) FuturesWsCancelOrder(symbol, orderId, cltId string) (string, error) {

@@ -116,10 +116,10 @@ type Exchanger interface {
 	FuturesGetAllPositionList(typ string) (map[string]*FuturesPosition, error)
 	FuturesGetAllPositions(typ string) (map[string]*FuturesPositions, error)
 	FuturesQtyToSize(typ, symbol string, qty decimal.Decimal) decimal.Decimal
-	// CM中 qty为合约张数
+	// CM中 qty为合约张数, positionMode=BOTH,LONG/SHORT
 	FuturesPlaceOrder(typ, symbol, clientId string,
-		price, qty decimal.Decimal, side, orderType, timeInForce string,
-		positionMode /*0单仓,1双仓*/, tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error)
+		price, qty decimal.Decimal, side, orderType, timeInForce, positionMode string,
+		tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error)
 	FuturesGetOrder(typ, symbol, orderId, cltId string) (*FuturesOrder, error)
 	// symbol 为空取所有的
 	FuturesGetOpenOrders(typ, symbol string) ([]*FuturesOrder, error)
@@ -154,6 +154,7 @@ type Exchanger interface {
 	FuturesWsPrivateOpen(typ string) error
 	// channels: orders
 	//           positions
+	//           balance // 只有binance
 	FuturesWsPrivateSubscribe(channels []string)
 	FuturesWsPrivateLoop(ch chan<- any)
 	FuturesWsPrivateClose()
@@ -161,8 +162,8 @@ type Exchanger interface {
 
 	// return reqId,err, CM中 qty为合约张数,
 	FuturesWsPlaceOrder(symbol, cltId string, price, qty decimal.Decimal,
-		side, orderType, timeInForce string,
-		positionMode /*0单仓,1双仓*/, tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error)
+		side, orderType, timeInForce, positionMode string,
+		tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error)
 	FuturesWsCancelOrder(symbol, orderId, cltId string) (string, error)
 
 	//= 统一账户
@@ -248,13 +249,13 @@ func New(cexName, account, apikey, secretkey, passwd, localIp string) (Exchanger
 	var cexObj Exchanger
 	var err error
 	if cexName == "binance" {
-		cexObj = NewBinance(account, apikey, secretkey)
+		cexObj, err = NewBinance(account, apikey, secretkey, localIp)
 	} else if cexName == "gate" {
-		cexObj, err = NewGate(account, apikey, secretkey, "")
+		cexObj, err = NewGate(account, apikey, secretkey, localIp)
 	} else if cexName == "okx" {
 		cexObj = NewOkx(account, apikey, secretkey, passwd)
 	} else if cexName == "bigone" {
-		cexObj, err = NewBigone(account, apikey, secretkey, "")
+		cexObj, err = NewBigone(account, apikey, secretkey, localIp)
 	} else if cexName == "bybit" {
 		cexObj = NewBybit(account, apikey, secretkey)
 	} else if cexName == "ktx" {
@@ -267,7 +268,7 @@ func New(cexName, account, apikey, secretkey, passwd, localIp string) (Exchanger
 		return nil, errors.New("unknown cex platform : " + cexName)
 	}
 	if err != nil {
-		return nil, errors.New(cexObj.Name() + " create failed! " + err.Error())
+		return nil, errors.New(cexName + " create failed! " + err.Error())
 	}
 	if err = cexObj.Init(); err != nil {
 		return nil, errors.New(cexObj.Name() + " init failed! " + err.Error())

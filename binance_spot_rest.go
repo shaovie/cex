@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/shaovie/gutils/ihttp"
 	"github.com/shopspring/decimal"
 )
 
@@ -16,7 +15,7 @@ func (bn *Binance) SpotSupported() bool {
 }
 func (bn *Binance) SpotServerTime() (int64, error) {
 	url := bnSpotEndpoint + "/api/v3/time"
-	_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+	_, resp, err := bn.Get(url, bnApiDeadline, nil)
 	if err != nil {
 		return 0, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -30,7 +29,7 @@ func (bn *Binance) SpotServerTime() (int64, error) {
 }
 func (bn *Binance) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	url := bnSpotEndpoint + "/api/v3/exchangeInfo?permissions=SPOT&symbolStatus=TRADING"
-	_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+	_, resp, err := bn.Get(url, bnApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -96,7 +95,7 @@ func (bn *Binance) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, erro
 }
 func (bn *Binance) SpotGetAll24hTicker() (map[string]Pub24hTicker, error) {
 	url := bnSpotEndpoint + "/api/v3/ticker/24hr"
-	_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+	_, resp, err := bn.Get(url, bnApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -129,7 +128,7 @@ func (bn *Binance) SpotGetAll24hTicker() (map[string]Pub24hTicker, error) {
 }
 func (bn *Binance) SpotGetBBO(symbol string) (BestBidAsk, error) {
 	url := bnSpotEndpoint + "/api/v3/ticker/bookTicker?symbol=" + symbol
-	_, resp, err := ihttp.Get(url, bnApiDeadline, nil)
+	_, resp, err := bn.Get(url, bnApiDeadline, nil)
 	if err != nil {
 		return BestBidAsk{}, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -153,7 +152,7 @@ func (bn *Binance) SpotGetBBO(symbol string) (BestBidAsk, error) {
 }
 func (bn *Binance) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 	url := bnSpotEndpoint + "/api/v3/account?" + bn.httpQuerySign("")
-	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -209,7 +208,7 @@ func (bn *Binance) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 	}
 	url := bnSpotEndpoint + "/api/v3/order?" + bn.httpQuerySign(params)
 	headers := map[string]string{"X-MBX-APIKEY": bn.apikey}
-	_, resp, err := ihttp.Post(url, nil, bnApiDeadline, headers)
+	_, resp, err := bn.Post(url, nil, bnApiDeadline, headers)
 	if err != nil {
 		return "", errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -243,16 +242,16 @@ func (bn *Binance) SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId str
 	}
 	url := bnSpotEndpoint + "/api/v3/order?" + bn.httpQuerySign(params)
 	headers := map[string]string{"X-MBX-APIKEY": bn.apikey}
-	_, resp, err := ihttp.Delete(url, bnApiDeadline, headers)
+	_, resp, err := bn.Delete(url, bnApiDeadline, headers)
 	if err != nil {
 		return errors.New(bn.Name() + " net error! " + err.Error())
 	}
 
 	ret := struct {
-		Code int    `json:"code,omitempty"`
-		Msg  string `json:"msg,omitempty"`
+		Code int    `json:"code"`
+		Msg  string `json:"msg"`
 
-		Status string `json:"status,omitempty"`
+		Status string `json:"status"`
 	}{}
 	if err = json.Unmarshal(resp, &ret); err != nil {
 		return errors.New(bn.Name() + " unmarshal fail! " + err.Error())
@@ -276,7 +275,7 @@ func (bn *Binance) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, erro
 	}
 	url := bnSpotEndpoint + "/api/v3/order?" + bn.httpQuerySign(params)
 	headers := map[string]string{"X-MBX-APIKEY": bn.apikey}
-	_, resp, err := ihttp.Get(url, bnApiDeadline, headers)
+	_, resp, err := bn.Get(url, bnApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -327,7 +326,7 @@ func (bn *Binance) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 		params += "&symbol=" + symbol
 	}
 	url := bnSpotEndpoint + "/api/v3/openOrders?" + bn.httpQuerySign(params)
-	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -378,7 +377,7 @@ func (bn *Binance) SpotGetTradeFee(symbol string) (SpotTradeFee, error) {
 	params := "&symbol=" + symbol
 	var f SpotTradeFee
 	url := bnSpotEndpoint + "/api/v3/account/commission?" + bn.httpQuerySign(params)
-	_, resp, err := ihttp.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return f, errors.New(bn.Name() + " net error! " + err.Error())
 	}

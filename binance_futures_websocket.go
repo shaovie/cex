@@ -1,8 +1,10 @@
 package cex
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"net"
 	"strconv"
 	"strings"
 	"sync"
@@ -11,7 +13,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/mailru/easyjson"
 	"github.com/shaovie/gutils/gutils"
-	"github.com/shaovie/gutils/ihttp"
 	"github.com/shaovie/gutils/ilog"
 	"github.com/shopspring/decimal"
 )
@@ -59,6 +60,19 @@ func (bn *Binance) FuturesWsPublicOpen(typ string) error {
 	dialer := websocket.Dialer{
 		EnableCompression: true, // 启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
+	}
+	if bn.localIP != "" {
+		localAddr := &net.TCPAddr{
+			IP:   net.ParseIP(bn.localIP),
+			Port: 0, // 0 表示随机可用端口
+		}
+		dialer.NetDialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			d := net.Dialer{
+				LocalAddr: localAddr,
+				Timeout:   2 * time.Second,
+			}
+			return d.DialContext(ctx, network, addr)
+		}
 	}
 	bn.futuresWsPublicConn, _, err = dialer.Dial(url, nil)
 	if err != nil {
@@ -325,7 +339,7 @@ func (bn *Binance) getListenKey(typ string) (string, error) {
 	} else if typ == "UNIFIED" {
 		link = bnUnifiedEndpoint + "/papi/v1/listenKey"
 	}
-	_, resp, err := ihttp.Post(link, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	_, resp, err := bn.Post(link, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
 	if err != nil {
 		return "", errors.New(bn.Name() + " net error! " + err.Error())
 	}
@@ -358,13 +372,26 @@ func (bn *Binance) futuresWsPrivateOpen(typ string) error {
 	if err != nil {
 		return errors.New(bn.Name() + " get listenkey fail! " + err.Error())
 	}
-	url := "wss://fstream.binance.com/ws/" + listenKey
+	url := "wss://fstream.binance.com/private/ws/" + listenKey
 	if typ == "CM" {
 		url = "wss://dstream.binance.com/ws/" + listenKey
 	}
 	dialer := websocket.Dialer{
 		EnableCompression: true, // 启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
+	}
+	if bn.localIP != "" {
+		localAddr := &net.TCPAddr{
+			IP:   net.ParseIP(bn.localIP),
+			Port: 0, // 0 表示随机可用端口
+		}
+		dialer.NetDialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			d := net.Dialer{
+				LocalAddr: localAddr,
+				Timeout:   2 * time.Second,
+			}
+			return d.DialContext(ctx, network, addr)
+		}
 	}
 	bn.futuresWsPrivateConn, _, err = dialer.Dial(url, nil)
 	if err != nil {
@@ -384,6 +411,19 @@ func (bn *Binance) futuresWsPrivateApiOpen(typ string) error {
 	dialer := websocket.Dialer{
 		EnableCompression: true, // 启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
+	}
+	if bn.localIP != "" {
+		localAddr := &net.TCPAddr{
+			IP:   net.ParseIP(bn.localIP),
+			Port: 0, // 0 表示随机可用端口
+		}
+		dialer.NetDialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			d := net.Dialer{
+				LocalAddr: localAddr,
+				Timeout:   2 * time.Second,
+			}
+			return d.DialContext(ctx, network, addr)
+		}
 	}
 	bn.futuresWsPrivateApiConn, _, err = dialer.Dial(url, nil)
 	if err != nil {
@@ -486,14 +526,21 @@ func (bn *Binance) futuresWsPrivateLoop(ch chan<- any, wg *sync.WaitGroup) {
 		}
 	}()
 
+	exitChan2 := make(chan struct{})
+	defer close(exitChan2)
 	go func() {
 		ticker := time.NewTicker((3600 - 120) * time.Second)
 		defer ticker.Stop()
-		for range ticker.C {
-			if bn.futuresWsPrivateIsClosed() {
-				break
+		for {
+			select {
+			case <-exitChan2:
+				return
+			case <-ticker.C:
+				if bn.futuresWsPrivateIsClosed() {
+					break
+				}
+				bn.getListenKey(bn.futuresWsPrivateTyp)
 			}
-			bn.getListenKey(bn.futuresWsPrivateTyp)
 		}
 	}()
 
@@ -582,7 +629,11 @@ func (bn *Binance) futuresWsHandleOrder(data json.RawMessage, ch chan<- any) {
 func (bn *Binance) futuresWsHandlePosition(data json.RawMessage, ch chan<- any, t int64) {
 	pl := struct {
 		Event string `json:"m"`
-		Pos   []struct {
+		B     []struct {
+			Symbol string          `json:"a"`  // USDT
+			Free   decimal.Decimal `json:"wb"` // 钱包余额
+		} `json:"B"`
+		Pos []struct {
 			Symbol           string          `json:"s"`
 			EntryPrice       decimal.Decimal `json:"ep"`
 			UnRealizedProfit decimal.Decimal `json:"up"`
@@ -591,7 +642,7 @@ func (bn *Binance) futuresWsHandlePosition(data json.RawMessage, ch chan<- any, 
 			UTime            int64           `json:"time_ms"`
 		} `json:"P"`
 	}{}
-	if err := json.Unmarshal(data, &pl); err == nil && len(pl.Pos) > 0 {
+	if err := json.Unmarshal(data, &pl); err == nil {
 		for _, p := range pl.Pos {
 			side := "SELL"
 			if p.PositionMode == "BOTH" { // 单仓模式
@@ -614,6 +665,15 @@ func (bn *Binance) futuresWsHandlePosition(data json.RawMessage, ch chan<- any, 
 				UTime:            t,
 			}
 			ch <- &cp
+		}
+		for _, b := range pl.B {
+			fa := FuturesAsset{
+				Symbol:            b.Symbol,
+				Total:             b.Free,
+				Avail:             decimal.NewFromInt(-999999999),
+				MaxWithdrawAmount: decimal.NewFromInt(-999999999),
+			}
+			ch <- &fa
 		}
 	}
 }
@@ -713,8 +773,8 @@ func (bn *Binance) futuresWsHandleCancelOrderResp(errS string) {
 
 // priv ws api
 func (bn *Binance) FuturesWsPlaceOrder(symbol, cltId string,
-	price, qty decimal.Decimal, side, orderType, timeInForce string,
-	positionMode /*0单仓,1双仓*/, tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error) {
+	price, qty decimal.Decimal, side, orderType, timeInForce, positionMode string,
+	tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error) {
 	if bn.futuresWsPrivateApiIsClosed() {
 		return "", errors.New(bn.Name() + " futures.ws.priv.api ws closed")
 	}
@@ -744,9 +804,8 @@ func (bn *Binance) FuturesWsPlaceOrder(symbol, cltId string,
 		params["timeInForce"] = timeInForce
 	} else if orderType == "MARKET" {
 	}
-	if positionMode == 0 {
-		params["positionSide"] = "BOTH"
-	}
+	params["positionSide"] = positionMode
+
 	if reduceOnly == 1 {
 		params["reduceOnly"] = true
 	}

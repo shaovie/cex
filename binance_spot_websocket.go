@@ -1,9 +1,11 @@
 package cex
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 	"sync"
@@ -60,6 +62,19 @@ func (bn *Binance) SpotWsPublicOpen() error {
 	dialer := websocket.Dialer{
 		EnableCompression: true, // 启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
+	}
+	if bn.localIP != "" {
+		localAddr := &net.TCPAddr{
+			IP:   net.ParseIP(bn.localIP),
+			Port: 0, // 0 表示随机可用端口
+		}
+		dialer.NetDialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			d := net.Dialer{
+				LocalAddr: localAddr,
+				Timeout:   2 * time.Second,
+			}
+			return d.DialContext(ctx, network, addr)
+		}
 	}
 	bn.spotWsPublicConn, _, err = dialer.Dial(url, nil)
 	if err != nil {
@@ -326,6 +341,19 @@ func (bn *Binance) SpotWsPrivateOpen() error {
 	dialer := websocket.Dialer{
 		EnableCompression: true, // 启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
+	}
+	if bn.localIP != "" {
+		localAddr := &net.TCPAddr{
+			IP:   net.ParseIP(bn.localIP),
+			Port: 0, // 0 表示随机可用端口
+		}
+		dialer.NetDialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			d := net.Dialer{
+				LocalAddr: localAddr,
+				Timeout:   2 * time.Second,
+			}
+			return d.DialContext(ctx, network, addr)
+		}
 	}
 	bn.spotWsPrivateConn, _, err = dialer.Dial(url, nil)
 	if err != nil {
