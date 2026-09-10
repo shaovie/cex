@@ -241,3 +241,56 @@ func (bn *Binance) GetDepositAddress(symbol, network string) ([]DepositAddress, 
 
 	return daL, nil
 }
+func (bn *Binance) GetWalletAllAssetInfo() (map[string]*WalletAssetInfo, error) {
+	url := bnWalletEndpoint + "/sapi/v1/capital/config/getall?" + bn.httpQuerySign("")
+	_, resp, err := bn.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	if err != nil {
+		return nil, errors.New(bn.Name() + " net error! " + err.Error())
+	}
+	if resp[0] != '[' {
+		return nil, bn.handleExceptionResp("GetWalletAllAssetInfo", resp)
+	}
+
+	recv := []struct {
+		Symbol       string `json:"coin"`
+		BindNetworks []struct {
+			Network                 string          `json:"network"`
+			IsDepositEnabled        bool            `json:"depositEnable"`
+			IsWithdrawalEnabled     bool            `json:"withdrawEnable"`
+			WithdrawFee             decimal.Decimal `json:"withdrawFee"`
+			MinWithdrawalAmount     decimal.Decimal `json:"withdrawMin"`
+			WithdrawIntegerMultiple decimal.Decimal `json:"withdrawIntegerMultiple"`
+			MinDepositAmount        decimal.Decimal `json:"depositDust"`
+		} `json:"networkList"`
+	}{}
+
+	err = json.Unmarshal(resp, &recv)
+	if err != nil {
+		return nil, errors.New(bn.Name() + " unmarshal error! " + err.Error())
+	}
+	waiMap := make(map[string]*WalletAssetInfo)
+	for _, v := range recv {
+		if len(v.BindNetworks) == 0 {
+			continue
+		}
+		wai := WalletAssetInfo{
+			Symbol:            v.Symbol,
+			IsTransferEnabled: true,
+			TransferScale:     8,
+			BindNetworks:      make(map[string]*WalletAssetBindNetworkInfo),
+		}
+		for _, vv := range v.BindNetworks {
+			wbni := WalletAssetBindNetworkInfo{
+				IsWithdrawalEnabled:     vv.IsWithdrawalEnabled,
+				IsDepositEnabled:        vv.IsDepositEnabled,
+				WithdrawIntegerMultiple: vv.WithdrawIntegerMultiple,
+				WithdrawFee:             vv.WithdrawFee,
+				MinWithdrawalAmount:     vv.MinWithdrawalAmount,
+				MinDepositAmount:        vv.MinDepositAmount,
+			}
+			wai.BindNetworks[vv.Network] = &wbni
+		}
+		waiMap[v.Symbol] = &wai
+	}
+	return waiMap, nil
+}

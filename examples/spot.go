@@ -241,8 +241,8 @@ func main() {
 	// ok,gate,bybit,binance
 	cexObj, _ := cex.NewPrivate(cexName, "", apiKey, secretKey, passphrase)
 	cexObj.Debug(true)
-	bba, _ := cexObj.SpotGetBBO("CASHCATUSDT")
-	ilog.Rinfo("bba=%v", bba)
+	//bba, _ := cexObj.SpotGetBBO("CASHCATUSDT")
+	//ilog.Rinfo("bba=%v", bba)
 	//order, err := cexObj.SpotGetOrder("AMDxUSD", "OG7HA3-I656I-VH7MX7", "")
 	//ilog.Rinfo("%v", *order)
 	//testRest(cexObj)
@@ -251,23 +251,22 @@ func main() {
 		if err != nil {
 			ilog.Rinfo("Withdrawal%s", err.Error())
 		}*/
-	/*
-		wh, err := cexObj.GetWithdrawalHistory("USDT")
-		if err != nil {
-			ilog.Rinfo("GetWithdrawalHistory %s", err.Error())
-		}
-		for _, v := range wh {
-			ilog.Rinfo("%v", v)
-		}
-		return
-		wh2, err := cexObj.GetDepositAddress("USDT", "")
-		if err != nil {
-			ilog.Rinfo("GetDepositAddress %s", err.Error())
-		}
-		for _, v := range wh2 {
-			ilog.Rinfo("%v", v)
-		}
-	*/
+
+	wh, err := cexObj.GetWalletAllAssetInfo()
+	if err != nil {
+		ilog.Rinfo("GetWithdrawalHistory %s", err.Error())
+	}
+	for _, v := range wh {
+		ilog.Rinfo("%v %v", v, v.BindNetworks["AR"])
+	}
+	return
+	wh2, err := cexObj.GetDepositAddress("USDT", "")
+	if err != nil {
+		ilog.Rinfo("GetDepositAddress %s", err.Error())
+	}
+	for _, v := range wh2 {
+		ilog.Rinfo("%v", v)
+	}
 	testPubWs(cexObj)
 	//testPrivWs(cexObj)
 	//go spotPrivWs(cexObj)

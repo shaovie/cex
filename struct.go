@@ -270,10 +270,11 @@ type FuturesOrder struct {
 	FilledAmt decimal.Decimal // 累计交易的金额  在CM中为标的数量
 	AvgPrice  decimal.Decimal // 仅在CM中有效
 
-	FeeAsset string          // 交易费资产类型
-	FeeQty   decimal.Decimal // 手续费金额 一般是指usdt金额
-	CTime    int64
-	UTime    int64
+	FeeAsset       string          // 交易费资产类型
+	FeeQty         decimal.Decimal // 手续费金额 一般是指usdt金额
+	RealizedProfit decimal.Decimal // 该交易实现盈亏 （可选，不是所有交易所都支持）
+	CTime          int64
+	UTime          int64
 }
 type FuturesPosition struct {
 	Mode        int             // 0单仓,1双仓
@@ -313,6 +314,7 @@ func (cp *FuturesPosition) Val(v *FuturesPosition) {
 // 为了支持双仓而增加的结构
 type FuturesPositionsData struct {
 	UTime      int64           // mill second
+	Adl        int             // 自动减仓等级
 	Side       string          // SELL/BUY
 	Qty        decimal.Decimal // 持仓数量  正数, 在CM中为张数
 	EntryPrice decimal.Decimal // 开仓均价
@@ -352,7 +354,9 @@ func (fp *FuturesPositions) Val(v *FuturesPosition) {
 		if v.UTime > 0 {
 			fp.Both.UTime = v.UTime
 		}
-	} else if v.Side == "BUY" {
+		return
+	}
+	if v.Side == "BUY" {
 		fp.Buy.Side = v.Side
 		fp.Buy.Qty = v.PositionQty
 		fp.Buy.EntryPrice = v.EntryPrice
@@ -511,15 +515,16 @@ type DepositAddress struct {
 
 type WalletAssetInfo struct {
 	Symbol            string // BTC
-	IsTransferEnabled bool
-	TransferScale     int32 // 划转精度
+	IsTransferEnabled bool   // 仅限于BigOne使用
+	TransferScale     int32  // 划转精度 仅限于BigOne使用
 	BindNetworks      map[string]*WalletAssetBindNetworkInfo
 }
 type WalletAssetBindNetworkInfo struct {
-	IsWithdrawalEnabled bool
-	IsDepositEnabled    bool
-	WithdrawScale       int32           // 提现精度
-	WithdrawFee         decimal.Decimal // 提现Fee
-	MinWithdrawalAmount decimal.Decimal
-	MinDepositAmount    decimal.Decimal
+	IsWithdrawalEnabled     bool
+	IsDepositEnabled        bool
+	WithdrawScale           int32 // 提现精度 仅限于BigOne使用
+	WithdrawIntegerMultiple decimal.Decimal
+	WithdrawFee             decimal.Decimal // 提现Fee
+	MinWithdrawalAmount     decimal.Decimal
+	MinDepositAmount        decimal.Decimal
 }

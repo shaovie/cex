@@ -27,7 +27,7 @@ func (bn *Binance) FuturesServerTime(typ string) (int64, error) {
 		return 0, errors.New(bn.Name() + " net error! " + err.Error())
 	}
 	recv := struct {
-		Time int64 `json:"serverTime,omitempty"`
+		Time int64 `json:"serverTime"`
 	}{}
 	if err = json.Unmarshal(resp, &recv); err != nil {
 		return 0, errors.New(bn.Name() + " unmarshal error! " + err.Error())
@@ -51,17 +51,17 @@ func (bn *Binance) FuturesLoadAllPairRule(typ string) (map[string]*FuturesExchan
 	}
 
 	recv := struct {
-		Code    int    `json:"code,omitempty"`
-		Msg     string `json:"msg,omitempty"`
+		Code    int    `json:"code"`
+		Msg     string `json:"msg"`
 		Symbols []struct {
-			Symbol         string          `json:"symbol,omitempty"`
-			Pair           string          `json:"pair,omitempty"`
-			Quote          string          `json:"quoteAsset,omitempty"`
-			Base           string          `json:"baseAsset,omitempty"`
-			Status         string          `json:"status,omitempty"`
-			ContractType   string          `json:"contractType,omitempty"`
-			ContractStatus string          `json:"contractStatus,omitempty"` // for CM
-			ContractSize   decimal.Decimal `json:"contractSize"`             // for CM
+			Symbol         string          `json:"symbol"`
+			Pair           string          `json:"pair"`
+			Quote          string          `json:"quoteAsset"`
+			Base           string          `json:"baseAsset"`
+			Status         string          `json:"status"`
+			ContractType   string          `json:"contractType"`
+			ContractStatus string          `json:"contractStatus"` // for CM
+			ContractSize   decimal.Decimal `json:"contractSize"`   // for CM
 			Filters        []struct {
 				FilterType  string          `json:"filterType"`
 				MaxPrice    decimal.Decimal `json:"maxPrice"`
@@ -78,7 +78,7 @@ func (bn *Binance) FuturesLoadAllPairRule(typ string) (map[string]*FuturesExchan
 		return nil, errors.New(bn.Name() + " unmarshal fail! " + err.Error())
 	}
 	if recv.Code != 0 {
-		return nil, errors.New(bn.Name() + " api err! " + recv.Msg)
+		return nil, errors.New(bn.Name() + ": " + recv.Msg)
 	}
 	all := make(map[string]*FuturesExchangePairRule)
 	now := time.Now().Unix()
@@ -164,7 +164,7 @@ func (bn *Binance) FuturesGetBBO(typ, symbol string) (BestBidAsk, error) {
 			return BestBidAsk{}, errors.New(bn.Name() + " net error! " + err.Error())
 		}
 		bbo := struct {
-			Symbol   string          `json:"symbol,omitempty"`
+			Symbol   string          `json:"symbol"`
 			BidPrice decimal.Decimal `json:"bidPrice"`
 			BidQty   decimal.Decimal `json:"bidQty"`
 			AskPrice decimal.Decimal `json:"askPrice"`
@@ -191,7 +191,7 @@ func (bn *Binance) FuturesGetBBO(typ, symbol string) (BestBidAsk, error) {
 			return BestBidAsk{}, errors.New(bn.Name() + " net error! " + err.Error())
 		}
 		bboL := []struct {
-			Symbol   string          `json:"symbol,omitempty"`
+			Symbol   string          `json:"symbol"`
 			BidPrice decimal.Decimal `json:"bidPrice"`
 			BidQty   decimal.Decimal `json:"bidQty"`
 			AskPrice decimal.Decimal `json:"askPrice"`
@@ -274,7 +274,7 @@ func (bn *Binance) FuturesGetFundingRateHistory(typ, symbol string,
 	ret := []struct {
 		FundingRate decimal.Decimal `json:"fundingRate"`
 		MarkPrice   decimal.Decimal `json:"markPrice"`
-		Time        int64           `json:"fundingTime,omitempty"`
+		Time        int64           `json:"fundingTime"`
 	}{}
 	if err = json.Unmarshal(resp, &ret); err != nil {
 		return nil, errors.New(bn.Name() + " unmarshal fail! " + err.Error())
@@ -355,7 +355,7 @@ func (bn *Binance) FuturesGetAllAssets(typ string) (map[string]*FuturesAsset, er
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
 	alls := []struct {
-		Symbol              string          `json:"asset,omitempty"`
+		Symbol              string          `json:"asset"`
 		Total               decimal.Decimal `json:"balance"`
 		AvailBalance        decimal.Decimal `json:"availableBalance"`  // 可用下单余额
 		MaxWithdrawAmount   decimal.Decimal `json:"maxWithdrawAmount"` // 最大可转出余额
@@ -445,7 +445,7 @@ func (bn *Binance) FuturesPlaceOrder(typ, symbol, clientId string, /*BTCUSDT*/
 	}
 	query += "&positionSide=" + positionMode
 
-	if reduceOnly == 1 {
+	if reduceOnly == 1 && positionMode == "BOTH" {
 		query += "&reduceOnly=true" // 双开模式下不接受此参数
 	}
 	link := bnUMFuturesEndpoint + "/fapi/v1/order?" + bn.httpQuerySign(query)
@@ -501,23 +501,23 @@ func (bn *Binance) FuturesGetOrder(typ, symbol, orderId, cltId string) (*Futures
 	}
 
 	order := struct {
-		Code         int             `json:"code,omitempty"`
-		Msg          string          `json:"msg,omitempty"`
-		Symbol       string          `json:"symbol,omitempty"` // BTCUSDT
-		OrderId      int64           `json:"orderId,omitempty"`
-		ClientId     string          `json:"clientOrderId,omitempty"` // BTCUSDT
+		Code         int             `json:"code"`
+		Msg          string          `json:"msg"`
+		Symbol       string          `json:"symbol"` // BTCUSDT
+		OrderId      int64           `json:"orderId"`
+		ClientId     string          `json:"clientOrderId"` // BTCUSDT
 		Price        decimal.Decimal `json:"price"`
 		Quantity     decimal.Decimal `json:"origQty"`     // 用户设置的原始订单数量
 		ExecutedQty  decimal.Decimal `json:"executedQty"` // 交易的订单数量
 		CummQuoteQty decimal.Decimal `json:"cumQuote"`    // 累计交易的金额 for UM
 		CummBaseQty  decimal.Decimal `json:"cumBase"`     // 累计交易的金额(标地数量) for CM
 		AvgPrice     decimal.Decimal `json:"avgPrice"`    // for CM
-		Status       string          `json:"status,omitempty"`
-		Type         string          `json:"type,omitempty"`        // LIMIT/MARKET
-		TimeInForce  string          `json:"timeInForce,omitempty"` // GTC/FOK/IOC
-		Side         string          `json:"side,omitempty"`
-		Time         int64           `json:"time,omitempty"`
-		UTime        int64           `json:"updateTime,omitempty"`
+		Status       string          `json:"status"`
+		Type         string          `json:"type"`        // LIMIT/MARKET
+		TimeInForce  string          `json:"timeInForce"` // GTC/FOK/IOC
+		Side         string          `json:"side"`
+		Time         int64           `json:"time"`
+		UTime        int64           `json:"updateTime"`
 	}{}
 	if err = json.Unmarshal(resp, &order); err != nil {
 		return nil, errors.New(bn.Name() + " unmarshal fail! " + err.Error())
@@ -861,6 +861,7 @@ func (bn *Binance) FuturesGetAllPositions(typ string) (map[string]*FuturesPositi
 		NotionalVal   decimal.Decimal `json:"notionalValue"` // for CM
 		Notional      decimal.Decimal `json:"notional"`      // for UM
 		UnrealisedPnl decimal.Decimal `json:"unRealizedProfit"`
+		Adl           int             `json:"adl"`          // 自动减仓等级
 		Side          string          `json:"positionSide"` // BOTH/SELL/BUY
 
 		Time int64 `json:"updateTime"` // msec
@@ -870,9 +871,15 @@ func (bn *Binance) FuturesGetAllPositions(typ string) (map[string]*FuturesPositi
 	}
 	positionM := make(map[string]*FuturesPositions)
 	for _, v := range recv {
-		fp := FuturesPositions{
-			Symbol:   strings.ReplaceAll(v.Symbol, "_PERP", ""), // BTCUSDT
-			Leverage: v.Leverage,
+		symbol := strings.ReplaceAll(v.Symbol, "_PERP", "") // BTCUSDT
+		var fp *FuturesPositions
+		if ov, ok := positionM[symbol]; ok {
+			fp = ov
+		} else {
+			fp = &FuturesPositions{
+				Symbol:   symbol,
+				Leverage: v.Leverage,
+			}
 		}
 		if v.Side == "BOTH" { // 单仓模式
 			fp.Mode = 0
@@ -881,12 +888,14 @@ func (bn *Binance) FuturesGetAllPositions(typ string) (map[string]*FuturesPositi
 				fp.Both.Side = "BUY"
 			}
 			fp.Both.UTime = v.Time
+			fp.Both.Adl = v.Adl
 			fp.Both.Qty = v.PositionQty.Abs()
 			fp.Both.EntryPrice = v.EntryPrice
 			fp.Both.LiqPrice = v.LiqPrice
 			fp.Both.UnRealizedProfit = v.UnrealisedPnl
 		} else if v.Side == "LONG" { // 双仓模式
 			fp.Mode = 1
+			fp.Buy.Adl = v.Adl
 			fp.Buy.Side = "BUY"
 			fp.Buy.UTime = v.Time
 			fp.Buy.Qty = v.PositionQty.Abs()
@@ -895,6 +904,7 @@ func (bn *Binance) FuturesGetAllPositions(typ string) (map[string]*FuturesPositi
 			fp.Buy.UnRealizedProfit = v.UnrealisedPnl
 		} else if v.Side == "SHORT" {
 			fp.Mode = 1
+			fp.Sell.Adl = v.Adl
 			fp.Sell.Side = "SELL"
 			fp.Sell.UTime = v.Time
 			fp.Sell.Qty = v.PositionQty.Abs()
@@ -903,7 +913,7 @@ func (bn *Binance) FuturesGetAllPositions(typ string) (map[string]*FuturesPositi
 			fp.Sell.UnRealizedProfit = v.UnrealisedPnl
 		}
 
-		positionM[fp.Symbol] = &fp
+		positionM[symbol] = fp
 	}
 
 	return positionM, nil

@@ -192,7 +192,7 @@ type Exchanger interface {
 	FundingGetAsset(symbol string) (FundingAsset, error)
 	// network is optional
 	GetDepositAddress(symbol, network string) ([]DepositAddress, error)
-	// only bigone
+	// only bigone/binance
 	GetWalletAllAssetInfo() (map[string]*WalletAssetInfo, error)
 }
 

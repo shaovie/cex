@@ -325,12 +325,13 @@ func (bo *Bigone) GetWalletAllAssetInfo() (map[string]*WalletAssetInfo, error) {
 		}
 		for _, vv := range v.BindNetworks {
 			wbni := WalletAssetBindNetworkInfo{
-				IsWithdrawalEnabled: vv.IsWithdrawalEnabled,
-				IsDepositEnabled:    vv.IsDepositEnabled,
-				WithdrawScale:       vv.WithdrawScale,
-				WithdrawFee:         vv.WithdrawFee,
-				MinWithdrawalAmount: vv.MinWithdrawalAmount,
-				MinDepositAmount:    vv.MinDepositAmount,
+				IsWithdrawalEnabled:     vv.IsWithdrawalEnabled,
+				IsDepositEnabled:        vv.IsDepositEnabled,
+				WithdrawScale:           vv.WithdrawScale,
+				WithdrawIntegerMultiple: PowOneTenth(int(vv.WithdrawScale)),
+				WithdrawFee:             vv.WithdrawFee,
+				MinWithdrawalAmount:     vv.MinWithdrawalAmount,
+				MinDepositAmount:        vv.MinDepositAmount,
 			}
 			wai.BindNetworks[vv.Network] = &wbni
 		}

@@ -62,7 +62,7 @@ func (bb *Bybit) FuturesLoadAllPairRule(typ string) (map[string]*FuturesExchange
 		return nil, errors.New(bb.Name() + " unmarshal fail! " + err.Error())
 	}
 	if recv.Code != 0 {
-		return nil, errors.New(bb.Name() + " api err! " + recv.Msg)
+		return nil, errors.New(bb.Name() + ": " + recv.Msg)
 	}
 	all := make(map[string]*FuturesExchangePairRule)
 	now := time.Now().Unix()
@@ -150,7 +150,7 @@ func (bb *Bybit) FuturesGetAllAssets(typ string) (map[string]*FuturesAsset, erro
 		return nil, errors.New(bb.Name() + " unmarshal error! " + err.Error())
 	}
 	if recv.Code != 0 {
-		return nil, errors.New(bb.Name() + " api err! " + recv.Msg)
+		return nil, errors.New(bb.Name() + ": " + recv.Msg)
 	}
 	if len(recv.Result.List) == 0 {
 		return nil, errors.New(bb.Name() + " resp empty")
@@ -256,7 +256,7 @@ func (bb *Bybit) FuturesGetOrder(typ, symbol, orderId, cltId string) (*FuturesOr
 		return nil, errors.New(bb.Name() + " unmarshal error! " + err.Error())
 	}
 	if recv.Code != 0 {
-		return nil, errors.New(bb.Name() + " api err! " + recv.Msg)
+		return nil, errors.New(bb.Name() + ": " + recv.Msg)
 	}
 	if len(recv.Result.List) == 0 {
 		return nil, errors.New(bb.Name() + " resp empty")
@@ -330,7 +330,7 @@ func (bb *Bybit) FuturesGetOpenOrders(typ, symbol string) ([]*FuturesOrder, erro
 		return nil, errors.New(bb.Name() + " unmarshal error! " + err.Error())
 	}
 	if recv.Code != 0 {
-		return nil, errors.New(bb.Name() + " api err! " + recv.Msg)
+		return nil, errors.New(bb.Name() + ": " + recv.Msg)
 	}
 	oL := make([]*FuturesOrder, 0, len(recv.Result.List))
 	for _, order := range recv.Result.List {
@@ -450,7 +450,7 @@ func (bb *Bybit) FuturesGetAllPositionList(typ string) (map[string]*FuturesPosit
 		return nil, errors.New(bb.Name() + " unmarshal fail! " + err.Error())
 	}
 	if recv.Code != 0 {
-		return nil, errors.New(bb.Name() + " api err! " + recv.Msg)
+		return nil, errors.New(bb.Name() + ": " + recv.Msg)
 	}
 	positionM := make(map[string]*FuturesPosition)
 	for _, v := range recv.Result.List {

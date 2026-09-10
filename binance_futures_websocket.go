@@ -576,26 +576,27 @@ func (bn *Binance) futuresWsPrivateLoop(ch chan<- any, wg *sync.WaitGroup) {
 }
 func (bn *Binance) futuresWsHandleOrder(data json.RawMessage, ch chan<- any) {
 	order := struct {
-		ClientId      string          `json:"c,omitempty"` //
-		OrderId       int64           `json:"i,omitempty"` //
-		Symbol        string          `json:"s,omitempty"` // BTCUSDT
-		Side          string          `json:"S,omitempty"`
-		TimeInForce   string          `json:"f,omitempty"` // GTC/FOK/IOC
-		OrderType     string          `json:"o,omitempty"`
-		OrderTypeOrig string          `json:"ot,omitempty"` // 原始订单类型
-		ExecTime      int64           `json:"T,omitempty"`  // 成交时间 msec
-		TradeId       int64           `json:"t,omitempty"`  //
-		Qty           decimal.Decimal `json:"q"`            // 原始订单数量
-		Price         decimal.Decimal `json:"p"`            // 原始订单价格
-		AvgPrice      decimal.Decimal `json:"ap"`           // 订单平均价格
-		ExecQty       decimal.Decimal `json:"l"`            // 末次成交数量
-		ExecPrice     decimal.Decimal `json:"L"`            // 末次成交价格
-		ExecutedQty   decimal.Decimal `json:"z"`            // 订单累计已成交量  在CM中还不确定含义
-		CummQuoteQty  decimal.Decimal `json:"Z"`            // 订单累计已成交金额 文档不存在
-		FeeQty        decimal.Decimal `json:"n"`            // 手续费数量
-		FeeAsset      string          `json:"N,omitempty"`  // 手续费类型
-		EventType     string          `json:"x,omitempty"`  // 本次事件的执行类型
-		Status        string          `json:"X,omitempty"`  // 订单当前状态
+		ClientId      string          `json:"c"` //
+		OrderId       int64           `json:"i"` //
+		Symbol        string          `json:"s"` // BTCUSDT
+		Side          string          `json:"S"`
+		TimeInForce   string          `json:"f"` // GTC/FOK/IOC
+		OrderType     string          `json:"o"`
+		OrderTypeOrig string          `json:"ot"` // 原始订单类型
+		ExecTime      int64           `json:"T"`  // 成交时间 msec
+		TradeId       int64           `json:"t"`  //
+		Qty           decimal.Decimal `json:"q"`  // 原始订单数量
+		Price         decimal.Decimal `json:"p"`  // 原始订单价格
+		AvgPrice      decimal.Decimal `json:"ap"` // 订单平均价格
+		ExecQty       decimal.Decimal `json:"l"`  // 末次成交数量
+		ExecPrice     decimal.Decimal `json:"L"`  // 末次成交价格
+		ExecutedQty   decimal.Decimal `json:"z"`  // 订单累计已成交量  在CM中还不确定含义
+		CummQuoteQty  decimal.Decimal `json:"Z"`  // 订单累计已成交金额 文档不存在
+		Rpnl          decimal.Decimal `json:"rp"` // 该交易实现盈亏
+		FeeQty        decimal.Decimal `json:"n"`  // 手续费数量
+		FeeAsset      string          `json:"N"`  // 手续费类型
+		EventType     string          `json:"x"`  // 本次事件的执行类型
+		Status        string          `json:"X"`  // 订单当前状态
 	}{}
 	if err := json.Unmarshal(data, &order); err == nil && order.OrderId > 0 {
 		var ctime int64
@@ -603,20 +604,21 @@ func (bn *Binance) futuresWsHandleOrder(data json.RawMessage, ch chan<- any) {
 			ctime = order.ExecTime
 		}
 		fo := &FuturesOrder{
-			Symbol:    order.Symbol,
-			OrderId:   strconv.FormatInt(order.OrderId, 10),
-			ClientId:  order.ClientId,
-			Price:     order.Price,
-			Qty:       order.Qty,
-			FilledQty: order.ExecutedQty,
-			FilledAmt: order.ExecutedQty.Mul(order.AvgPrice),
-			Status:    order.Status,
-			Type:      order.OrderType,
-			Side:      order.Side,
-			FeeQty:    order.FeeQty.Neg(), // 换成负数
-			FeeAsset:  order.FeeAsset,
-			CTime:     ctime,
-			UTime:     order.ExecTime,
+			Symbol:         order.Symbol,
+			OrderId:        strconv.FormatInt(order.OrderId, 10),
+			ClientId:       order.ClientId,
+			Price:          order.Price,
+			Qty:            order.Qty,
+			FilledQty:      order.ExecutedQty,
+			FilledAmt:      order.ExecutedQty.Mul(order.AvgPrice),
+			Status:         order.Status,
+			Type:           order.OrderType,
+			Side:           order.Side,
+			FeeQty:         order.FeeQty.Neg(), // 换成负数
+			FeeAsset:       order.FeeAsset,
+			RealizedProfit: order.Rpnl,
+			CTime:          ctime,
+			UTime:          order.ExecTime,
 		}
 		if bn.futuresWsPrivateTyp == "CM" {
 			fo.Symbol = strings.ReplaceAll(fo.Symbol, "_PERP", "")
@@ -645,17 +647,21 @@ func (bn *Binance) futuresWsHandlePosition(data json.RawMessage, ch chan<- any, 
 	if err := json.Unmarshal(data, &pl); err == nil {
 		for _, p := range pl.Pos {
 			side := "SELL"
+			mode := 0                     // 0单仓,1双仓
 			if p.PositionMode == "BOTH" { // 单仓模式
+				mode = 0
 				if p.Qty.IsPositive() {
 					side = "BUY"
 				}
 			} else {
+				mode = 1
 				side = bn.toStdSide(p.PositionMode)
 			}
 			if bn.futuresWsPrivateTyp == "CM" {
 				p.Symbol = strings.ReplaceAll(p.Symbol, "_PERP", "")
 			}
 			cp := FuturesPosition{
+				Mode:             mode,
 				Symbol:           p.Symbol,
 				Side:             side,
 				PositionQty:      p.Qty.Abs(),
@@ -709,12 +715,12 @@ func (bn *Binance) futuresWsPrivateApiLoop(ch chan<- any, wg *sync.WaitGroup) {
 	}(pingExit)
 
 	type Msg struct {
-		Id     string          `json:"Id,omitempty"`
-		Status int             `json:"status,omitempty"`
-		Result json.RawMessage `json:"result,omitempty"`
+		Id     string          `json:"id"`
+		Status int             `json:"status"`
+		Result json.RawMessage `json:"result"`
 		Err    struct {
-			Code int    `json:"code,omitempty"`
-			Msg  string `json:"msg,omitempty"`
+			Code int    `json:"code"`
+			Msg  string `json:"msg"`
 		} `json:"error"`
 	}
 	for {
@@ -751,9 +757,9 @@ func (bn *Binance) futuresWsHandlePlaceOrderResp(reqId, errS string,
 	}
 
 	ret := struct {
-		Symbol   string `json:"symbol,omitempty"`
-		OrderId  int64  `json:"orderId,omitempty"`
-		ClientId string `json:"clientOrderId,omitempty"`
+		Symbol   string `json:"symbol"`
+		OrderId  int64  `json:"orderId"`
+		ClientId string `json:"clientOrderId"`
 	}{}
 	if err := json.Unmarshal(data, &ret); err != nil {
 		ilog.Error(bn.Name() + " futures.ws.priv.api handle place order resp: " + err.Error())

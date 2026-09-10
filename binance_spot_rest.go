@@ -60,7 +60,7 @@ func (bn *Binance) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, erro
 		return nil, errors.New(bn.Name() + " unmarshal fail! " + err.Error())
 	}
 	if recv.Code != 0 {
-		return nil, errors.New(bn.Name() + " api err! " + recv.Msg)
+		return nil, errors.New(bn.Name() + ": " + recv.Msg)
 	}
 	all := make(map[string]*SpotExchangePairRule)
 	now := time.Now().Unix()
@@ -169,7 +169,7 @@ func (bn *Binance) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 		return nil, errors.New(bn.Name() + " unmarshal error! " + err.Error())
 	}
 	if recv.Code != 0 || len(recv.Msg) != 0 {
-		return nil, errors.New(bn.Name() + " api err! " + recv.Msg)
+		return nil, errors.New(bn.Name() + ": " + recv.Msg)
 	}
 
 	assetsMap := make(map[string]*SpotAsset, len(recv.Balances))
@@ -226,7 +226,7 @@ func (bn *Binance) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 		return "", errors.New(bn.Name() + " unmarshal fail! " + err.Error())
 	}
 	if ret.Code != 0 {
-		return "", errors.New(bn.Name() + " api err! " + ret.Msg)
+		return "", errors.New(bn.Name() + ": " + ret.Msg)
 	}
 
 	return strconv.FormatInt(ret.OrderId, 10), nil
