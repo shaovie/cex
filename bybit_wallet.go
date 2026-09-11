@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid"
-	"github.com/shaovie/gutils/ihttp"
 	"github.com/shopspring/decimal"
 )
 
@@ -30,7 +29,7 @@ func (bb *Bybit) Transfer(symbol, from, to, typ, subAccount string, qty decimal.
 	path := "/v5/asset/transfer/inter-transfer"
 	headers := bb.buildHeaders("", payload)
 	url := bbUniEndpoint + path
-	_, resp, err := ihttp.Get(url, bbApiDeadline, headers)
+	_, resp, err := bb.Post(url, []byte(payload), bbApiDeadline, headers)
 	if err != nil {
 		return errors.New(bb.Name() + " net error! " + err.Error())
 	}
@@ -65,7 +64,7 @@ func (bb *Bybit) Withdrawal(symbol, addr, memo, chain string, qty decimal.Decima
 		`,"chain":"` + chain + `"` +
 		`}`
 	headers := bb.buildHeaders("", payload)
-	_, resp, err := ihttp.Post(url, []byte(payload), bbApiDeadline, headers)
+	_, resp, err := bb.Post(url, []byte(payload), bbApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(bb.Name() + " net error! " + err.Error())
 	}
@@ -95,7 +94,7 @@ func (bb *Bybit) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error) {
 	params := "coin=" + symbol
 	headers := bb.buildHeaders(params, "")
 	url := bbUniEndpoint + path + "?" + params
-	_, resp, err := ihttp.Get(url, bbApiDeadline, headers)
+	_, resp, err := bb.Get(url, bbApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(bb.Name() + " net error! " + err.Error())
 	}
@@ -140,7 +139,7 @@ func (bb *Bybit) FundingGetAsset(symbol string) (FundingAsset, error) {
 	params := "accountType=FUND&coin=" + symbol
 	headers := bb.buildHeaders(params, "")
 	url := bbUniEndpoint + path + "?" + params
-	_, resp, err := ihttp.Get(url, bbApiDeadline, headers)
+	_, resp, err := bb.Get(url, bbApiDeadline, headers)
 	if err != nil {
 		return FundingAsset{}, errors.New(bb.Name() + " net error! " + err.Error())
 	}
@@ -167,6 +166,42 @@ func (bb *Bybit) FundingGetAsset(symbol string) (FundingAsset, error) {
 		Total:  ret.Result.Balance.Total,
 	}, nil
 }
+func (bb *Bybit) FundingGetAllAssets() (map[string]*FundingAsset, error) {
+	path := "/v5/asset/transfer/query-account-coins-balance"
+	params := "accountType=FUND"
+	headers := bb.buildHeaders(params, "")
+	url := bbUniEndpoint + path + "?" + params
+	_, resp, err := bb.Get(url, bbApiDeadline, headers)
+	if err != nil {
+		return nil, errors.New(bb.Name() + " net error! " + err.Error())
+	}
+	ret := struct {
+		Code   int    `json:"retCode,omitempty"`
+		Msg    string `json:"retMsg,omitempty"`
+		Result struct {
+			Balance []struct {
+				Symbol string          `json:"coin"`
+				Total  decimal.Decimal `json:"walletBalance"`
+				Avail  decimal.Decimal `json:"transferBalance"`
+			} `json:"balance"`
+		} `json:"result"`
+	}{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return nil, errors.New(bb.Name() + " unmarshal fail! " + err.Error())
+	}
+	if ret.Code != 0 {
+		return nil, errors.New(bb.Name() + ": " + ret.Msg)
+	}
+	assetsMap := make(map[string]*FundingAsset, len(ret.Result.Balance))
+	for _, v := range ret.Result.Balance {
+		assetsMap[v.Symbol] = &FundingAsset{
+			Symbol: v.Symbol,
+			Avail:  v.Avail,
+			Total:  v.Total,
+		}
+	}
+	return assetsMap, nil
+}
 func (bb *Bybit) GetDepositAddress(symbol, network string) ([]DepositAddress, error) {
 	path := "/v5/asset/deposit/query-address"
 	params := "coin=" + symbol
@@ -175,7 +210,7 @@ func (bb *Bybit) GetDepositAddress(symbol, network string) ([]DepositAddress, er
 	}
 	headers := bb.buildHeaders(params, "")
 	url := bbUniEndpoint + path + "?" + params
-	_, resp, err := ihttp.Get(url, bbApiDeadline, headers)
+	_, resp, err := bb.Get(url, bbApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(bb.Name() + " net error! " + err.Error())
 	}

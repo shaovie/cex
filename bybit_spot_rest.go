@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/shaovie/gutils/ihttp"
 	"github.com/shopspring/decimal"
 )
 
@@ -18,7 +17,7 @@ func (bb *Bybit) SpotServerTime() (int64, error) {
 }
 func (bb *Bybit) serverTime() (int64, error) {
 	url := bbUniEndpoint + "/v5/market/time"
-	_, resp, err := ihttp.Get(url, bbApiDeadline, nil)
+	_, resp, err := bb.Get(url, bbApiDeadline, nil)
 	if err != nil {
 		return 0, errors.New(bb.Name() + " net error! " + err.Error())
 	}
@@ -35,7 +34,7 @@ func (bb *Bybit) serverTime() (int64, error) {
 }
 func (bb *Bybit) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	url := bbUniEndpoint + "/v5/market/instruments-info?category=spot&limit=1000"
-	_, resp, err := ihttp.Get(url, bbApiDeadline, nil)
+	_, resp, err := bb.Get(url, bbApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(bb.Name() + " net error! " + err.Error())
 	}
@@ -96,7 +95,7 @@ func (bb *Bybit) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error)
 }
 func (bb *Bybit) SpotGetBBO(symbol string) (BestBidAsk, error) {
 	url := bbUniEndpoint + "/v5/market/tickers?category=spot&symbol=" + symbol
-	_, resp, err := ihttp.Get(url, bbApiDeadline, nil)
+	_, resp, err := bb.Get(url, bbApiDeadline, nil)
 	if err != nil {
 		return BestBidAsk{}, errors.New(bb.Name() + " net error! " + err.Error())
 	}
@@ -128,10 +127,54 @@ func (bb *Bybit) SpotGetBBO(symbol string) (BestBidAsk, error) {
 		AskQty:   bbo.AskQty,
 	}, nil
 }
+func (bb *Bybit) SpotGetOrderBook(symbol string, depth int64) (*OrderBookDepth, error) {
+	url := bbUniEndpoint + "/v5/market/orderbook?category=spot&symbol=" + symbol
+	if depth > 0 {
+		url += "&limit=" + strconv.FormatInt(depth, 10)
+	}
+	_, resp, err := bb.Get(url, bbApiDeadline, nil)
+	if err != nil {
+		return nil, errors.New(bb.Name() + " net error! " + err.Error())
+	}
+	ret := struct {
+		Code   int    `json:"retCode,omitempty"`
+		Msg    string `json:"retMsg,omitempty"`
+		Result struct {
+			Symbol string               `json:"s,omitempty"`
+			Bids   [][2]decimal.Decimal `json:"b,omitempty"`
+			Asks   [][2]decimal.Decimal `json:"a,omitempty"`
+			Time   int64                `json:"ts,omitempty"`
+		} `json:"result"`
+	}{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return nil, errors.New(bb.Name() + " Unmarshal err! " + err.Error())
+	}
+	if ret.Code != 0 {
+		return nil, errors.New(bb.Name() + ": " + ret.Msg)
+	}
+	if len(ret.Result.Bids) == 0 || len(ret.Result.Asks) == 0 {
+		return nil, errors.New(bb.Name() + " resp empty")
+	}
+
+	obd := &OrderBookDepth{
+		Symbol: ret.Result.Symbol,
+		Level:  int(depth),
+		Time:   ret.Result.Time,
+		Bids:   make([]Ticker, 0, len(ret.Result.Bids)),
+		Asks:   make([]Ticker, 0, len(ret.Result.Asks)),
+	}
+	for _, v := range ret.Result.Bids {
+		obd.Bids = append(obd.Bids, Ticker{Price: v[0], Quantity: v[1]})
+	}
+	for _, v := range ret.Result.Asks {
+		obd.Asks = append(obd.Asks, Ticker{Price: v[0], Quantity: v[1]})
+	}
+	return obd, nil
+}
 func (bb *Bybit) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 	query := "accountType=UNIFIED"
 	url := bbUniEndpoint + "/v5/account/wallet-balance?" + query
-	_, resp, err := ihttp.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
+	_, resp, err := bb.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
 	if err != nil {
 		return nil, errors.New(bb.Name() + " net error! " + err.Error())
 	}
@@ -210,7 +253,7 @@ func (bb *Bybit) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 	}
 	body, _ := json.Marshal(params)
 	url := bbUniEndpoint + "/v5/order/create"
-	_, resp, err := ihttp.Post(url, body, bbApiDeadline, bb.buildHeaders("", string(body)))
+	_, resp, err := bb.Post(url, body, bbApiDeadline, bb.buildHeaders("", string(body)))
 	recv := struct {
 		Code   int    `json:"retCode,omitempty"`
 		Msg    string `json:"retMsg,omitempty"`
@@ -241,7 +284,7 @@ func (bb *Bybit) SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId strin
 	}
 	body, _ := json.Marshal(params)
 	url := bbUniEndpoint + "/v5/order/cancel"
-	_, resp, err := ihttp.Post(url, body, bbApiDeadline, bb.buildHeaders("", string(body)))
+	_, resp, err := bb.Post(url, body, bbApiDeadline, bb.buildHeaders("", string(body)))
 	recv := struct {
 		Code   int    `json:"retCode,omitempty"`
 		Msg    string `json:"retMsg,omitempty"`
@@ -267,7 +310,7 @@ func (bb *Bybit) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error)
 		return nil, errors.New(bb.Name() + " orderId or cltId empty!")
 	}
 	url := bbUniEndpoint + "/v5/order/realtime?" + query
-	_, resp, err := ihttp.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
+	_, resp, err := bb.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
 	if err != nil {
 		return nil, errors.New(bb.Name() + " net error! " + err.Error())
 	}
@@ -329,7 +372,7 @@ func (bb *Bybit) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error)
 func (bb *Bybit) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 	query := "category=spot&limit=50&symbol=" + symbol
 	url := bbUniEndpoint + "/v5/order/realtime?" + query
-	_, resp, err := ihttp.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
+	_, resp, err := bb.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
 	if err != nil {
 		return nil, errors.New(bb.Name() + " net error! " + err.Error())
 	}
@@ -394,7 +437,7 @@ func (bb *Bybit) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 func (bb *Bybit) SpotGetTradeFee(symbol string) (SpotTradeFee, error) {
 	query := "category=spot&symbol=" + symbol
 	url := bbUniEndpoint + "/v5/account/fee-rate?" + query
-	_, resp, err := ihttp.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
+	_, resp, err := bb.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
 	if err != nil {
 		return SpotTradeFee{}, errors.New(bb.Name() + " net error! " + err.Error())
 	}

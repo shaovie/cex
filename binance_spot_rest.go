@@ -150,6 +150,47 @@ func (bn *Binance) SpotGetBBO(symbol string) (BestBidAsk, error) {
 		AskQty:   bbo.AskQty,
 	}, nil
 }
+func (bn *Binance) SpotGetOrderBook(symbol string, depth int64) (*OrderBookDepth, error) {
+	url := bnSpotEndpoint + "/api/v3/depth?symbol=" + symbol
+	if depth > 0 {
+		url += "&limit=" + strconv.FormatInt(depth, 10)
+	}
+	_, resp, err := bn.Get(url, bnApiDeadline, nil)
+	if err != nil {
+		return nil, errors.New(bn.Name() + " net error! " + err.Error())
+	}
+	recv := struct {
+		Code int    `json:"code,omitempty"`
+		Msg  string `json:"msg,omitempty"`
+
+		Bids [][2]decimal.Decimal `json:"bids,omitempty"`
+		Asks [][2]decimal.Decimal `json:"asks,omitempty"`
+	}{}
+	if err = json.Unmarshal(resp, &recv); err != nil {
+		return nil, errors.New(bn.Name() + " unmarshal error! " + err.Error())
+	}
+	if recv.Code != 0 {
+		return nil, errors.New(bn.Name() + ": " + recv.Msg)
+	}
+	if len(recv.Bids) == 0 || len(recv.Asks) == 0 {
+		return nil, errors.New(bn.Name() + " resp empty")
+	}
+
+	obd := &OrderBookDepth{
+		Symbol: symbol,
+		Level:  int(depth),
+		Time:   0, // 币安现货不提供
+		Bids:   make([]Ticker, 0, len(recv.Bids)),
+		Asks:   make([]Ticker, 0, len(recv.Asks)),
+	}
+	for _, v := range recv.Bids {
+		obd.Bids = append(obd.Bids, Ticker{Price: v[0], Quantity: v[1]})
+	}
+	for _, v := range recv.Asks {
+		obd.Asks = append(obd.Asks, Ticker{Price: v[0], Quantity: v[1]})
+	}
+	return obd, nil
+}
 func (bn *Binance) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 	url := bnSpotEndpoint + "/api/v3/account?" + bn.httpQuerySign("")
 	_, resp, err := bn.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})

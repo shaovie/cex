@@ -22,6 +22,8 @@ type Exchanger interface {
 	SpotGetAll24hTicker() (map[string]Pub24hTicker, error) // bigone 不支持
 	// 获取订单簿买1/卖1挂单数据
 	SpotGetBBO(symbol string) (BestBidAsk, error)
+	// 获取订单簿 depth: 5,10,20,50,100,500,1000,5000 ; 0 使用交易所默认值
+	SpotGetOrderBook(symbol string, depth int64) (*OrderBookDepth, error)
 	SpotGetAllAssets() (map[string]*SpotAsset, error)
 	IsXStock(symbol /*AAPLxUSD*/ string) bool
 
@@ -105,6 +107,8 @@ type Exchanger interface {
 	FuturesSizeToQty(typ, symbol string, size decimal.Decimal) decimal.Decimal
 	FuturesGetAll24hTicker(typ string) (map[string]Pub24hTicker, error)
 	FuturesGetBBO(typ, symbol string) (BestBidAsk, error)
+	// 获取订单簿 depth: 5,10,20,50,100,500,1000 ; 0 使用交易所默认值
+	FuturesGetOrderBook(typ, symbol string, depth int64) (*OrderBookDepth, error)
 	FuturesGetAllFundingRate(typ string) (map[string]FundingRate, error)
 	FuturesGetFundingRateHistory(typ, symbol string, startTime, endTime int64) ([]FundingRateHistory, error)
 	// for binance
@@ -258,7 +262,7 @@ func New(cexName, account, apikey, secretkey, passwd, localIp string) (Exchanger
 	} else if cexName == "bigone" {
 		cexObj, err = NewBigone(account, apikey, secretkey, localIp)
 	} else if cexName == "bybit" {
-		cexObj = NewBybit(account, apikey, secretkey)
+		cexObj, err = NewBybit(account, apikey, secretkey, localIp)
 	} else if cexName == "ktx" {
 		cexObj = NewKtx()
 	} else if cexName == "kucoin" {

@@ -21,6 +21,9 @@ func (us *Unsupported) SpotGetAll24hTicker() (map[string]Pub24hTicker, error) {
 func (us *Unsupported) SpotGetBBO(symbol string) (BestBidAsk, error) {
 	return BestBidAsk{}, errors.New("not support")
 }
+func (us *Unsupported) SpotGetOrderBook(symbol string, depth int64) (*OrderBookDepth, error) {
+	return nil, errors.New("not support")
+}
 func (us *Unsupported) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 	return nil, errors.New("not support")
 }
@@ -115,6 +118,9 @@ func (us *Unsupported) FuturesGetAll24hTicker(typ string) (map[string]Pub24hTick
 }
 func (us *Unsupported) FuturesGetBBO(typ, symbol string) (BestBidAsk, error) {
 	return BestBidAsk{}, errors.New("not support")
+}
+func (us *Unsupported) FuturesGetOrderBook(typ, symbol string, depth int64) (*OrderBookDepth, error) {
+	return nil, errors.New("not support")
 }
 func (us *Unsupported) FuturesGetAllFundingRate(typ string) (map[string]FundingRate, error) {
 	return nil, errors.New("not support")

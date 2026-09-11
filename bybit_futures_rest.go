@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
-
-	"github.com/shaovie/gutils/ihttp"
 )
 
 func (bb *Bybit) FuturesSupported(typ string) bool {
@@ -30,7 +28,7 @@ func (bb *Bybit) FuturesQtyToSize(typ, symbol string, qty decimal.Decimal) decim
 func (bb *Bybit) FuturesLoadAllPairRule(typ string) (map[string]*FuturesExchangePairRule, error) {
 	typ = bb.fromStdCategory(typ)
 	url := bbUniEndpoint + "/v5/market/instruments-info?category=" + typ
-	_, resp, err := ihttp.Get(url, bbApiDeadline, nil)
+	_, resp, err := bb.Get(url, bbApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(bb.Name() + " net error! " + err.Error())
 	}
@@ -91,7 +89,7 @@ func (bb *Bybit) FuturesLoadAllPairRule(typ string) (map[string]*FuturesExchange
 func (bb *Bybit) FuturesGetBBO(typ, symbol string) (BestBidAsk, error) {
 	typ = bb.fromStdCategory(typ)
 	url := bbUniEndpoint + "/v5/market/tickers?category=" + typ + "&symbol=" + symbol
-	_, resp, err := ihttp.Get(url, bbApiDeadline, nil)
+	_, resp, err := bb.Get(url, bbApiDeadline, nil)
 	if err != nil {
 		return BestBidAsk{}, errors.New(bb.Name() + " net error! " + err.Error())
 	}
@@ -123,13 +121,58 @@ func (bb *Bybit) FuturesGetBBO(typ, symbol string) (BestBidAsk, error) {
 		AskQty:   bbo.AskQty,
 	}, nil
 }
+func (bb *Bybit) FuturesGetOrderBook(typ, symbol string, depth int64) (*OrderBookDepth, error) {
+	typ = bb.fromStdCategory(typ)
+	url := bbUniEndpoint + "/v5/market/orderbook?category=" + typ + "&symbol=" + symbol
+	if depth > 0 {
+		url += "&limit=" + strconv.FormatInt(depth, 10)
+	}
+	_, resp, err := bb.Get(url, bbApiDeadline, nil)
+	if err != nil {
+		return nil, errors.New(bb.Name() + " net error! " + err.Error())
+	}
+	ret := struct {
+		Code   int    `json:"retCode,omitempty"`
+		Msg    string `json:"retMsg,omitempty"`
+		Result struct {
+			Symbol string               `json:"s,omitempty"`
+			Bids   [][2]decimal.Decimal `json:"b,omitempty"`
+			Asks   [][2]decimal.Decimal `json:"a,omitempty"`
+			Time   int64                `json:"ts,omitempty"`
+		} `json:"result"`
+	}{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return nil, errors.New(bb.Name() + " Unmarshal err! " + err.Error())
+	}
+	if ret.Code != 0 {
+		return nil, errors.New(bb.Name() + ": " + ret.Msg)
+	}
+	if len(ret.Result.Bids) == 0 || len(ret.Result.Asks) == 0 {
+		return nil, errors.New(bb.Name() + " resp empty")
+	}
+
+	obd := &OrderBookDepth{
+		Symbol: ret.Result.Symbol,
+		Level:  int(depth),
+		Time:   ret.Result.Time,
+		Bids:   make([]Ticker, 0, len(ret.Result.Bids)),
+		Asks:   make([]Ticker, 0, len(ret.Result.Asks)),
+	}
+	for _, v := range ret.Result.Bids {
+		obd.Bids = append(obd.Bids, Ticker{Price: v[0], Quantity: v[1]})
+	}
+	for _, v := range ret.Result.Asks {
+		obd.Asks = append(obd.Asks, Ticker{Price: v[0], Quantity: v[1]})
+	}
+	return obd, nil
+}
 func (bb *Bybit) FuturesGetAllAssets(typ string) (map[string]*FuturesAsset, error) {
 	query := "accountType=UNIFIED"
 	if typ == "UM" {
 		query += "&coin=USDT"
 	}
 	url := bbUniEndpoint + "/v5/account/wallet-balance?" + query
-	_, resp, err := ihttp.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
+	_, resp, err := bb.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
 	if err != nil {
 		return nil, errors.New(bb.Name() + " net error! " + err.Error())
 	}
@@ -197,7 +240,7 @@ func (bb *Bybit) FuturesPlaceOrder(typ, symbol, cltId string, /*BTCUSDT*/
 	}
 	body, _ := json.Marshal(params)
 	url := bbUniEndpoint + "/v5/order/create"
-	_, resp, err := ihttp.Post(url, body, bbApiDeadline, bb.buildHeaders("", string(body)))
+	_, resp, err := bb.Post(url, body, bbApiDeadline, bb.buildHeaders("", string(body)))
 	recv := struct {
 		Code   int    `json:"retCode,omitempty"`
 		Msg    string `json:"retMsg,omitempty"`
@@ -224,7 +267,7 @@ func (bb *Bybit) FuturesGetOrder(typ, symbol, orderId, cltId string) (*FuturesOr
 		return nil, errors.New(bb.Name() + " orderId or cltId empty!")
 	}
 	url := bbUniEndpoint + "/v5/order/realtime?" + query
-	_, resp, err := ihttp.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
+	_, resp, err := bb.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
 	if err != nil {
 		return nil, errors.New(bb.Name() + " net error! " + err.Error())
 	}
@@ -298,7 +341,7 @@ func (bb *Bybit) FuturesGetOpenOrders(typ, symbol string) ([]*FuturesOrder, erro
 		query += "&settleCoin=USDT"
 	}
 	url := bbUniEndpoint + "/v5/order/realtime?" + query
-	_, resp, err := ihttp.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
+	_, resp, err := bb.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
 	if err != nil {
 		return nil, errors.New(bb.Name() + " net error! " + err.Error())
 	}
@@ -379,7 +422,7 @@ func (bb *Bybit) FuturesCancelOrder(typ, symbol, orderId, cltId string) error {
 	}
 	body, _ := json.Marshal(params)
 	url := bbUniEndpoint + "/v5/order/cancel"
-	_, resp, err := ihttp.Post(url, body, bbApiDeadline, bb.buildHeaders("", string(body)))
+	_, resp, err := bb.Post(url, body, bbApiDeadline, bb.buildHeaders("", string(body)))
 	recv := struct {
 		Code   int    `json:"retCode,omitempty"`
 		Msg    string `json:"retMsg,omitempty"`
@@ -406,7 +449,7 @@ func (bb *Bybit) FuturesSwitchTradeMode(typ, symbol string, mode, leverage int) 
 	}
 	body, _ := json.Marshal(params)
 	url := bbUniEndpoint + "/v5/position/set-leverage"
-	_, resp, err := ihttp.Post(url, body, bbApiDeadline, bb.buildHeaders("", string(body)))
+	_, resp, err := bb.Post(url, body, bbApiDeadline, bb.buildHeaders("", string(body)))
 	recv := struct {
 		Code int    `json:"retCode,omitempty"`
 		Msg  string `json:"retMsg,omitempty"`
@@ -426,7 +469,7 @@ func (bb *Bybit) FuturesGetAllPositionList(typ string) (map[string]*FuturesPosit
 		query += "&settleCoin=USDT"
 	}
 	url := bbUniEndpoint + "/v5/position/list?" + query
-	_, resp, err := ihttp.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
+	_, resp, err := bb.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
 	recv := struct {
 		Code   int    `json:"retCode,omitempty"`
 		Msg    string `json:"retMsg,omitempty"`
@@ -468,5 +511,82 @@ func (bb *Bybit) FuturesGetAllPositionList(typ string) (map[string]*FuturesPosit
 		positionM[cp.Symbol] = &cp
 	}
 
+	return positionM, nil
+}
+func (bb *Bybit) FuturesGetAllPositions(typ string) (map[string]*FuturesPositions, error) {
+	typ = bb.fromStdCategory(typ)
+	query := "limit=200&category=" + typ
+	if typ == "linear" {
+		query += "&settleCoin=USDT"
+	}
+	url := bbUniEndpoint + "/v5/position/list?" + query
+	_, resp, err := bb.Get(url, bbApiDeadline, bb.buildHeaders(query, ""))
+	if err != nil {
+		return nil, errors.New(bb.Name() + " net error! " + err.Error())
+	}
+	recv := struct {
+		Code   int    `json:"retCode,omitempty"`
+		Msg    string `json:"retMsg,omitempty"`
+		Result struct {
+			List []struct {
+				Symbol        string          `json:"symbol"`
+				Side          string          `json:"side"`
+				PositionIdx   int             `json:"positionIdx"` // 0单向,1双向Buy,2双向Sell
+				EntryPrice    decimal.Decimal `json:"avgPrice"`
+				Leverage      decimal.Decimal `json:"leverage"`
+				LiqPrice      decimal.Decimal `json:"liqPrice"`
+				PositionQty   decimal.Decimal `json:"size"`
+				UnrealisedPnl decimal.Decimal `json:"unrealisedPnl"`
+				Time          int64           `json:"updatedTime"` // msec
+			} `json:"list,omitempty"`
+		} `json:"result"`
+	}{}
+	if err = json.Unmarshal(resp, &recv); err != nil {
+		return nil, errors.New(bb.Name() + " unmarshal fail! " + err.Error())
+	}
+	if recv.Code != 0 {
+		return nil, errors.New(bb.Name() + ": " + recv.Msg)
+	}
+	positionM := make(map[string]*FuturesPositions)
+	for _, v := range recv.Result.List {
+		fp := positionM[v.Symbol]
+		if fp == nil {
+			fp = &FuturesPositions{
+				Symbol:   v.Symbol,
+				Leverage: v.Leverage,
+			}
+		}
+		if v.PositionIdx == 1 || v.PositionIdx == 2 { // 双向持仓
+			fp.Mode = 1
+			side := "SELL"
+			if v.PositionIdx == 1 {
+				side = "BUY"
+			}
+			pd := FuturesPositionsData{
+				Side:             side,
+				Qty:              v.PositionQty.Abs(),
+				EntryPrice:       v.EntryPrice,
+				LiqPrice:         v.LiqPrice,
+				UnRealizedProfit: v.UnrealisedPnl,
+				UTime:            v.Time,
+			}
+			if side == "BUY" {
+				fp.Buy = pd
+			} else {
+				fp.Sell = pd
+			}
+		} else { // 单向持仓
+			fp.Mode = 0
+			fp.Both = FuturesPositionsData{
+				Side:             bb.toStdSide(v.Side),
+				Qty:              v.PositionQty.Abs(),
+				EntryPrice:       v.EntryPrice,
+				LiqPrice:         v.LiqPrice,
+				UnRealizedProfit: v.UnrealisedPnl,
+				UTime:            v.Time,
+			}
+		}
+		positionM[v.Symbol] = fp
+	}
 	return positionM, nil
 }

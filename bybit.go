@@ -14,10 +14,12 @@ import (
 
 type Bybit struct {
 	Unsupported
+	Http
 	name      string
 	account   string
 	apikey    string
 	secretkey string
+	localIP   string
 	debug     bool
 
 	// spot websocket
@@ -30,6 +32,12 @@ type Bybit struct {
 	spotWsPrivateConnMtx   sync.Mutex
 	spotWsPrivateClosed    bool
 	spotWsPrivateClosedMtx sync.RWMutex
+
+	// futures websocket
+	futuresWsPrivateConn      *websocket.Conn
+	futuresWsPrivateConnMtx   sync.Mutex
+	futuresWsPrivateClosed    bool
+	futuresWsPrivateClosedMtx sync.RWMutex
 }
 
 type BbSubscribeArg struct {
@@ -59,14 +67,22 @@ func init() {
 	}
 }
 
-func NewBybit(account, apikey, secretkey string) *Bybit {
+func NewBybit(account, apikey, secretkey, localIP string) (*Bybit, error) {
+	client, err := NewClientWithLocalIP(localIP)
+	if err != nil {
+		return nil, err
+	}
 	cexObj := &Bybit{
+		Http: Http{
+			client: client,
+		},
 		name:      "bybit",
 		account:   account,
 		apikey:    apikey,
 		secretkey: secretkey,
+		localIP:   localIP,
 	}
-	return cexObj
+	return cexObj, nil
 }
 func (bb *Bybit) Name() string {
 	return bb.name
@@ -83,6 +99,7 @@ func (bb *Bybit) Debug(v bool) {
 func (bb *Bybit) Init() error {
 	bb.spotWsPublicClosed = true
 	bb.spotWsPrivateClosed = true
+	bb.futuresWsPrivateClosed = true
 	return nil
 }
 func (bb *Bybit) buildHeaders(query, body string) map[string]string {

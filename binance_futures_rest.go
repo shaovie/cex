@@ -214,6 +214,58 @@ func (bn *Binance) FuturesGetBBO(typ, symbol string) (BestBidAsk, error) {
 	}
 	return BestBidAsk{}, errors.New("not support")
 }
+func (bn *Binance) FuturesGetOrderBook(typ, symbol string, depth int64) (*OrderBookDepth, error) {
+	var url string
+	if typ == "UM" {
+		url = bnUMFuturesEndpoint + "/fapi/v1/depth?symbol=" + symbol
+	} else if typ == "CM" {
+		if strings.Index(symbol, "_") == -1 {
+			symbol += "_PERP"
+		}
+		url = bnCMFuturesEndpoint + "/dapi/v1/depth?symbol=" + symbol
+	} else {
+		return nil, errors.New("not support")
+	}
+	if depth > 0 {
+		url += "&limit=" + strconv.FormatInt(depth, 10)
+	}
+	_, resp, err := bn.Get(url, bnApiDeadline, nil)
+	if err != nil {
+		return nil, errors.New(bn.Name() + " " + typ + " net error! " + err.Error())
+	}
+	recv := struct {
+		Code int    `json:"code,omitempty"`
+		Msg  string `json:"msg,omitempty"`
+
+		Time int64                `json:"T,omitempty"` // 撮合时间 msec
+		Bids [][2]decimal.Decimal `json:"bids,omitempty"`
+		Asks [][2]decimal.Decimal `json:"asks,omitempty"`
+	}{}
+	if err = json.Unmarshal(resp, &recv); err != nil {
+		return nil, errors.New(bn.Name() + " unmarshal error! " + err.Error())
+	}
+	if recv.Code != 0 {
+		return nil, errors.New(bn.Name() + ": " + recv.Msg)
+	}
+	if len(recv.Bids) == 0 || len(recv.Asks) == 0 {
+		return nil, errors.New(bn.Name() + " resp empty")
+	}
+
+	obd := &OrderBookDepth{
+		Symbol: symbol,
+		Level:  int(depth),
+		Time:   recv.Time,
+		Bids:   make([]Ticker, 0, len(recv.Bids)),
+		Asks:   make([]Ticker, 0, len(recv.Asks)),
+	}
+	for _, v := range recv.Bids {
+		obd.Bids = append(obd.Bids, Ticker{Price: v[0], Quantity: v[1]})
+	}
+	for _, v := range recv.Asks {
+		obd.Asks = append(obd.Asks, Ticker{Price: v[0], Quantity: v[1]})
+	}
+	return obd, nil
+}
 func (bn *Binance) FuturesGetAllFundingRate(typ string) (map[string]FundingRate, error) {
 	url := bnUMFuturesEndpoint + "/fapi/v1/premiumIndex"
 	if typ == "CM" {

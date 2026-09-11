@@ -1,8 +1,10 @@
 package cex
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"net"
 	"strconv"
 	"strings"
 	"sync"
@@ -47,6 +49,19 @@ func (bb *Bybit) SpotWsPublicOpen() error {
 	dialer := websocket.Dialer{
 		EnableCompression: true, // 启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
+	}
+	if bb.localIP != "" {
+		localAddr := &net.TCPAddr{
+			IP:   net.ParseIP(bb.localIP),
+			Port: 0, // 0 表示随机可用端口
+		}
+		dialer.NetDialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			d := net.Dialer{
+				LocalAddr: localAddr,
+				Timeout:   2 * time.Second,
+			}
+			return d.DialContext(ctx, network, addr)
+		}
 	}
 	bb.spotWsPublicConn, _, err = dialer.Dial(url, nil)
 	if err != nil {
@@ -271,6 +286,19 @@ func (bb *Bybit) SpotWsPrivateOpen() error {
 		EnableCompression: true, // 启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
 	}
+	if bb.localIP != "" {
+		localAddr := &net.TCPAddr{
+			IP:   net.ParseIP(bb.localIP),
+			Port: 0, // 0 表示随机可用端口
+		}
+		dialer.NetDialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			d := net.Dialer{
+				LocalAddr: localAddr,
+				Timeout:   2 * time.Second,
+			}
+			return d.DialContext(ctx, network, addr)
+		}
+	}
 	bb.spotWsPrivateConn, _, err = dialer.Dial(url, nil)
 	if err != nil {
 		return errors.New(bb.Name() + " connect failed! " + err.Error())
@@ -463,7 +491,7 @@ func (bb *Bybit) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
 }
 func (bb *Bybit) spotWsHandleBalanceUpdate(data json.RawMessage, ch chan<- any) {
 	bls := []struct {
-		Coin struct {
+		Coin []struct {
 			Symbol string          `json:"coin"`
 			Total  decimal.Decimal `json:"equity"`
 			Avail  decimal.Decimal `json:"walletBalance"`
@@ -472,11 +500,13 @@ func (bb *Bybit) spotWsHandleBalanceUpdate(data json.RawMessage, ch chan<- any) 
 	}{}
 	if err := json.Unmarshal(data, &bls); err == nil && len(bls) > 0 {
 		for i := range bls {
-			ch <- &SpotAsset{
-				Symbol: bls[i].Coin.Symbol,
-				Avail:  bls[i].Coin.Avail,
-				Locked: bls[i].Coin.Locked,
-				Total:  bls[i].Coin.Avail.Add(bls[i].Coin.Locked),
+			for j := range bls[i].Coin {
+				ch <- &SpotAsset{
+					Symbol: bls[i].Coin[j].Symbol,
+					Avail:  bls[i].Coin[j].Avail,
+					Locked: bls[i].Coin[j].Locked,
+					Total:  bls[i].Coin[j].Avail.Add(bls[i].Coin[j].Locked),
+				}
 			}
 		}
 	}
