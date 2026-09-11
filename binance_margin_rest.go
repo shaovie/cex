@@ -270,7 +270,7 @@ func (bn *Binance) MarginGetTrades(symbol, orderId string, isIsolated bool) ([]*
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
-	if resp[0] != '[' {
+	if len(resp) == 0 || resp[0] != '[' {
 		return nil, bn.handleExceptionResp("MarginGetTrades", resp)
 	}
 
@@ -333,7 +333,7 @@ func (bn *Binance) MarginGetAssetInfo(symbol string) (MarginAssetInfo, error) {
 	if err != nil {
 		return info, errors.New(bn.Name() + " net error! " + err.Error())
 	}
-	if resp[0] != '[' {
+	if len(resp) == 0 || resp[0] != '[' {
 		return info, bn.handleExceptionResp("MarginGetAssetInfo", resp)
 	}
 

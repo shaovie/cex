@@ -206,7 +206,7 @@ func (bn *Binance) SpotWsPublicLoop(ch chan<- any) {
 				return
 			case <-ticker.C:
 				if bn.SpotWsPublicIsClosed() {
-					break
+					return
 				}
 				bn.spotWsPublicConnMtx.Lock()
 				bn.spotWsPublicConn.WriteMessage(websocket.PingMessage, nil)
@@ -460,7 +460,7 @@ func (bn *Binance) SpotWsPrivateLoop(ch chan<- any) {
 				return
 			case <-ticker.C:
 				if bn.SpotWsPrivateIsClosed() {
-					break
+					return
 				}
 				bn.spotWsPrivateConnMtx.Lock()
 				bn.spotWsPrivateConn.WriteMessage(websocket.PingMessage, nil)

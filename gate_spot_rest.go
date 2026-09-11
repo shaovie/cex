@@ -90,7 +90,7 @@ func (gt *Gate) SpotGetAll24hTicker() (map[string]Pub24hTicker, error) {
 	if err != nil {
 		return nil, errors.New(gt.Name() + " net error! " + err.Error())
 	}
-	if resp[0] == '{' {
+	if len(resp) == 0 || resp[0] == '{' {
 		return nil, gt.handleExceptionResp("SpotGetAll24hTicker", resp)
 	}
 
@@ -130,7 +130,7 @@ func (gt *Gate) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 	if err != nil {
 		return nil, errors.New(gt.Name() + " unmarshal error! " + err.Error())
 	}
-	if resp[0] == '{' {
+	if len(resp) == 0 || resp[0] == '{' {
 		return nil, gt.handleExceptionResp("SpotGetAllAssets", resp)
 	}
 
@@ -366,7 +366,7 @@ func (gt *Gate) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 	if err != nil {
 		return nil, errors.New(gt.Name() + " net error! " + err.Error())
 	}
-	if resp[0] != '[' {
+	if len(resp) == 0 || resp[0] != '[' {
 		return nil, gt.handleExceptionResp("SpotGetOpenOrders", resp)
 	}
 	orders := []struct {

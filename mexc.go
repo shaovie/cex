@@ -70,6 +70,9 @@ func (mc *Mexc) Init() error {
 	return nil
 }
 func (mc *Mexc) handleExceptionResp(api string, resp []byte) error {
+	if len(resp) == 0 {
+		return errors.New(mc.Name() + " " + api + " resp empty")
+	}
 	ret := struct {
 		Code int    `json:"code,omitempty"`
 		Msg  string `json:"msg,omitempty"`

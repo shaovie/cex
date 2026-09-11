@@ -179,6 +179,9 @@ func (bn *Binance) wsSign(kv map[string]any) string {
 	return bn.sign(buf.String())
 }
 func (bn *Binance) handleExceptionResp(api string, resp []byte) error {
+	if len(resp) == 0 {
+		return errors.New(bn.Name() + " " + api + " resp empty")
+	}
 	ret := struct {
 		Code int    `json:"code,omitempty"`
 		Msg  string `json:"msg,omitempty"`

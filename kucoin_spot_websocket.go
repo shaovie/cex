@@ -114,7 +114,7 @@ func (kc *Kucoin) SpotWsPublicLoop(ch chan<- any) {
 				return
 			case <-ticker.C:
 				if kc.SpotWsPublicIsClosed() {
-					break
+					return
 				}
 				kc.spotWsPublicConnMtx.Lock()
 				kc.spotWsPublicConn.WriteMessage(websocket.TextMessage, pingMsg)

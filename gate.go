@@ -161,6 +161,9 @@ func (gt *Gate) getContractSymbol(symbol string) string {
 	return gtContractSymbolMap[symbol]
 }
 func (gt *Gate) handleExceptionResp(api string, resp []byte) error {
+	if len(resp) == 0 {
+		return errors.New(gt.Name() + " " + api + " resp empty")
+	}
 	ret := struct {
 		Label string `json:"label,omitempty"`
 		Msg   string `json:"message,omitempty"`

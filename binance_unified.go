@@ -16,7 +16,7 @@ func (bn *Binance) UnifiedGetAssets() (map[string]*UnifiedAsset, error) {
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
-	if resp[0] != '[' {
+	if len(resp) == 0 || resp[0] != '[' {
 		return nil, bn.handleExceptionResp("UnifiedGetAssets", resp)
 	}
 	ret := []struct {

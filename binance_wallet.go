@@ -81,7 +81,7 @@ func (bn *Binance) FundingGetAllAssets() (map[string]*FundingAsset, error) {
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
-	if resp[0] != '[' {
+	if len(resp) == 0 || resp[0] != '[' {
 		return nil, bn.handleExceptionResp("FundingGetAsset", resp)
 	}
 	recv := []struct {
@@ -116,7 +116,7 @@ func (bn *Binance) FundingGetAsset(symbol string) (FundingAsset, error) {
 	if err != nil {
 		return fa, errors.New(bn.Name() + " net error! " + err.Error())
 	}
-	if resp[0] != '[' {
+	if len(resp) == 0 || resp[0] != '[' {
 		return fa, bn.handleExceptionResp("FundingGetAsset", resp)
 	}
 	recv := []struct {
@@ -176,7 +176,7 @@ func (bn *Binance) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error)
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
-	if resp[0] != '[' {
+	if len(resp) == 0 || resp[0] != '[' {
 		return nil, bn.handleExceptionResp("GetWithdrawalHistory", resp)
 	}
 	ret := []struct {
@@ -219,7 +219,7 @@ func (bn *Binance) GetDepositAddress(symbol, network string) ([]DepositAddress, 
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
-	if resp[0] != '[' {
+	if len(resp) == 0 || resp[0] != '[' {
 		return nil, bn.handleExceptionResp("GetDepositAddress", resp)
 	}
 	ret := []struct {
@@ -247,7 +247,7 @@ func (bn *Binance) GetWalletAllAssetInfo() (map[string]*WalletAssetInfo, error) 
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
-	if resp[0] != '[' {
+	if len(resp) == 0 || resp[0] != '[' {
 		return nil, bn.handleExceptionResp("GetWalletAllAssetInfo", resp)
 	}
 
@@ -300,7 +300,7 @@ func (bn *Binance) GetWithdrawalAddress(symbol string) ([]WithdrawalAddress, err
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
-	if resp[0] != '[' {
+	if len(resp) == 0 || resp[0] != '[' {
 		return nil, bn.handleExceptionResp("GetWithdralAddress", resp)
 	}
 	ret := []struct {

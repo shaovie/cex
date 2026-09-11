@@ -190,7 +190,7 @@ func (gt *Gate) SpotWsPublicLoop(ch chan<- any) {
 				return
 			case <-ticker.C:
 				if gt.SpotWsPublicIsClosed() {
-					break
+					return
 				}
 				s := fmt.Sprintf(`{"time":%d,"channel":"spot.ping"}`, time.Now().Unix())
 				gt.spotWsPublicConnMtx.Lock()
@@ -468,7 +468,7 @@ func (gt *Gate) SpotWsPrivateLoop(ch chan<- any) {
 				return
 			case <-ticker.C:
 				if gt.SpotWsPrivateIsClosed() {
-					break
+					return
 				}
 				s := fmt.Sprintf(`{"time":%d,"channel":"spot.ping"}`, time.Now().Unix())
 				gt.spotWsPrivateConnMtx.Lock()

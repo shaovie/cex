@@ -195,7 +195,7 @@ func (kk *Kraken) SpotWsPublicLoop(ch chan<- any) {
 				return
 			case <-ticker.C:
 				if kk.SpotWsPublicIsClosed() {
-					break
+					return
 				}
 				kk.spotWsPublicConnMtx.Lock()
 				kk.spotWsPublicConn.WriteMessage(websocket.TextMessage, pingMsg)
@@ -541,7 +541,7 @@ func (kk *Kraken) SpotWsPrivateLoop(ch chan<- any) {
 				return
 			case <-ticker.C:
 				if kk.SpotWsPrivateIsClosed() {
-					break
+					return
 				}
 				kk.spotWsPrivateConnMtx.Lock()
 				kk.spotWsPrivateConn.WriteMessage(websocket.TextMessage, pingMsg)

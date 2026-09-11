@@ -121,7 +121,7 @@ func (ktx *Ktx) SpotWsPublicLoop(ch chan<- any) {
 				return
 			case <-ticker.C:
 				if ktx.SpotWsPublicIsClosed() {
-					break
+					return
 				}
 				s := fmt.Sprintf(`{"ping":%d}`, time.Now().UnixMilli())
 				ktx.spotWsPublicConnMtx.Lock()

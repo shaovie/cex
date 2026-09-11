@@ -195,7 +195,7 @@ func (ok *Okx) SpotWsPublicLoop(ch chan<- any) {
 				return
 			case <-ticker.C:
 				if ok.SpotWsPublicIsClosed() {
-					break
+					return
 				}
 				ok.spotWsPublicConnMtx.Lock()
 				ok.spotWsPublicConn.WriteMessage(websocket.TextMessage, pingMsg)
@@ -469,7 +469,7 @@ func (ok *Okx) SpotWsPrivateLoop(ch chan<- any) {
 				return
 			case <-ticker.C:
 				if ok.SpotWsPrivateIsClosed() {
-					break
+					return
 				}
 				ok.spotWsPrivateConnMtx.Lock()
 				ok.spotWsPrivateConn.WriteMessage(websocket.TextMessage, pingMsg)

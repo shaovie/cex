@@ -147,7 +147,7 @@ func (bb *Bybit) SpotWsPublicLoop(ch chan<- any) {
 				return
 			case <-ticker.C:
 				if bb.SpotWsPublicIsClosed() {
-					break
+					return
 				}
 				bb.spotWsPublicConnMtx.Lock()
 				bb.spotWsPublicConn.WriteMessage(websocket.TextMessage, []byte(ping))
@@ -373,7 +373,7 @@ func (bb *Bybit) SpotWsPrivateLoop(ch chan<- any) {
 				return
 			case <-ticker.C:
 				if bb.SpotWsPrivateIsClosed() {
-					break
+					return
 				}
 				bb.spotWsPrivateConnMtx.Lock()
 				bb.spotWsPrivateConn.WriteMessage(websocket.TextMessage, []byte(ping))

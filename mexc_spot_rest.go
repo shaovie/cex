@@ -79,7 +79,7 @@ func (mc *Mexc) SpotGetAll24hTicker() (map[string]Pub24hTicker, error) {
 	if err != nil {
 		return nil, errors.New(mc.Name() + " net error! " + err.Error())
 	}
-	if resp[0] != '[' {
+	if len(resp) == 0 || resp[0] != '[' {
 		return nil, mc.handleExceptionResp("SpotGetAll24hTicker", resp)
 	}
 	tickers := []struct {

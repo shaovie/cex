@@ -125,7 +125,7 @@ func (bn *Binance) FuturesGetAll24hTicker(typ string) (map[string]Pub24hTicker, 
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
-	if resp[0] != '[' {
+	if len(resp) == 0 || resp[0] != '[' {
 		return nil, bn.handleExceptionResp("FuturesGetAll24hTicker", resp)
 	}
 
@@ -223,7 +223,7 @@ func (bn *Binance) FuturesGetAllFundingRate(typ string) (map[string]FundingRate,
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
-	if resp[0] != '[' {
+	if len(resp) == 0 || resp[0] != '[' {
 		return nil, bn.handleExceptionResp("FuturesGetAllFundingRate", resp)
 	}
 
@@ -268,7 +268,7 @@ func (bn *Binance) FuturesGetFundingRateHistory(typ, symbol string,
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
-	if resp[0] != '[' {
+	if len(resp) == 0 || resp[0] != '[' {
 		return nil, bn.handleExceptionResp("FuturesGetFundingRateHistory", resp)
 	}
 	ret := []struct {
@@ -320,7 +320,7 @@ func (bn *Binance) FuturesGetFundingRateMarkPrice(typ, symbol string) (FundingRa
 		if err != nil {
 			return FundingRateMarkPrice{}, errors.New(bn.Name() + " net error! " + err.Error())
 		}
-		if resp[0] != '[' {
+		if len(resp) == 0 || resp[0] != '[' {
 			return FundingRateMarkPrice{}, bn.handleExceptionResp("FuturesGetFundingRateMarkPrice", resp)
 		}
 
@@ -397,7 +397,7 @@ func (bn *Binance) FuturesGetKLine(typ, symbol, interval string,
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
-	if resp[0] != '[' {
+	if len(resp) == 0 || resp[0] != '[' {
 		return nil, bn.handleExceptionResp("FuturesGetKLine", resp)
 	}
 
@@ -568,7 +568,7 @@ func (bn *Binance) FuturesGetOpenOrders(typ, symbol string) ([]*FuturesOrder, er
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
-	if resp[0] == '{' {
+	if len(resp) == 0 || resp[0] == '{' {
 		return nil, bn.handleExceptionResp("FuturesGetOpenOrders", resp)
 	}
 
@@ -793,7 +793,7 @@ func (bn *Binance) FuturesMaintMargin(typ, symbol string) ([]*FuturesLeverageBra
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
-	if resp[0] != '[' {
+	if len(resp) == 0 || resp[0] != '[' {
 		return nil, bn.handleExceptionResp("FuturesMaintMargin", resp)
 	}
 	type Bracket struct {
@@ -847,7 +847,7 @@ func (bn *Binance) FuturesGetAllPositions(typ string) (map[string]*FuturesPositi
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
 
-	if resp[0] == '{' {
+	if len(resp) == 0 || resp[0] == '{' {
 		return nil, bn.handleExceptionResp("FuturesGetAllPositions", resp)
 	}
 	recv := []struct {
@@ -934,7 +934,7 @@ func (bn *Binance) FuturesGetAllPositionList(typ string) (map[string]*FuturesPos
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
 
-	if resp[0] == '{' {
+	if len(resp) == 0 || resp[0] == '{' {
 		return nil, bn.handleExceptionResp("FuturesGetAllPositionList", resp)
 	}
 	recv := []struct {
@@ -1004,7 +1004,7 @@ func (bn *Binance) FuturesGetProfitLossHistory(typ, symbol, plType string,
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}
-	if resp[0] != '[' {
+	if len(resp) == 0 || resp[0] != '[' {
 		return nil, bn.handleExceptionResp("FuturesGetProfitLossHistory", resp)
 	}
 	ret := []struct {

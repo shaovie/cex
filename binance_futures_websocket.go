@@ -208,7 +208,7 @@ func (bn *Binance) FuturesWsPublicLoop(ch chan<- any) {
 				return
 			case <-ticker.C:
 				if bn.FuturesWsPublicIsClosed() {
-					break
+					return
 				}
 				bn.futuresWsPublicConnMtx.Lock()
 				bn.futuresWsPublicConn.WriteMessage(websocket.PingMessage, nil)
@@ -517,7 +517,7 @@ func (bn *Binance) futuresWsPrivateLoop(ch chan<- any, wg *sync.WaitGroup) {
 				return
 			case <-ticker.C:
 				if bn.futuresWsPrivateIsClosed() {
-					break
+					return
 				}
 				bn.futuresWsPrivateConnMtx.Lock()
 				bn.futuresWsPrivateConn.WriteMessage(websocket.PingMessage, nil)
@@ -537,7 +537,7 @@ func (bn *Binance) futuresWsPrivateLoop(ch chan<- any, wg *sync.WaitGroup) {
 				return
 			case <-ticker.C:
 				if bn.futuresWsPrivateIsClosed() {
-					break
+					return
 				}
 				bn.getListenKey(bn.futuresWsPrivateTyp)
 			}
@@ -705,7 +705,7 @@ func (bn *Binance) futuresWsPrivateApiLoop(ch chan<- any, wg *sync.WaitGroup) {
 				return
 			case <-ticker.C:
 				if bn.futuresWsPrivateApiIsClosed() {
-					break
+					return
 				}
 				bn.futuresWsPrivateApiConnMtx.Lock()
 				bn.futuresWsPrivateApiConn.WriteMessage(websocket.PingMessage, nil)
