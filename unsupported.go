@@ -224,6 +224,9 @@ func (us *Unsupported) FundingGetAsset(symbol string) (FundingAsset, error) {
 func (us *Unsupported) GetDepositAddress(symbol, network string) ([]DepositAddress, error) {
 	return nil, errors.New("not support")
 }
+func (us *Unsupported) GetWithdrawalAddress(symbol string) ([]WithdrawalAddress, error) {
+	return nil, errors.New("not support")
+}
 func (us *Unsupported) GetWalletAllAssetInfo() (map[string]*WalletAssetInfo, error) {
 	return nil, errors.New("not support")
 }

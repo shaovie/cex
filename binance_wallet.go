@@ -294,3 +294,36 @@ func (bn *Binance) GetWalletAllAssetInfo() (map[string]*WalletAssetInfo, error) 
 	}
 	return waiMap, nil
 }
+func (bn *Binance) GetWithdrawalAddress(symbol string) ([]WithdrawalAddress, error) {
+	url := bnWalletEndpoint + "/sapi/v1/capital/withdraw/address/list?" + bn.httpQuerySign("")
+	_, resp, err := bn.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	if err != nil {
+		return nil, errors.New(bn.Name() + " net error! " + err.Error())
+	}
+	if resp[0] != '[' {
+		return nil, bn.handleExceptionResp("GetWithdralAddress", resp)
+	}
+	ret := []struct {
+		Symbol  string `json:"coin"`
+		Network string `json:"network"`
+		Addr    string `json:"address"`
+		Memo    string `json:"addressTag"`
+	}{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return nil, errors.New(bn.Name() + " unmarshal error! " + err.Error())
+	}
+	daL := make([]WithdrawalAddress, 0, 4)
+	for i := range ret {
+		if symbol != ret[i].Symbol {
+			continue
+		}
+		daL = append(daL, WithdrawalAddress{
+			Symbol:  ret[i].Symbol,
+			Network: ret[i].Network,
+			Addr:    ret[i].Addr,
+			Memo:    ret[i].Memo,
+		})
+	}
+
+	return daL, nil
+}

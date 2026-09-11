@@ -512,6 +512,12 @@ type DepositAddress struct {
 	Network string
 	Memo    string
 }
+type WithdrawalAddress struct {
+	Symbol  string // BTC
+	Addr    string
+	Network string
+	Memo    string
+}
 
 type WalletAssetInfo struct {
 	Symbol            string // BTC
