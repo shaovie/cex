@@ -385,8 +385,8 @@ func (bb *Bybit) SpotWsPrivateLoop(ch chan<- any) {
 	pingInterval := 31 * time.Second
 	pongWait := pingInterval + 2*time.Second
 	bb.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
-	bb.spotWsPublicConn.SetPongHandler(func(message string) error {
-		bb.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
+	bb.spotWsPrivateConn.SetPongHandler(func(message string) error {
+		bb.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
 	pingExit := make(chan struct{})
