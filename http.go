@@ -14,7 +14,7 @@ import (
 // 全局复用 Transport（连接池核心），避免每次创建新连接
 var sharedTransport = &http.Transport{
 	MaxIdleConns:        32, // 最大空闲连接数（默认2）
-	MaxIdleConnsPerHost: 8,
+	MaxIdleConnsPerHost: 16,
 	IdleConnTimeout:     90 * time.Second, // 空闲连接超时时间（默认无）
 	MaxConnsPerHost:     0,                // 每个主机最大并发连接数
 	TLSHandshakeTimeout: 5 * time.Second,  // TLS握手超时
