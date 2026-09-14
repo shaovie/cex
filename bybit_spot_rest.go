@@ -34,16 +34,12 @@ func (bb *Bybit) serverTime() (int64, error) {
 }
 func (bb *Bybit) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	url := bbUniEndpoint + "/v5/market/instruments-info?category=spot&limit=1000"
-	_, resp, err := bb.Get(url, bbApiDeadline, nil)
-	if err != nil {
-		return nil, errors.New(bb.Name() + " net error! " + err.Error())
-	}
-
-	recv := struct {
+	type instrumentsResp struct {
 		Code   int    `json:"retCode,omitempty"`
 		Msg    string `json:"retMsg,omitempty"`
 		Result struct {
-			List []struct {
+			Cursor string `json:"nextPageCursor,omitempty"`
+			List   []struct {
 				Symbol        string `json:"symbol,omitempty"`
 				Base          string `json:"baseCoin,omitempty"`
 				Quote         string `json:"quoteCoin,omitempty"`
@@ -61,35 +57,52 @@ func (bb *Bybit) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error)
 				} `json:"priceFilter"`
 			} `json:"list,omitempty"`
 		} `json:"result"`
-	}{}
-	if err = json.Unmarshal(resp, &recv); err != nil {
-		return nil, errors.New(bb.Name() + " unmarshal fail! " + err.Error())
-	}
-	if recv.Code != 0 {
-		return nil, errors.New(bb.Name() + " api err! " + recv.Msg)
 	}
 	all := make(map[string]*SpotExchangePairRule)
 	now := time.Now().Unix()
-	for _, pair := range recv.Result.List {
-		if pair.Status != "Trading" {
-			continue
+	cursor, lastCursor := "", ""
+	for {
+		link := url
+		if cursor != "" {
+			link += "&cursor=" + cursor
 		}
+		_, resp, err := bb.Get(link, bbApiDeadline, nil)
+		if err != nil {
+			return nil, errors.New(bb.Name() + " net error! " + err.Error())
+		}
+		var recv instrumentsResp
+		if err = json.Unmarshal(resp, &recv); err != nil {
+			return nil, errors.New(bb.Name() + " unmarshal fail! " + err.Error())
+		}
+		if recv.Code != 0 {
+			return nil, errors.New(bb.Name() + " api err! " + recv.Msg)
+		}
+		for _, pair := range recv.Result.List {
+			if pair.Status != "Trading" {
+				continue
+			}
 
-		ep := &SpotExchangePairRule{
-			Symbol:        pair.Symbol,
-			Base:          pair.Base,
-			Quote:         pair.Quote,
-			Status:        "online",
-			PriceTickSize: pair.PriceFilter.TickSize,
-			MaxOrderQty:   pair.LotSizeFilter.MaxQty,
-			MinOrderQty:   pair.LotSizeFilter.MinQty,
-			MinPrice:      pair.PriceFilter.TickSize,
-			MaxPrice:      decimal.NewFromFloat(9999999999999999.99),
-			QtyStep:       pair.LotSizeFilter.StepSize,
-			MinNotional:   pair.LotSizeFilter.MinAmt,
-			Time:          now,
+			ep := &SpotExchangePairRule{
+				Symbol:        pair.Symbol,
+				Base:          pair.Base,
+				Quote:         pair.Quote,
+				Status:        "online",
+				PriceTickSize: pair.PriceFilter.TickSize,
+				MaxOrderQty:   pair.LotSizeFilter.MaxQty,
+				MinOrderQty:   pair.LotSizeFilter.MinQty,
+				MinPrice:      pair.PriceFilter.TickSize,
+				MaxPrice:      decimal.NewFromFloat(9999999999999999.99),
+				QtyStep:       pair.LotSizeFilter.StepSize,
+				MinNotional:   pair.LotSizeFilter.MinAmt,
+				Time:          now,
+			}
+			all[ep.Symbol] = ep
 		}
-		all[ep.Symbol] = ep
+		cursor = recv.Result.Cursor
+		if cursor == "" || cursor == lastCursor { // 无下一页, 或游标未推进
+			break
+		}
+		lastCursor = cursor
 	}
 	return all, nil
 }

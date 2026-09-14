@@ -27,17 +27,13 @@ func (bb *Bybit) FuturesQtyToSize(typ, symbol string, qty decimal.Decimal) decim
 }
 func (bb *Bybit) FuturesLoadAllPairRule(typ string) (map[string]*FuturesExchangePairRule, error) {
 	typ = bb.fromStdCategory(typ)
-	url := bbUniEndpoint + "/v5/market/instruments-info?category=" + typ
-	_, resp, err := bb.Get(url, bbApiDeadline, nil)
-	if err != nil {
-		return nil, errors.New(bb.Name() + " net error! " + err.Error())
-	}
-
-	recv := struct {
+	url := bbUniEndpoint + "/v5/market/instruments-info?category=" + typ + "&limit=1000"
+	type instrumentsResp struct {
 		Code   int    `json:"retCode,omitempty"`
 		Msg    string `json:"retMsg,omitempty"`
 		Result struct {
-			List []struct {
+			Cursor string `json:"nextPageCursor,omitempty"`
+			List   []struct {
 				Symbol        string `json:"symbol,omitempty"`
 				Base          string `json:"baseCoin,omitempty"`
 				Quote         string `json:"quoteCoin,omitempty"`
@@ -55,34 +51,51 @@ func (bb *Bybit) FuturesLoadAllPairRule(typ string) (map[string]*FuturesExchange
 				} `json:"priceFilter"`
 			} `json:"list,omitempty"`
 		} `json:"result"`
-	}{}
-	if err = json.Unmarshal(resp, &recv); err != nil {
-		return nil, errors.New(bb.Name() + " unmarshal fail! " + err.Error())
-	}
-	if recv.Code != 0 {
-		return nil, errors.New(bb.Name() + ": " + recv.Msg)
 	}
 	all := make(map[string]*FuturesExchangePairRule)
 	now := time.Now().Unix()
-	for _, pair := range recv.Result.List {
-		if pair.Status != "Trading" {
-			continue
+	cursor, lastCursor := "", ""
+	for {
+		link := url
+		if cursor != "" {
+			link += "&cursor=" + cursor
 		}
+		_, resp, err := bb.Get(link, bbApiDeadline, nil)
+		if err != nil {
+			return nil, errors.New(bb.Name() + " net error! " + err.Error())
+		}
+		var recv instrumentsResp
+		if err = json.Unmarshal(resp, &recv); err != nil {
+			return nil, errors.New(bb.Name() + " unmarshal fail! " + err.Error())
+		}
+		if recv.Code != 0 {
+			return nil, errors.New(bb.Name() + ": " + recv.Msg)
+		}
+		for _, pair := range recv.Result.List {
+			if pair.Status != "Trading" {
+				continue
+			}
 
-		ep := &FuturesExchangePairRule{
-			Symbol:        pair.Symbol,
-			Base:          pair.Base,
-			Quote:         pair.Quote,
-			PriceTickSize: pair.PriceFilter.TickSize,
-			MaxOrderQty:   pair.LotSizeFilter.MaxQty,
-			MinOrderQty:   pair.LotSizeFilter.MinQty,
-			MinPrice:      pair.PriceFilter.MinPrice,
-			MaxPrice:      pair.PriceFilter.MaxPrice,
-			QtyStep:       pair.LotSizeFilter.StepSize,
-			MinNotional:   pair.LotSizeFilter.MinNotional,
-			Time:          now,
+			ep := &FuturesExchangePairRule{
+				Symbol:        pair.Symbol,
+				Base:          pair.Base,
+				Quote:         pair.Quote,
+				PriceTickSize: pair.PriceFilter.TickSize,
+				MaxOrderQty:   pair.LotSizeFilter.MaxQty,
+				MinOrderQty:   pair.LotSizeFilter.MinQty,
+				MinPrice:      pair.PriceFilter.MinPrice,
+				MaxPrice:      pair.PriceFilter.MaxPrice,
+				QtyStep:       pair.LotSizeFilter.StepSize,
+				MinNotional:   pair.LotSizeFilter.MinNotional,
+				Time:          now,
+			}
+			all[ep.Symbol] = ep
 		}
-		all[ep.Symbol] = ep
+		cursor = recv.Result.Cursor
+		if cursor == "" || cursor == lastCursor { // 无下一页, 或游标未推进
+			break
+		}
+		lastCursor = cursor
 	}
 	return all, nil
 }
