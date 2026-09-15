@@ -47,8 +47,8 @@ func NewClientWithLocalIP(localIP string) (*http.Client, error) {
 		}
 		localAddr := &net.TCPAddr{IP: ipAddr, Port: 0}
 		tr := &http.Transport{
-			MaxIdleConns:        32,               // 全局最大空闲连接
-			MaxIdleConnsPerHost: 24,               // 单个域名最大空闲连接
+			MaxIdleConns:        8,                // 全局最大空闲连接
+			MaxIdleConnsPerHost: 2,                // 单个域名最大空闲连接
 			MaxConnsPerHost:     0,                // 单域名最大并发连接，0=无限制，少量场景无所谓
 			IdleConnTimeout:     30 * time.Second, // 空闲连接快速回收，避免长占句柄
 			TLSHandshakeTimeout: 3 * time.Second,
