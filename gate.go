@@ -85,7 +85,7 @@ func init() {
 	gtContractSymbolMap = make(map[string]string)
 }
 func NewGate(account, apikey, secretkey, localIP string) (*Gate, error) {
-	client, err := NewClientWithLocalIP(localIP)
+	client, err := NewClient("gate", localIP)
 	if err != nil {
 		return nil, err
 	}

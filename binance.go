@@ -93,7 +93,7 @@ func init() {
 	}
 }
 func NewBinance(account, apikey, secretkey, localIP string) (*Binance, error) {
-	client, err := NewClientWithLocalIP(localIP)
+	client, err := NewClient("binance", localIP)
 	if err != nil {
 		return nil, err
 	}

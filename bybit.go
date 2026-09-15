@@ -68,7 +68,7 @@ func init() {
 }
 
 func NewBybit(account, apikey, secretkey, localIP string) (*Bybit, error) {
-	client, err := NewClientWithLocalIP(localIP)
+	client, err := NewClient("bybit", localIP)
 	if err != nil {
 		return nil, err
 	}

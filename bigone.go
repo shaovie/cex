@@ -61,7 +61,7 @@ func init() {
 	boFuturesSymbolMap = make(map[string]string)
 }
 func NewBigone(account, apikey, secretkey, localIP string) (*Bigone, error) {
-	client, err := NewClientWithLocalIP(localIP)
+	client, err := NewClient("bigone", localIP)
 	if err != nil {
 		return nil, err
 	}
