@@ -1,6 +1,7 @@
 package cex
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -244,7 +245,7 @@ func (bn *Binance) FuturesWsPublicLoop(ch chan<- any) {
 		} else if l > 11 && msg.Stream[l-11:l] == "@miniTicker" {
 			bn.futuresWsHandle24hTickers(msg.Data, ch)
 		} else {
-			if strings.Index(string(recv), `"result":null`) == -1 {
+			if !bytes.Contains(recv, []byte(`"result":null`)) {
 				ilog.Error(bn.Name() + " futures.ws.public recv unknown msg: " + string(recv))
 			}
 		}

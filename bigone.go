@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -35,10 +36,15 @@ type Bigone struct {
 	spotWsOrderBookSeqId           map[string]string
 	spotWsBBOCache                 map[string]*BestBidAsk
 
+	// 交易所符号 -> 标准符号缓存(BTC-USDT -> BTCUSDT)
+	// 公有流与私有流各用各的表, 分别由各自的goroutine处理, 因此都不用加锁
+	spotWsPublicSymbolMap map[string]string
+
 	spotWsPrivateConn      *websocket.Conn
 	spotWsPrivateConnMtx   sync.Mutex
 	spotWsPrivateClosed    bool
 	spotWsPrivateClosedMtx sync.RWMutex
+	spotWsPrivateSymbolMap map[string]string
 }
 
 var (
@@ -96,6 +102,8 @@ func (bo *Bigone) Init() error {
 	bo.spotWsOrderBookAsks = make(map[string]*treemap.Map[decimal.Decimal, string], 512)
 	bo.spotWsOrderBookSeqId = make(map[string]string, 16)
 	bo.spotWsBBOCache = make(map[string]*BestBidAsk, 16)
+	bo.spotWsPublicSymbolMap = make(map[string]string, 128)
+	bo.spotWsPrivateSymbolMap = make(map[string]string, 16)
 
 	if bo.spotWsPublicOrderBookInnerPool == nil {
 		bo.spotWsPublicOrderBookInnerPool = &sync.Pool{
@@ -132,6 +140,17 @@ func (bo *Bigone) getFuturesSymbol(symbol string) string {
 	boFuturesSymbolMapMtx.RLock()
 	defer boFuturesSymbolMapMtx.RUnlock()
 	return boFuturesSymbolMap[symbol]
+}
+
+// convSymbol 交易所符号转标准符号(BTC-USDT -> BTCUSDT)
+// m为调用方独占的表, 命中时零分配
+func (bo *Bigone) convSymbol(m map[string]string, symbol string) string {
+	if std, ok := m[symbol]; ok {
+		return std
+	}
+	std := strings.ReplaceAll(symbol, "-", "")
+	m[symbol] = std
+	return std
 }
 
 func (bo *Bigone) toStdSide(side string) string {

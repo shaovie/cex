@@ -1,6 +1,7 @@
 package cex
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -244,7 +245,7 @@ func (bn *Binance) SpotWsPublicLoop(ch chan<- any) {
 		} else if l > 9 && msg.Stream[l-9:l] == "@aggTrade" {
 			bn.spotWsHandlePublicTrade(msg.Data, ch)
 		} else {
-			if strings.Index(string(recv), `"result":null`) == -1 {
+			if !bytes.Contains(recv, []byte(`"result":null`)) {
 				ilog.Error(bn.Name() + " spot.ws.public recv unknown msg: " + string(recv))
 			}
 		}

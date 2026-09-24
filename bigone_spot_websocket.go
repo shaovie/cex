@@ -293,7 +293,7 @@ func (bo *Bigone) spotWsHandleOrderBookSnap(data json.RawMessage) (string, bool)
 	depth.Depth.Bids = depth.Depth.Bids[:0]
 	depth.Depth.Asks = depth.Depth.Asks[:0]
 	if err := easyjson.Unmarshal(data, depth); err == nil {
-		symbol := strings.ReplaceAll(depth.Depth.Symbol, "-", "")
+		symbol := bo.convSymbol(bo.spotWsPublicSymbolMap, depth.Depth.Symbol)
 		bo.spotWsOrderBookSeqId[symbol] = depth.ChangeId
 		bids := treemap.NewWith[decimal.Decimal, string](func(a, b decimal.Decimal) int {
 			return b.Compare(a) // desc
@@ -323,8 +323,7 @@ func (bo *Bigone) spotWsHandleOrderBookUpdate(data json.RawMessage) (string, boo
 	depth.Depth.Bids = depth.Depth.Bids[:0]
 	depth.Depth.Asks = depth.Depth.Asks[:0]
 	if err := easyjson.Unmarshal(data, depth); err == nil {
-		base, quote, _ := strings.Cut(depth.Depth.Symbol, "-")
-		symbol := base + quote
+		symbol := bo.convSymbol(bo.spotWsPublicSymbolMap, depth.Depth.Symbol)
 		if depth.PrevId != bo.spotWsOrderBookSeqId[symbol] {
 			ilog.Error(bo.Name() + " spot.ws.public orderbook seq error!")
 			return "", false
@@ -389,20 +388,19 @@ func (bo *Bigone) spotWsHandleBBO(data json.RawMessage, ch chan<- any) {
 	defer boSpotWsPublicBBOInnerPool.Put(bbo)
 	bbo.reset()
 	if err := easyjson.Unmarshal(data, bbo); err == nil {
-		base, quote, _ := strings.Cut(bbo.Ticker.Symbol, "-")
-		symbol := base + quote
+		symbol := bo.convSymbol(bo.spotWsPublicSymbolMap, bbo.Ticker.Symbol)
 		if cached, ok := bo.spotWsBBOCache[symbol]; ok {
 			cachedUpdated := false
 			if bbo.Ticker.Bid.Price.IsPositive() &&
-				(!bbo.Ticker.Bid.Price.Equals(cached.BidPrice) ||
-					!bbo.Ticker.Bid.Qty.Equals(cached.BidQty)) {
+				(!bbo.Ticker.Bid.Price.Equal(cached.BidPrice) ||
+					!bbo.Ticker.Bid.Qty.Equal(cached.BidQty)) {
 				cached.BidPrice = bbo.Ticker.Bid.Price
 				cached.BidQty = bbo.Ticker.Bid.Qty
 				cachedUpdated = true
 			}
 			if bbo.Ticker.Ask.Price.IsPositive() &&
-				(!bbo.Ticker.Ask.Price.Equals(cached.AskPrice) ||
-					!bbo.Ticker.Ask.Qty.Equals(cached.AskQty)) {
+				(!bbo.Ticker.Ask.Price.Equal(cached.AskPrice) ||
+					!bbo.Ticker.Ask.Qty.Equal(cached.AskQty)) {
 				cached.AskPrice = bbo.Ticker.Ask.Price
 				cached.AskQty = bbo.Ticker.Ask.Qty
 				cachedUpdated = true
@@ -426,9 +424,9 @@ func (bo *Bigone) spotWsHandleBBOSnap(data json.RawMessage, ch chan<- any) {
 	bbos.reset()
 	if err := easyjson.Unmarshal(data, bbos); err == nil {
 		for i := range bbos.Tickers {
-			base, quote, _ := strings.Cut(bbos.Tickers[i].Symbol, "-")
+			symbol := bo.convSymbol(bo.spotWsPublicSymbolMap, bbos.Tickers[i].Symbol)
 			obd := wsPublicBBOPool.Get().(*BestBidAsk)
-			obd.Symbol = base + quote
+			obd.Symbol = symbol
 			obd.Time = 0 // Bigone不提供
 			obd.BidPrice = bbos.Tickers[i].Bid.Price
 			obd.BidQty = bbos.Tickers[i].Bid.Qty
@@ -452,16 +450,13 @@ func (bo *Bigone) spotWsHandleTradeSpap(data json.RawMessage, ch chan<- any) {
 	}{}
 	if err := json.Unmarshal(data, &trs); err == nil && len(trs.Trades) > 0 {
 		for i := range trs.Trades {
-			base, quote, ok := strings.Cut(trs.Trades[i].Symbol, "-")
-			if ok {
-				tr := wsPublicTradePool.Get().(*PublicTrade)
-				tr.Symbol = base + quote
-				ctime, _ := time.Parse(time.RFC3339, trs.Trades[i].Time)
-				tr.Time = ctime.UnixMilli()
-				tr.Price = trs.Trades[i].Price
-				tr.Qty = trs.Trades[i].Qty
-				ch <- tr
-			}
+			tr := wsPublicTradePool.Get().(*PublicTrade)
+			tr.Symbol = bo.convSymbol(bo.spotWsPublicSymbolMap, trs.Trades[i].Symbol)
+			ctime, _ := time.Parse(time.RFC3339, trs.Trades[i].Time)
+			tr.Time = ctime.UnixMilli()
+			tr.Price = trs.Trades[i].Price
+			tr.Qty = trs.Trades[i].Qty
+			ch <- tr
 		}
 	}
 }
@@ -475,16 +470,13 @@ func (bo *Bigone) spotWsHandleTradeUpdate(data json.RawMessage, ch chan<- any) {
 		} `json:"trade"`
 	}{}
 	if err := json.Unmarshal(data, &tr); err == nil {
-		base, quote, ok := strings.Cut(tr.Trade.Symbol, "-")
-		if ok {
-			str := wsPublicTradePool.Get().(*PublicTrade)
-			str.Symbol = base + quote
-			ctime, _ := time.Parse(time.RFC3339, tr.Trade.Time)
-			str.Time = ctime.UnixMilli()
-			str.Price = tr.Trade.Price
-			str.Qty = tr.Trade.Qty
-			ch <- str
-		}
+		str := wsPublicTradePool.Get().(*PublicTrade)
+		str.Symbol = bo.convSymbol(bo.spotWsPublicSymbolMap, tr.Trade.Symbol)
+		ctime, _ := time.Parse(time.RFC3339, tr.Trade.Time)
+		str.Time = ctime.UnixMilli()
+		str.Price = tr.Trade.Price
+		str.Qty = tr.Trade.Qty
+		ch <- str
 	}
 }
 
@@ -656,7 +648,7 @@ func (bo *Bigone) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
 	if err := json.Unmarshal(data, &order); err == nil && order.Order.OrderId != "" {
 		ctime, _ := time.Parse(time.RFC3339, order.Order.Time)
 		utime, _ := time.Parse(time.RFC3339, order.Order.UTime)
-		symbol := strings.ReplaceAll(order.Order.Symbol, "-", "")
+		symbol := bo.convSymbol(bo.spotWsPrivateSymbolMap, order.Order.Symbol)
 		arr := strings.Split(order.Order.Symbol, "-")
 		so := &SpotOrder{
 			Symbol:    symbol,

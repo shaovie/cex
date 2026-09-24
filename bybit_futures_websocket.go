@@ -1,12 +1,12 @@
 package cex
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"net"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -162,7 +162,7 @@ func (bb *Bybit) FuturesWsPrivateLoop(ch chan<- any) {
 			bb.futuresWsHandlePosition(msg.Data, ch)
 		} else {
 			if msg.Op == "subscribe" { // 订阅的响应
-				if strings.Index(string(recv), "false") != -1 {
+				if bytes.Contains(recv, []byte("false")) {
 					ilog.Error(bb.Name() + " futures.ws.priv recv subscribe err:" + string(recv))
 				}
 			}

@@ -1,6 +1,7 @@
 package cex
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -195,7 +196,7 @@ func (bb *Bybit) SpotWsPublicLoop(ch chan<- any) {
 			if msg.Op == "ping" {
 				bb.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
 			} else if msg.Op == "subscribe" || msg.Op == "unsubscribe" { // 订阅的响应
-				if strings.Index(string(recv), "false") != -1 {
+				if bytes.Contains(recv, []byte("false")) {
 					ilog.Error(bb.Name() + " spot.ws.public recv subscribe err:" + string(recv))
 				}
 			}
@@ -435,7 +436,7 @@ func (bb *Bybit) SpotWsPrivateLoop(ch chan<- any) {
 			bb.spotWsHandleOrder(msg.Data, ch)
 		} else {
 			if msg.Op == "subscribe" { // 订阅的响应
-				if strings.Index(string(recv), "false") != -1 {
+				if bytes.Contains(recv, []byte("false")) {
 					ilog.Error(bb.Name() + " spot.ws.priv recv subscribe err:" + string(recv))
 				}
 			}
