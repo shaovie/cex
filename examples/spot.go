@@ -252,12 +252,12 @@ func main() {
 			ilog.Rinfo("Withdrawal%s", err.Error())
 		}*/
 
-	wh, err := cexObj.GetWalletAllAssetInfo()
+	wh, err := cexObj.GetWithdrawalHistory("AR")
 	if err != nil {
 		ilog.Rinfo("GetWithdrawalHistory %s", err.Error())
 	}
 	for _, v := range wh {
-		ilog.Rinfo("%v %v", v, v.BindNetworks["AR"])
+		ilog.Rinfo("%v ", v)
 	}
 	return
 	wh2, err := cexObj.GetDepositAddress("USDT", "")

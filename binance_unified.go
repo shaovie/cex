@@ -94,29 +94,43 @@ func (bn *Binance) UnifiedWsLoop(ch chan<- any) {
 		bn.unifiedWsConn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
-	go func() {
+	pingExit := make(chan struct{})
+	defer close(pingExit)
+	go func(exitChan <-chan struct{}) {
 		ticker := time.NewTicker(pingInterval)
 		defer ticker.Stop()
-		for range ticker.C {
-			if bn.UnifiedWsIsClosed() {
-				break
+		for {
+			select {
+			case <-exitChan:
+				return
+			case <-ticker.C:
+				if bn.UnifiedWsIsClosed() {
+					break
+				}
+				bn.unifiedWsConnMtx.Lock()
+				bn.unifiedWsConn.WriteMessage(websocket.PingMessage, nil)
+				bn.unifiedWsConnMtx.Unlock()
 			}
-			bn.unifiedWsConnMtx.Lock()
-			bn.unifiedWsConn.WriteMessage(websocket.PingMessage, nil)
-			bn.unifiedWsConnMtx.Unlock()
 		}
-	}()
+	}(pingExit)
 
-	go func() {
+	listenKeyExit := make(chan struct{})
+	defer close(listenKeyExit)
+	go func(exitChan <-chan struct{}) {
 		ticker := time.NewTicker((3600 - 110) * time.Second)
 		defer ticker.Stop()
-		for range ticker.C {
-			if bn.UnifiedWsIsClosed() {
-				break
+		for {
+			select {
+			case <-exitChan:
+				return
+			case <-ticker.C:
+				if bn.UnifiedWsIsClosed() {
+					break
+				}
+				bn.getListenKey("UNIFIED")
 			}
-			bn.getListenKey("UNIFIED")
 		}
-	}()
+	}(listenKeyExit)
 
 	type Msg struct {
 		Event  string          `json:"e,omitempty"`

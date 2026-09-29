@@ -216,22 +216,29 @@ func (bo *Bigone) SpotWsPublicLoop(ch chan<- any) {
 	pingInterval := 27 * time.Second
 	pongWait := pingInterval + 2*time.Second
 	bo.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
-	go func() {
-		ticker := time.NewTicker(pingInterval)
-		defer ticker.Stop()
-		for range ticker.C {
-			if bo.SpotWsPublicIsClosed() {
-				break
-			}
-			bo.spotWsPublicConnMtx.Lock()
-			bo.spotWsPublicConn.WriteMessage(websocket.PingMessage, nil)
-			bo.spotWsPublicConnMtx.Unlock()
-		}
-	}()
 	bo.spotWsPublicConn.SetPongHandler(func(message string) error {
 		bo.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
+	pingExit := make(chan struct{})
+	defer close(pingExit)
+	go func(exitChan <-chan struct{}) {
+		ticker := time.NewTicker(pingInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-exitChan:
+				return
+			case <-ticker.C:
+				if bo.SpotWsPublicIsClosed() {
+					break
+				}
+				bo.spotWsPublicConnMtx.Lock()
+				bo.spotWsPublicConn.WriteMessage(websocket.PingMessage, nil)
+				bo.spotWsPublicConnMtx.Unlock()
+			}
+		}
+	}(pingExit)
 
 	for {
 		_, recv, err := bo.spotWsPublicConn.ReadMessage()
@@ -578,22 +585,29 @@ func (bo *Bigone) SpotWsPrivateLoop(ch chan<- any) {
 	pingInterval := 29 * time.Second
 	pongWait := pingInterval + 2*time.Second
 	bo.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
-	go func() {
-		ticker := time.NewTicker(pingInterval)
-		defer ticker.Stop()
-		for range ticker.C {
-			if bo.SpotWsPrivateIsClosed() {
-				break
-			}
-			bo.spotWsPrivateConnMtx.Lock()
-			bo.spotWsPrivateConn.WriteMessage(websocket.PingMessage, nil)
-			bo.spotWsPrivateConnMtx.Unlock()
-		}
-	}()
 	bo.spotWsPrivateConn.SetPongHandler(func(message string) error {
 		bo.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
+	pingExit := make(chan struct{})
+	defer close(pingExit)
+	go func(exitChan <-chan struct{}) {
+		ticker := time.NewTicker(pingInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-exitChan:
+				return
+			case <-ticker.C:
+				if bo.SpotWsPrivateIsClosed() {
+					break
+				}
+				bo.spotWsPrivateConnMtx.Lock()
+				bo.spotWsPrivateConn.WriteMessage(websocket.PingMessage, nil)
+				bo.spotWsPrivateConnMtx.Unlock()
+			}
+		}
+	}(pingExit)
 
 	for {
 		_, recv, err := bo.spotWsPrivateConn.ReadMessage()
