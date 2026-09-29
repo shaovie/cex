@@ -35,7 +35,7 @@ func spotPubWs(cexObj cex.Exchanger) {
 	//cexObj.SpotWsPublicSubscribe([]string{"ticker@" + allSymbols,
 	//"orderbook5@ETHUSDT,BTCUSDT", "orderbook5@SOLUSDT", "bbo@SPCXXUSDT", "trades@BTCUSDT"})
 	_ = allSymbols
-	cexObj.SpotWsPublicSubscribe([]string{"bbo@CASHCATUSDT"})
+	cexObj.SpotWsPublicSubscribe([]string{"bbo@PRLUSDT"})
 	go cexObj.SpotWsPublicLoop(ch)
 	go func() {
 		time.Sleep(30 * time.Second)
@@ -241,8 +241,8 @@ func main() {
 	// ok,gate,bybit,binance
 	cexObj, _ := cex.NewPrivate(cexName, "", apiKey, secretKey, passphrase)
 	cexObj.Debug(true)
-	//bba, _ := cexObj.SpotGetBBO("CASHCATUSDT")
-	//ilog.Rinfo("bba=%v", bba)
+	bba, _ := cexObj.SpotGetBBO("PRLUSDT")
+	ilog.Rinfo("bba=%v", bba)
 	//order, err := cexObj.SpotGetOrder("AMDxUSD", "OG7HA3-I656I-VH7MX7", "")
 	//ilog.Rinfo("%v", *order)
 	//testRest(cexObj)
@@ -250,7 +250,7 @@ func main() {
 		_, err = cexObj.Withdrawal("USDT", "asfdsafdsdf", "232323", "", decimal.NewFromFloat(1000))
 		if err != nil {
 			ilog.Rinfo("Withdrawal%s", err.Error())
-		}*/
+		}
 
 	wh, err := cexObj.GetWithdrawalHistory("AR")
 	if err != nil {
@@ -267,6 +267,7 @@ func main() {
 	for _, v := range wh2 {
 		ilog.Rinfo("%v", v)
 	}
+	*/
 	testPubWs(cexObj)
 	//testPrivWs(cexObj)
 	//go spotPrivWs(cexObj)

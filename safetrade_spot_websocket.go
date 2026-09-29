@@ -1,10 +1,12 @@
 package cex
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
-	"net/url"
+	//"net/url"
+	"net"
 	"strings"
 	"time"
 
@@ -19,16 +21,29 @@ func (sa *Safetrade) SpotWsPublicOpen() error {
 		EnableCompression: true, // 启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
 	}
+	if sa.localIP != "" {
+		localAddr := &net.TCPAddr{
+			IP:   net.ParseIP(sa.localIP),
+			Port: 0, // 0 表示随机可用端口
+		}
+		dialer.NetDialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			d := net.Dialer{
+				LocalAddr: localAddr,
+				Timeout:   2 * time.Second,
+			}
+			return d.DialContext(ctx, network, addr)
+		}
+	}
 	header := http.Header{}
 	header.Set("Origin", stWsOrigin) // 服务端校验Origin
 	header.Set("User-Agent", stUserAgent)
 
 	//= 调试用: 走本机代理, 上线请删除以下2行
-	proxyURL, _ := url.Parse("http://127.0.0.1:7890")
-	dialer.Proxy = http.ProxyURL(proxyURL)
+	//proxyURL, _ := url.Parse("http://127.0.0.1:7890")
+	//dialer.Proxy = http.ProxyURL(proxyURL)
 	//= 调试用 end
 
-	url := "wss://safetrade.com/api/v2/websocket/public"
+	url := "wss://safe.trade/api/v2/websocket/public"
 	conn, _, err := dialer.Dial(url, header)
 	if err != nil {
 		return errors.New(sa.Name() + " spot.ws.public con failed! " + err.Error())
@@ -121,6 +136,7 @@ func (sa *Safetrade) SpotWsPublicLoop(ch chan<- any) {
 			break
 		}
 
+		ilog.Rinfo(string(recv))
 		msg := make(map[string]json.RawMessage, 2)
 		if err = json.Unmarshal(recv, &msg); err != nil {
 			ilog.Error(sa.Name() + " spot.ws.public recv invalid msg:" + string(recv))
