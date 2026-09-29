@@ -17,6 +17,11 @@ import (
 )
 
 func (sa *Safetrade) SpotWsPublicOpen() error {
+	sa.spotWsPublicClosedMtx.Lock()
+	sa.spotWsPublicClosed = false
+	sa.spotWsPublicClosedMtx.Unlock()
+	return nil // TODO
+
 	dialer := websocket.Dialer{
 		EnableCompression: true, // 启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
@@ -35,15 +40,10 @@ func (sa *Safetrade) SpotWsPublicOpen() error {
 		}
 	}
 	header := http.Header{}
-	header.Set("Origin", stWsOrigin) // 服务端校验Origin
+	header.Set("Origin", "https://safetrade.com") // 服务端校验Origin
 	header.Set("User-Agent", stUserAgent)
 
-	//= 调试用: 走本机代理, 上线请删除以下2行
-	//proxyURL, _ := url.Parse("http://127.0.0.1:7890")
-	//dialer.Proxy = http.ProxyURL(proxyURL)
-	//= 调试用 end
-
-	url := "wss://safe.trade/api/v2/websocket/public"
+	url := "wss://safetrade.com/api/v2/websocket/public"
 	conn, _, err := dialer.Dial(url, header)
 	if err != nil {
 		return errors.New(sa.Name() + " spot.ws.public con failed! " + err.Error())
@@ -88,15 +88,39 @@ func (sa *Safetrade) stWsPublicEvent(event string, channels []string) {
 	sa.spotWsPublicConnMtx.Unlock()
 }
 func (sa *Safetrade) SpotWsPublicSubscribe(channels []string) {
+	return // TODO
 	sa.stWsPublicEvent("subscribe", channels)
 }
 func (sa *Safetrade) SpotWsPublicUnsubscribe(channels []string) {
+	return // TODO
 	sa.stWsPublicEvent("unsubscribe", channels)
 }
 func (sa *Safetrade) SpotWsPublicBBOPoolPut(v any) {
 	wsPublicBBOPool.Put(v)
 }
 func (sa *Safetrade) SpotWsPublicLoop(ch chan<- any) {
+	defer close(ch)
+	symbol := "PRLUSDT"
+	for {
+		time.Sleep(800*time.Millisecond)
+		if sa.SpotWsPublicIsClosed() {
+			break
+		}
+		bba, _ := sa.SpotGetBBO(symbol)
+		if bba.BidPrice.IsZero() {
+			continue
+		}
+		obd := wsPublicBBOPool.Get().(*BestBidAsk)
+		obd.Symbol = symbol
+		obd.Time = 0 // SafeTrade不提供
+		obd.BidPrice = bba.BidPrice
+		obd.BidQty = bba.BidQty
+		obd.AskPrice = bba.AskPrice
+		obd.AskQty = bba.AskQty
+		ch <- obd
+	}
+}
+func (sa *Safetrade) SpotWsPublicLoop_(ch chan<- any) {
 	defer sa.SpotWsPublicClose()
 	defer close(ch)
 
@@ -168,7 +192,9 @@ func (sa *Safetrade) SpotWsPublicClose() {
 		return
 	}
 	sa.spotWsPublicClosed = true
-	sa.spotWsPublicConn.Close()
+	if sa.spotWsPublicConn != nil {
+		sa.spotWsPublicConn.Close()
+	}
 }
 
 // spotWsLoadDepth 取一次盘口快照作为本地底仓(depth频道只推增量)
