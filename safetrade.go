@@ -31,7 +31,7 @@ var (
 	stSpotSymbolMapMtx sync.RWMutex
 )
 
-const stEndpoint = "https://safetrade.com/api/v2"
+const stEndpoint = "https://safe.trade/api/v2"
 const stWsOrigin = "https://safetrade.com"
 const stApiDeadline = 1500 * time.Millisecond
 
