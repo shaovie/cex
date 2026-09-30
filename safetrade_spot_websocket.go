@@ -16,12 +16,13 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (sa *Safetrade) SpotWsPublicOpen() error {
+func (sa *Safetrade) SpotWsPublicOpen_() error {
 	sa.spotWsPublicClosedMtx.Lock()
 	sa.spotWsPublicClosed = false
 	sa.spotWsPublicClosedMtx.Unlock()
-	return nil // TODO
-
+	return nil
+}
+func (sa *Safetrade) SpotWsPublicOpen() error {
 	dialer := websocket.Dialer{
 		EnableCompression: true, // 启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
@@ -40,10 +41,10 @@ func (sa *Safetrade) SpotWsPublicOpen() error {
 		}
 	}
 	header := http.Header{}
-	header.Set("Origin", "https://safetrade.com") // 服务端校验Origin
+	header.Set("Origin", "https://safe.trade") // 服务端校验Origin
 	header.Set("User-Agent", stUserAgent)
 
-	url := "wss://safetrade.com/api/v2/websocket/public"
+	url := "wss://safe.trade/api/v2/websocket/public"
 	conn, _, err := dialer.Dial(url, header)
 	if err != nil {
 		return errors.New(sa.Name() + " spot.ws.public con failed! " + err.Error())
@@ -87,18 +88,22 @@ func (sa *Safetrade) stWsPublicEvent(event string, channels []string) {
 	sa.spotWsPublicConn.WriteMessage(websocket.TextMessage, req)
 	sa.spotWsPublicConnMtx.Unlock()
 }
+func (sa *Safetrade) SpotWsPublicSubscribe_(channels []string) {
+	return
+}
+func (sa *Safetrade) SpotWsPublicUnsubscribe_(channels []string) {
+	return
+}
 func (sa *Safetrade) SpotWsPublicSubscribe(channels []string) {
-	return // TODO
 	sa.stWsPublicEvent("subscribe", channels)
 }
 func (sa *Safetrade) SpotWsPublicUnsubscribe(channels []string) {
-	return // TODO
 	sa.stWsPublicEvent("unsubscribe", channels)
 }
 func (sa *Safetrade) SpotWsPublicBBOPoolPut(v any) {
 	wsPublicBBOPool.Put(v)
 }
-func (sa *Safetrade) SpotWsPublicLoop(ch chan<- any) {
+func (sa *Safetrade) SpotWsPublicLoop_(ch chan<- any) {
 	defer close(ch)
 	symbol := "PRLUSDT"
 	for {
@@ -120,7 +125,7 @@ func (sa *Safetrade) SpotWsPublicLoop(ch chan<- any) {
 		ch <- obd
 	}
 }
-func (sa *Safetrade) SpotWsPublicLoop_(ch chan<- any) {
+func (sa *Safetrade) SpotWsPublicLoop(ch chan<- any) {
 	defer sa.SpotWsPublicClose()
 	defer close(ch)
 
@@ -160,7 +165,6 @@ func (sa *Safetrade) SpotWsPublicLoop_(ch chan<- any) {
 			break
 		}
 
-		ilog.Rinfo(string(recv))
 		msg := make(map[string]WsRawJSON, 2)
 		if err = json.Unmarshal(recv, &msg); err != nil {
 			ilog.Error(sa.Name() + " spot.ws.public recv invalid msg:" + string(recv))
@@ -199,7 +203,7 @@ func (sa *Safetrade) SpotWsPublicClose() {
 
 // spotWsLoadDepth 取一次盘口快照作为本地底仓(depth频道只推增量)
 func (sa *Safetrade) spotWsLoadDepth(symbol, id string) {
-	_, resp, err := sa.Get(stEndpoint+"/trade/public/markets/"+id+"/depth?limit=5",
+	_, resp, err := sa.Get(stEndpoint+"/trade/public/markets/"+id+"/depth?limit=20",
 		stApiDeadline, stHttpHeaders)
 	if err != nil {
 		return

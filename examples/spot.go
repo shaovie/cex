@@ -33,7 +33,7 @@ func spotPubWs(cexObj cex.Exchanger) {
 	ilog.Rinfo("test load exchange rule: %v", len(arr) > 0)
 	allSymbols := strings.Join(arr, ",")
 	//cexObj.SpotWsPublicSubscribe([]string{"ticker@" + allSymbols,
-	//"orderbook5@ETHUSDT,BTCUSDT", "orderbook5@SOLUSDT", "bbo@SPCXXUSDT", "trades@BTCUSDT"})
+	//"orderbook5@ETHUSDT,BTCUSDT", "orderbook5@SOLUSDT", "bbo@BTCUSDT", "trades@BTCUSDT"})
 	_ = allSymbols
 	cexObj.SpotWsPublicSubscribe([]string{"bbo@PRLUSDT"})
 	go cexObj.SpotWsPublicLoop(ch)
@@ -63,7 +63,7 @@ func spotPubWs(cexObj cex.Exchanger) {
 				orderBookN += 1
 				cexObj.SpotWsPublicOrderBook5PoolPut(val)
 			case *cex.BestBidAsk:
-				if (bboN % 10) == 0 {
+				if (bboN % 1) == 0 {
 					ilog.Rinfo("#%d, %s bbo bids:%s,%s ask:%s,%s",
 						bboN, val.Symbol, val.BidPrice.String(),
 						val.BidQty.String(), val.AskPrice.String(), val.AskQty.String())
