@@ -219,6 +219,7 @@ func (bn *Binance) FuturesWsPublicLoop(ch chan<- any) {
 	}(pingExit)
 
 	l := 0
+	var data json.RawMessage
 	for {
 		_, recv, err := bn.futuresWsPublicConn.ReadMessage()
 		if err != nil {
@@ -237,13 +238,14 @@ func (bn *Binance) FuturesWsPublicLoop(ch chan<- any) {
 			ilog.Error(bn.Name() + " futures.ws.public recv subscribe err:" + string(recv))
 			goto END
 		}
+		data = json.RawMessage(msg.Data)
 		l = len(msg.Stream)
 		if l > 13 && msg.Stream[l-13:l] == "@depth5@100ms" {
-			bn.futuresWsHandleOrderBook5(msg.Data, ch)
+			bn.futuresWsHandleOrderBook5(data, ch)
 		} else if l > 11 && msg.Stream[l-11:l] == "@bookTicker" {
-			bn.futuresWsHandleBBO(msg.Data, ch)
+			bn.futuresWsHandleBBO(data, ch)
 		} else if l > 11 && msg.Stream[l-11:l] == "@miniTicker" {
-			bn.futuresWsHandle24hTickers(msg.Data, ch)
+			bn.futuresWsHandle24hTickers(data, ch)
 		} else {
 			if !bytes.Contains(recv, []byte(`"result":null`)) {
 				ilog.Error(bn.Name() + " futures.ws.public recv unknown msg: " + string(recv))

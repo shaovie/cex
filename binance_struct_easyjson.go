@@ -48,9 +48,7 @@ func easyjsonC5a5ed42DecodeGithubComShaovieCex(in *jlexer.Lexer, out *BinanceWsP
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.Data).UnmarshalJSON(data))
-				}
+				(out.Data).UnmarshalEasyJSON(in)
 			}
 		default:
 			in.SkipRecursive()
@@ -90,7 +88,7 @@ func easyjsonC5a5ed42EncodeGithubComShaovieCex(out *jwriter.Writer, in BinanceWs
 		} else {
 			out.RawString(prefix)
 		}
-		out.Raw((in.Data).MarshalJSON())
+		out.Base64Bytes(in.Data)
 	}
 	out.RawByte('}')
 }
@@ -250,50 +248,6 @@ func easyjsonC5a5ed42DecodeGithubComShaovieCex2(in *jlexer.Lexer, out *BinanceSp
 					out.Bids = (out.Bids)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v1 [2]decimal.Decimal
-					if in.IsNull() {
-						in.Skip()
-					} else {
-						in.Delim('[')
-						v2 := 0
-						for !in.IsDelim(']') {
-							if v2 < 2 {
-								if in.IsNull() {
-									in.Skip()
-								} else {
-									if data := in.Raw(); in.Ok() {
-										in.AddError(((v1)[v2]).UnmarshalJSON(data))
-									}
-								}
-								v2++
-							} else {
-								in.SkipRecursive()
-							}
-							in.WantComma()
-						}
-						in.Delim(']')
-					}
-					out.Bids = append(out.Bids, v1)
-					in.WantComma()
-				}
-				in.Delim(']')
-			}
-		case "asks":
-			if in.IsNull() {
-				in.Skip()
-				out.Asks = nil
-			} else {
-				in.Delim('[')
-				if out.Asks == nil {
-					if !in.IsDelim(']') {
-						out.Asks = make([][2]decimal.Decimal, 0, 2)
-					} else {
-						out.Asks = [][2]decimal.Decimal{}
-					}
-				} else {
-					out.Asks = (out.Asks)[:0]
-				}
-				for !in.IsDelim(']') {
 					var v3 [2]decimal.Decimal
 					if in.IsNull() {
 						in.Skip()
@@ -317,7 +271,51 @@ func easyjsonC5a5ed42DecodeGithubComShaovieCex2(in *jlexer.Lexer, out *BinanceSp
 						}
 						in.Delim(']')
 					}
-					out.Asks = append(out.Asks, v3)
+					out.Bids = append(out.Bids, v3)
+					in.WantComma()
+				}
+				in.Delim(']')
+			}
+		case "asks":
+			if in.IsNull() {
+				in.Skip()
+				out.Asks = nil
+			} else {
+				in.Delim('[')
+				if out.Asks == nil {
+					if !in.IsDelim(']') {
+						out.Asks = make([][2]decimal.Decimal, 0, 2)
+					} else {
+						out.Asks = [][2]decimal.Decimal{}
+					}
+				} else {
+					out.Asks = (out.Asks)[:0]
+				}
+				for !in.IsDelim(']') {
+					var v5 [2]decimal.Decimal
+					if in.IsNull() {
+						in.Skip()
+					} else {
+						in.Delim('[')
+						v6 := 0
+						for !in.IsDelim(']') {
+							if v6 < 2 {
+								if in.IsNull() {
+									in.Skip()
+								} else {
+									if data := in.Raw(); in.Ok() {
+										in.AddError(((v5)[v6]).UnmarshalJSON(data))
+									}
+								}
+								v6++
+							} else {
+								in.SkipRecursive()
+							}
+							in.WantComma()
+						}
+						in.Delim(']')
+					}
+					out.Asks = append(out.Asks, v5)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -342,16 +340,16 @@ func easyjsonC5a5ed42EncodeGithubComShaovieCex2(out *jwriter.Writer, in BinanceS
 		out.RawString(prefix[1:])
 		{
 			out.RawByte('[')
-			for v5, v6 := range in.Bids {
-				if v5 > 0 {
+			for v7, v8 := range in.Bids {
+				if v7 > 0 {
 					out.RawByte(',')
 				}
 				out.RawByte('[')
-				for v7 := range v6 {
-					if v7 > 0 {
+				for v9 := range v8 {
+					if v9 > 0 {
 						out.RawByte(',')
 					}
-					out.Raw(((v6)[v7]).MarshalJSON())
+					out.Raw(((v8)[v9]).MarshalJSON())
 				}
 				out.RawByte(']')
 			}
@@ -368,16 +366,16 @@ func easyjsonC5a5ed42EncodeGithubComShaovieCex2(out *jwriter.Writer, in BinanceS
 		}
 		{
 			out.RawByte('[')
-			for v8, v9 := range in.Asks {
-				if v8 > 0 {
+			for v10, v11 := range in.Asks {
+				if v10 > 0 {
 					out.RawByte(',')
 				}
 				out.RawByte('[')
-				for v10 := range v9 {
-					if v10 > 0 {
+				for v12 := range v11 {
+					if v12 > 0 {
 						out.RawByte(',')
 					}
-					out.Raw(((v9)[v10]).MarshalJSON())
+					out.Raw(((v11)[v12]).MarshalJSON())
 				}
 				out.RawByte(']')
 			}
@@ -685,50 +683,6 @@ func easyjsonC5a5ed42DecodeGithubComShaovieCex5(in *jlexer.Lexer, out *BinanceFu
 					out.Bids = (out.Bids)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v11 [2]decimal.Decimal
-					if in.IsNull() {
-						in.Skip()
-					} else {
-						in.Delim('[')
-						v12 := 0
-						for !in.IsDelim(']') {
-							if v12 < 2 {
-								if in.IsNull() {
-									in.Skip()
-								} else {
-									if data := in.Raw(); in.Ok() {
-										in.AddError(((v11)[v12]).UnmarshalJSON(data))
-									}
-								}
-								v12++
-							} else {
-								in.SkipRecursive()
-							}
-							in.WantComma()
-						}
-						in.Delim(']')
-					}
-					out.Bids = append(out.Bids, v11)
-					in.WantComma()
-				}
-				in.Delim(']')
-			}
-		case "a":
-			if in.IsNull() {
-				in.Skip()
-				out.Asks = nil
-			} else {
-				in.Delim('[')
-				if out.Asks == nil {
-					if !in.IsDelim(']') {
-						out.Asks = make([][2]decimal.Decimal, 0, 2)
-					} else {
-						out.Asks = [][2]decimal.Decimal{}
-					}
-				} else {
-					out.Asks = (out.Asks)[:0]
-				}
-				for !in.IsDelim(']') {
 					var v13 [2]decimal.Decimal
 					if in.IsNull() {
 						in.Skip()
@@ -752,7 +706,51 @@ func easyjsonC5a5ed42DecodeGithubComShaovieCex5(in *jlexer.Lexer, out *BinanceFu
 						}
 						in.Delim(']')
 					}
-					out.Asks = append(out.Asks, v13)
+					out.Bids = append(out.Bids, v13)
+					in.WantComma()
+				}
+				in.Delim(']')
+			}
+		case "a":
+			if in.IsNull() {
+				in.Skip()
+				out.Asks = nil
+			} else {
+				in.Delim('[')
+				if out.Asks == nil {
+					if !in.IsDelim(']') {
+						out.Asks = make([][2]decimal.Decimal, 0, 2)
+					} else {
+						out.Asks = [][2]decimal.Decimal{}
+					}
+				} else {
+					out.Asks = (out.Asks)[:0]
+				}
+				for !in.IsDelim(']') {
+					var v15 [2]decimal.Decimal
+					if in.IsNull() {
+						in.Skip()
+					} else {
+						in.Delim('[')
+						v16 := 0
+						for !in.IsDelim(']') {
+							if v16 < 2 {
+								if in.IsNull() {
+									in.Skip()
+								} else {
+									if data := in.Raw(); in.Ok() {
+										in.AddError(((v15)[v16]).UnmarshalJSON(data))
+									}
+								}
+								v16++
+							} else {
+								in.SkipRecursive()
+							}
+							in.WantComma()
+						}
+						in.Delim(']')
+					}
+					out.Asks = append(out.Asks, v15)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -807,16 +805,16 @@ func easyjsonC5a5ed42EncodeGithubComShaovieCex5(out *jwriter.Writer, in BinanceF
 		}
 		{
 			out.RawByte('[')
-			for v15, v16 := range in.Bids {
-				if v15 > 0 {
+			for v17, v18 := range in.Bids {
+				if v17 > 0 {
 					out.RawByte(',')
 				}
 				out.RawByte('[')
-				for v17 := range v16 {
-					if v17 > 0 {
+				for v19 := range v18 {
+					if v19 > 0 {
 						out.RawByte(',')
 					}
-					out.Raw(((v16)[v17]).MarshalJSON())
+					out.Raw(((v18)[v19]).MarshalJSON())
 				}
 				out.RawByte(']')
 			}
@@ -833,16 +831,16 @@ func easyjsonC5a5ed42EncodeGithubComShaovieCex5(out *jwriter.Writer, in BinanceF
 		}
 		{
 			out.RawByte('[')
-			for v18, v19 := range in.Asks {
-				if v18 > 0 {
+			for v20, v21 := range in.Asks {
+				if v20 > 0 {
 					out.RawByte(',')
 				}
 				out.RawByte('[')
-				for v20 := range v19 {
-					if v20 > 0 {
+				for v22 := range v21 {
+					if v22 > 0 {
 						out.RawByte(',')
 					}
-					out.Raw(((v19)[v20]).MarshalJSON())
+					out.Raw(((v21)[v22]).MarshalJSON())
 				}
 				out.RawByte(']')
 			}

@@ -181,6 +181,7 @@ func (bn *Binance) SpotWsPublicLoop(ch chan<- any) {
 	}(pingExit)
 
 	l := 0
+	var data json.RawMessage
 	for {
 		_, recv, err := bn.spotWsPublicConn.ReadMessage()
 		if err != nil {
@@ -199,15 +200,16 @@ func (bn *Binance) SpotWsPublicLoop(ch chan<- any) {
 			ilog.Error(bn.Name() + " spot.ws.public recv subscribe err:" + string(recv))
 			goto END
 		}
+		data = json.RawMessage(msg.Data)
 		l = len(msg.Stream)
 		if l > 11 && msg.Stream[l-11:l] == "@bookTicker" {
-			bn.spotWsHandleBBO(msg.Data, ch)
+			bn.spotWsHandleBBO(data, ch)
 		} else if l > 13 && msg.Stream[l-13:l] == "@depth5@100ms" {
-			bn.spotWsHandleOrderBook5(strings.ToUpper(msg.Stream[0:l-13]), msg.Data, ch)
+			bn.spotWsHandleOrderBook5(strings.ToUpper(msg.Stream[0:l-13]), data, ch)
 		} else if l > 11 && msg.Stream[l-11:l] == "@miniTicker" {
-			bn.spotWsHandle24hTickers(msg.Data, ch)
+			bn.spotWsHandle24hTickers(data, ch)
 		} else if l > 9 && msg.Stream[l-9:l] == "@aggTrade" {
-			bn.spotWsHandlePublicTrade(msg.Data, ch)
+			bn.spotWsHandlePublicTrade(data, ch)
 		} else {
 			if !bytes.Contains(recv, []byte(`"result":null`)) {
 				ilog.Error(bn.Name() + " spot.ws.public recv unknown msg: " + string(recv))
