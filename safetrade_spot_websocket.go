@@ -1,6 +1,7 @@
 package cex
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/emirpasic/gods/v2/maps/treemap"
 	"github.com/gorilla/websocket"
+	"github.com/mailru/easyjson"
 	"github.com/shaovie/gutils/ilog"
 	"github.com/shopspring/decimal"
 )
@@ -156,6 +158,7 @@ func (sa *Safetrade) SpotWsPublicLoop(ch chan<- any) {
 		}
 	}(pingExit)
 
+	msg := make(map[string]WsRawJSON, 2) // 循环外分配一次, 之后复用
 	for {
 		_, recv, err := sa.spotWsPublicConn.ReadMessage()
 		if err != nil {
@@ -165,7 +168,9 @@ func (sa *Safetrade) SpotWsPublicLoop(ch chan<- any) {
 			break
 		}
 
-		msg := make(map[string]WsRawJSON, 2)
+		for k := range msg { // 清空后复用, 避免每条消息都make一次map
+			delete(msg, k)
+		}
 		if err = json.Unmarshal(recv, &msg); err != nil {
 			ilog.Error(sa.Name() + " spot.ws.public recv invalid msg:" + string(recv))
 			continue
@@ -174,10 +179,7 @@ func (sa *Safetrade) SpotWsPublicLoop(ch chan<- any) {
 			if strings.HasSuffix(k, ".depth") { // 如 ethbtc.depth
 				sa.spotWsHandleDepth(strings.ToUpper(strings.TrimSuffix(k, ".depth")), v, ch)
 			} else if k == "success" { // 订阅/取消订阅的回执
-				ret := struct {
-					Message string `json:"message"`
-				}{}
-				if json.Unmarshal(v, &ret) == nil && strings.Index(ret.Message, "subscribe") == -1 {
+				if !bytes.Contains(v, []byte("subscribe")) {
 					ilog.Error(sa.Name() + " spot.ws.public recv: " + string(v))
 				}
 			}
@@ -237,11 +239,8 @@ func (sa *Safetrade) spotWsLoadDepth(symbol, id string) {
 	sa.spotWsPublicConnMtx.Unlock()
 }
 func (sa *Safetrade) spotWsHandleDepth(symbol string, data []byte, ch chan<- any) {
-	recv := struct {
-		Asks [][2]decimal.Decimal `json:"asks"`
-		Bids [][2]decimal.Decimal `json:"bids"`
-	}{}
-	if err := json.Unmarshal(data, &recv); err != nil {
+	recv := SafetradeDepth{}
+	if err := easyjson.Unmarshal(data, &recv); err != nil {
 		ilog.Error(sa.Name() + " spot.ws.public invalid depth msg:" + string(data))
 		return
 	}
