@@ -102,7 +102,7 @@ func (sa *Safetrade) SpotWsPublicLoop(ch chan<- any) {
 	defer close(ch)
 	symbol := "PRLUSDT"
 	for {
-		time.Sleep(800*time.Millisecond)
+		time.Sleep(800 * time.Millisecond)
 		if sa.SpotWsPublicIsClosed() {
 			break
 		}

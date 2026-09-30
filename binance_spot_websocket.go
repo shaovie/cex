@@ -87,56 +87,20 @@ func (bn *Binance) SpotWsPublicOpen() error {
 	return nil
 }
 func (bn *Binance) SpotWsPublicSubscribe(channels []string) {
-	if len(channels) == 0 {
-		return
-	}
-	arg := BnSubscribeArg{Method: "SUBSCRIBE"}
-	arg.Id = "sub-" + gutils.RandomStr(12)
-	for _, c := range channels {
-		arr := strings.Split(c, "@")
-		if arr[0] == "orderbook5" {
-			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.SplitSeq(arr[1], ",")
-				for sym := range symbolArr {
-					arg.Params = append(arg.Params, strings.ToLower(sym)+"@depth5@100ms")
-				}
-			}
-		} else if arr[0] == "bbo" {
-			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.SplitSeq(arr[1], ",")
-				for sym := range symbolArr {
-					arg.Params = append(arg.Params, strings.ToLower(sym)+"@bookTicker")
-				}
-			}
-		} else if arr[0] == "ticker" {
-			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.SplitSeq(arr[1], ",")
-				for sym := range symbolArr {
-					arg.Params = append(arg.Params, strings.ToLower(sym)+"@miniTicker")
-				}
-			}
-		} else if arr[0] == "trades" {
-			if len(arr) > 1 && len(arr[1]) > 0 {
-				symbolArr := strings.SplitSeq(arr[1], ",")
-				for sym := range symbolArr {
-					arg.Params = append(arg.Params, strings.ToLower(sym)+"@aggTrade")
-				}
-			}
-		}
-	}
-	if len(arg.Params) > 0 {
-		req, _ := json.Marshal(&arg)
-		bn.spotWsPublicConnMtx.Lock()
-		bn.spotWsPublicConn.WriteMessage(websocket.TextMessage, req)
-		bn.spotWsPublicConnMtx.Unlock()
-	}
+	bn.spotWsPublicStream("SUBSCRIBE", channels)
 }
 func (bn *Binance) SpotWsPublicUnsubscribe(channels []string) {
+	bn.spotWsPublicStream("UNSUBSCRIBE", channels)
+}
+func (bn *Binance) spotWsPublicStream(t string, channels []string) {
 	if len(channels) == 0 {
 		return
 	}
-	arg := BnSubscribeArg{Method: "UNSUBSCRIBE"}
-	arg.Id = "unsub-" + gutils.RandomStr(12)
+	arg := BnSubscribeArg{Method: t}
+	arg.Id = "sub-" + gutils.RandomStr(12)
+	if t == "UNSUBSCRIBE" {
+		arg.Id = "unsub-" + gutils.RandomStr(12)
+	}
 	for _, c := range channels {
 		arr := strings.Split(c, "@")
 		if arr[0] == "orderbook5" {

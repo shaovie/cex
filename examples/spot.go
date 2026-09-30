@@ -247,26 +247,26 @@ func main() {
 	//ilog.Rinfo("%v", *order)
 	//testRest(cexObj)
 	/*
-		_, err = cexObj.Withdrawal("USDT", "asfdsafdsdf", "232323", "", decimal.NewFromFloat(1000))
-		if err != nil {
-			ilog.Rinfo("Withdrawal%s", err.Error())
-		}
+			_, err = cexObj.Withdrawal("USDT", "asfdsafdsdf", "232323", "", decimal.NewFromFloat(1000))
+			if err != nil {
+				ilog.Rinfo("Withdrawal%s", err.Error())
+			}
 
-	wh, err := cexObj.GetWithdrawalHistory("AR")
-	if err != nil {
-		ilog.Rinfo("GetWithdrawalHistory %s", err.Error())
-	}
-	for _, v := range wh {
-		ilog.Rinfo("%v ", v)
-	}
-	return
-	wh2, err := cexObj.GetDepositAddress("USDT", "")
-	if err != nil {
-		ilog.Rinfo("GetDepositAddress %s", err.Error())
-	}
-	for _, v := range wh2 {
-		ilog.Rinfo("%v", v)
-	}
+		wh, err := cexObj.GetWithdrawalHistory("AR")
+		if err != nil {
+			ilog.Rinfo("GetWithdrawalHistory %s", err.Error())
+		}
+		for _, v := range wh {
+			ilog.Rinfo("%v ", v)
+		}
+		return
+		wh2, err := cexObj.GetDepositAddress("USDT", "")
+		if err != nil {
+			ilog.Rinfo("GetDepositAddress %s", err.Error())
+		}
+		for _, v := range wh2 {
+			ilog.Rinfo("%v", v)
+		}
 	*/
 	testPubWs(cexObj)
 	//testPrivWs(cexObj)
