@@ -1,8 +1,6 @@
 package cex
 
 import (
-	"encoding/json"
-
 	"github.com/shopspring/decimal"
 )
 
@@ -24,9 +22,9 @@ type GateContractOrderBook struct {
 	Asks   []GateContractOrderBookTick `json:"asks,omitempty"`
 }
 type GateWsSpotPubMsg struct {
-	Channel string          `json:"channel,omitempty"`
-	Event   string          `json:"event,omitempty"`
-	Data    json.RawMessage `json:"result,omitempty"`
+	Channel string    `json:"channel,omitempty"`
+	Event   string    `json:"event,omitempty"`
+	Data    WsRawJSON `json:"result,omitempty"`
 }
 
 func (v *GateWsSpotPubMsg) reset() {
@@ -45,9 +43,9 @@ type GateSpotBBO struct {
 }
 
 type GateWsContractPubMsg struct {
-	Channel string          `json:"channel,omitempty"`
-	Event   string          `json:"event,omitempty"`
-	Data    json.RawMessage `json:"result,omitempty"`
+	Channel string    `json:"channel,omitempty"`
+	Event   string    `json:"event,omitempty"`
+	Data    WsRawJSON `json:"result,omitempty"`
 }
 type GateSpot24hTicker struct {
 	Symbol      string          `json:"currency_pair"`

@@ -1,8 +1,6 @@
 package cex
 
 import (
-	"encoding/json"
-
 	"github.com/shopspring/decimal"
 )
 
@@ -19,8 +17,8 @@ type OkxWsPubMsg struct {
 		Channel string `json:"channel,omitempty"`
 		Symbol  string `json:"instId,omitempty"`
 	} `json:"arg"`
-	Event string          `json:"event,omitempty"`
-	Data  json.RawMessage `json:"data,omitempty"`
+	Event string    `json:"event,omitempty"`
+	Data  WsRawJSON `json:"data,omitempty"`
 }
 
 func (v *OkxWsPubMsg) reset() {

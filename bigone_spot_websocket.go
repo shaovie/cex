@@ -294,7 +294,7 @@ func (bo *Bigone) SpotWsPublicClose() {
 	bo.spotWsPublicClosed = true
 	bo.spotWsPublicConn.Close()
 }
-func (bo *Bigone) spotWsHandleOrderBookSnap(data json.RawMessage) (string, bool) {
+func (bo *Bigone) spotWsHandleOrderBookSnap(data []byte) (string, bool) {
 	depth := bo.spotWsPublicOrderBookInnerPool.Get().(*BigoneSpotOrderBook)
 	defer bo.spotWsPublicOrderBookInnerPool.Put(depth)
 	depth.Depth.Bids = depth.Depth.Bids[:0]
@@ -324,7 +324,7 @@ func (bo *Bigone) spotWsHandleOrderBookSnap(data json.RawMessage) (string, bool)
 	}
 	return "", false
 }
-func (bo *Bigone) spotWsHandleOrderBookUpdate(data json.RawMessage) (string, bool) {
+func (bo *Bigone) spotWsHandleOrderBookUpdate(data []byte) (string, bool) {
 	depth := bo.spotWsPublicOrderBookInnerPool.Get().(*BigoneSpotOrderBook)
 	defer bo.spotWsPublicOrderBookInnerPool.Put(depth)
 	depth.Depth.Bids = depth.Depth.Bids[:0]
@@ -390,7 +390,7 @@ func (bo *Bigone) spotWsHandleOrderBook5(symbol string, ch chan<- any) {
 	}
 	ch <- obd
 }
-func (bo *Bigone) spotWsHandleBBO(data json.RawMessage, ch chan<- any) {
+func (bo *Bigone) spotWsHandleBBO(data []byte, ch chan<- any) {
 	bbo := boSpotWsPublicBBOInnerPool.Get().(*BigoneSpotBBO)
 	defer boSpotWsPublicBBOInnerPool.Put(bbo)
 	bbo.reset()
@@ -425,7 +425,7 @@ func (bo *Bigone) spotWsHandleBBO(data json.RawMessage, ch chan<- any) {
 		}
 	}
 }
-func (bo *Bigone) spotWsHandleBBOSnap(data json.RawMessage, ch chan<- any) {
+func (bo *Bigone) spotWsHandleBBOSnap(data []byte, ch chan<- any) {
 	bbos := boSpotWsPublicBBOsInnerPool.Get().(*BigoneSpotBBOs)
 	defer boSpotWsPublicBBOsInnerPool.Put(bbos)
 	bbos.reset()
@@ -446,7 +446,7 @@ func (bo *Bigone) spotWsHandleBBOSnap(data json.RawMessage, ch chan<- any) {
 		}
 	}
 }
-func (bo *Bigone) spotWsHandleTradeSpap(data json.RawMessage, ch chan<- any) {
+func (bo *Bigone) spotWsHandleTradeSpap(data []byte, ch chan<- any) {
 	trs := struct {
 		Trades []struct {
 			Symbol string          `json:"market"`
@@ -467,7 +467,7 @@ func (bo *Bigone) spotWsHandleTradeSpap(data json.RawMessage, ch chan<- any) {
 		}
 	}
 }
-func (bo *Bigone) spotWsHandleTradeUpdate(data json.RawMessage, ch chan<- any) {
+func (bo *Bigone) spotWsHandleTradeUpdate(data []byte, ch chan<- any) {
 	tr := struct {
 		Trade struct {
 			Symbol string          `json:"market"`
@@ -641,7 +641,7 @@ func (bo *Bigone) SpotWsPrivateLoop(ch chan<- any) {
 		boSpotWsPrivMsgPool.Put(msg)
 	}
 }
-func (bo *Bigone) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
+func (bo *Bigone) spotWsHandleOrder(data []byte, ch chan<- any) {
 	order := struct {
 		Order struct {
 			Symbol    string          `json:"market,omitempty"`
@@ -691,7 +691,7 @@ func (bo *Bigone) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
 		ch <- so
 	}
 }
-func (bo *Bigone) spotWsHandleAccountSnap(data json.RawMessage, ch chan<- any) {
+func (bo *Bigone) spotWsHandleAccountSnap(data []byte, ch chan<- any) {
 	soL := struct {
 		Accounts []struct {
 			Symbol  string          `json:"asset"`
@@ -713,7 +713,7 @@ func (bo *Bigone) spotWsHandleAccountSnap(data json.RawMessage, ch chan<- any) {
 		}
 	}
 }
-func (bo *Bigone) spotWsHandleAccountUpdate(data json.RawMessage, ch chan<- any) {
+func (bo *Bigone) spotWsHandleAccountUpdate(data []byte, ch chan<- any) {
 	as := struct {
 		Account struct {
 			Symbol  string          `json:"asset"`

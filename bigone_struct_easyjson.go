@@ -38,49 +38,37 @@ func easyjson12993614DecodeGithubComShaovieCex(in *jlexer.Lexer, out *BigoneSpot
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.DepthSnap).UnmarshalJSON(data))
-				}
+				(out.DepthSnap).UnmarshalEasyJSON(in)
 			}
 		case "depthUpdate":
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.DepthUpdate).UnmarshalJSON(data))
-				}
+				(out.DepthUpdate).UnmarshalEasyJSON(in)
 			}
 		case "tickersSnapshot":
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.TickerSnap).UnmarshalJSON(data))
-				}
+				(out.TickerSnap).UnmarshalEasyJSON(in)
 			}
 		case "tickerUpdate":
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.TickerUpdate).UnmarshalJSON(data))
-				}
+				(out.TickerUpdate).UnmarshalEasyJSON(in)
 			}
 		case "tradesSnapshot":
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.TradeSnap).UnmarshalJSON(data))
-				}
+				(out.TradeSnap).UnmarshalEasyJSON(in)
 			}
 		case "tradeUpdate":
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.TradeUpdate).UnmarshalJSON(data))
-				}
+				(out.TradeUpdate).UnmarshalEasyJSON(in)
 			}
 		default:
 			in.SkipRecursive()
@@ -235,25 +223,19 @@ func easyjson12993614DecodeGithubComShaovieCex1(in *jlexer.Lexer, out *BigoneSpo
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.OrderUpdate).UnmarshalJSON(data))
-				}
+				(out.OrderUpdate).UnmarshalEasyJSON(in)
 			}
 		case "accountsSnapshot":
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.AccountSnap).UnmarshalJSON(data))
-				}
+				(out.AccountSnap).UnmarshalEasyJSON(in)
 			}
 		case "accountUpdate":
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.AccountUpdate).UnmarshalJSON(data))
-				}
+				(out.AccountUpdate).UnmarshalEasyJSON(in)
 			}
 		default:
 			in.SkipRecursive()

@@ -1,14 +1,12 @@
 package cex
 
-import (
-	"encoding/json"
-)
+import ()
 
 type KrakenWsMsg struct {
-	Method  string          `json:"method"`
-	Channel string          `json:"channel"`
-	Type    string          `json:"type"`
-	Data    json.RawMessage `json:"data"`
+	Method  string    `json:"method"`
+	Channel string    `json:"channel"`
+	Type    string    `json:"type"`
+	Data    WsRawJSON `json:"data"`
 }
 
 func (v *KrakenWsMsg) reset() {

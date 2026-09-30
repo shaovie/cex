@@ -44,9 +44,7 @@ func easyjsonBb14c8deDecodeGithubComShaovieCex(in *jlexer.Lexer, out *OkxWsPubMs
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.Data).UnmarshalJSON(data))
-				}
+				(out.Data).UnmarshalEasyJSON(in)
 			}
 		default:
 			in.SkipRecursive()

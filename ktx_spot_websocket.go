@@ -173,7 +173,7 @@ func (ktx *Ktx) SpotWsPublicClose() {
 	ktx.spotWsPublicClosed = true
 	ktx.spotWsPublicConn.Close()
 }
-func (ktx *Ktx) spotWsHandleBBO(data json.RawMessage, ch chan<- any) {
+func (ktx *Ktx) spotWsHandleBBO(data []byte, ch chan<- any) {
 	bbo := KtxTicker{}
 	if err := easyjson.Unmarshal(data, &bbo); err == nil {
 		obd := wsPublicBBOPool.Get().(*BestBidAsk)

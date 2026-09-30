@@ -1,17 +1,15 @@
 package cex
 
 import (
-	"encoding/json"
-
 	"github.com/shopspring/decimal"
 )
 
 type BybitWsPubMsg struct {
-	Time  int64           `json:"ts,omitempty"`
-	Op    string          `json:"op,omitempty"`
-	Topic string          `json:"topic,omitempty"`
-	Type  string          `json:"type,omitempty"`
-	Data  json.RawMessage `json:"data,omitempty"`
+	Time  int64     `json:"ts,omitempty"`
+	Op    string    `json:"op,omitempty"`
+	Topic string    `json:"topic,omitempty"`
+	Type  string    `json:"type,omitempty"`
+	Data  WsRawJSON `json:"data,omitempty"`
 }
 
 func (v *BybitWsPubMsg) reset() {

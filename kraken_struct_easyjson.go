@@ -53,9 +53,7 @@ func easyjsonB9295facDecodeGithubComShaovieCex(in *jlexer.Lexer, out *KrakenWsMs
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.Data).UnmarshalJSON(data))
-				}
+				(out.Data).UnmarshalEasyJSON(in)
 			}
 		default:
 			in.SkipRecursive()

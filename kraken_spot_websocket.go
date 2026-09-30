@@ -271,7 +271,7 @@ type KrakenSpotOrderBook struct {
 	Checksum int64 `json:"checksum"`
 }
 
-func (kk *Kraken) spotWsHandleOrderBookSnap(data json.RawMessage) (string, bool) {
+func (kk *Kraken) spotWsHandleOrderBookSnap(data []byte) (string, bool) {
 	obs := kkSpotWsPublicOrderBookInnerPool.Get().([]KrakenSpotOrderBook)
 	defer func() {
 		kkSpotWsPublicOrderBookInnerPool.Put(obs)
@@ -313,7 +313,7 @@ func (kk *Kraken) spotWsHandleOrderBookSnap(data json.RawMessage) (string, bool)
 	}
 	return "", false
 }
-func (kk *Kraken) spotWsHandleOrderBookUpdate(data json.RawMessage) (string, bool) {
+func (kk *Kraken) spotWsHandleOrderBookUpdate(data []byte) (string, bool) {
 	obs := kkSpotWsPublicOrderBookInnerPool.Get().([]KrakenSpotOrderBook)
 	defer func() {
 		kkSpotWsPublicOrderBookInnerPool.Put(obs)
@@ -393,7 +393,7 @@ type KrakenSpotTicker struct {
 	AskQty   decimal.Decimal `json:"ask_qty"`
 }
 
-func (kk *Kraken) spotWsHandleBBO(data json.RawMessage, ch chan<- any) {
+func (kk *Kraken) spotWsHandleBBO(data []byte, ch chan<- any) {
 	bbo := kkSpotWsPublicBBOInnerPool.Get().([]KrakenSpotTicker)
 	defer func() {
 		kkSpotWsPublicBBOInnerPool.Put(bbo)
@@ -606,7 +606,7 @@ func (kk *Kraken) clearKrakenOrderCache(now int64) {
 		delete(kk.spotWsOrderCachedInfo, k)
 	}
 }
-func (kk *Kraken) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
+func (kk *Kraken) spotWsHandleOrder(data []byte, ch chan<- any) {
 	type Fee struct {
 		Asset string          `json:"asset"` // 币种
 		Qty   decimal.Decimal `json:"qty"`   // 数量
@@ -677,7 +677,7 @@ func (kk *Kraken) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
 		kk.clearKrakenOrderCache(now)
 	}
 }
-func (kk *Kraken) spotWsHandleAccountUpdate(data json.RawMessage, ch chan<- any) {
+func (kk *Kraken) spotWsHandleAccountUpdate(data []byte, ch chan<- any) {
 	soL := []struct {
 		Symbol  string          `json:"asset"`
 		Balance decimal.Decimal `json:"balance"`
@@ -695,7 +695,7 @@ func (kk *Kraken) spotWsHandleAccountUpdate(data json.RawMessage, ch chan<- any)
 		}
 	}
 }
-func (kk *Kraken) spotWsHandleAccountSnap(data json.RawMessage, ch chan<- any) {
+func (kk *Kraken) spotWsHandleAccountSnap(data []byte, ch chan<- any) {
 	soL := []struct {
 		Symbol  string          `json:"asset"`
 		Balance decimal.Decimal `json:"balance"`

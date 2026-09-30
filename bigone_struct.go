@@ -1,8 +1,6 @@
 package cex
 
 import (
-	"encoding/json"
-
 	"github.com/shopspring/decimal"
 )
 
@@ -50,12 +48,12 @@ type BigoneSpotWsPubMsg struct {
 		Msg  string `json:"message"`
 	} `json:"error"`
 
-	DepthSnap    json.RawMessage `json:"depthSnapshot"`
-	DepthUpdate  json.RawMessage `json:"depthUpdate"`
-	TickerSnap   json.RawMessage `json:"tickersSnapshot"`
-	TickerUpdate json.RawMessage `json:"tickerUpdate"`
-	TradeSnap    json.RawMessage `json:"tradesSnapshot"`
-	TradeUpdate  json.RawMessage `json:"tradeUpdate"`
+	DepthSnap    WsRawJSON `json:"depthSnapshot"`
+	DepthUpdate  WsRawJSON `json:"depthUpdate"`
+	TickerSnap   WsRawJSON `json:"tickersSnapshot"`
+	TickerUpdate WsRawJSON `json:"tickerUpdate"`
+	TradeSnap    WsRawJSON `json:"tradesSnapshot"`
+	TradeUpdate  WsRawJSON `json:"tradeUpdate"`
 }
 
 func (v *BigoneSpotWsPubMsg) reset() {
@@ -89,9 +87,9 @@ type BigoneSpotWsPrivMsg struct {
 		Msg  string `json:"message"`
 	} `json:"error"`
 
-	OrderUpdate   json.RawMessage `json:"orderUpdate"`
-	AccountSnap   json.RawMessage `json:"accountsSnapshot"`
-	AccountUpdate json.RawMessage `json:"accountUpdate"`
+	OrderUpdate   WsRawJSON `json:"orderUpdate"`
+	AccountSnap   WsRawJSON `json:"accountsSnapshot"`
+	AccountUpdate WsRawJSON `json:"accountUpdate"`
 }
 
 func (v *BigoneSpotWsPrivMsg) reset() {

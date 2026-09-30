@@ -1,16 +1,14 @@
 package cex
 
 import (
-	"encoding/json"
-
 	"github.com/shopspring/decimal"
 )
 
 type KtxWsPubMsg struct {
-	Pong   float64         `json:"pong"`
-	Op     string          `json:"op"`
-	Stream string          `json:"stream"`
-	Data   json.RawMessage `json:"data,omitempty"`
+	Pong   float64   `json:"pong"`
+	Op     string    `json:"op"`
+	Stream string    `json:"stream"`
+	Data   WsRawJSON `json:"data,omitempty"`
 }
 
 func (v *KtxWsPubMsg) reset() {

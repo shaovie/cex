@@ -161,7 +161,7 @@ func (sa *Safetrade) SpotWsPublicLoop_(ch chan<- any) {
 		}
 
 		ilog.Rinfo(string(recv))
-		msg := make(map[string]json.RawMessage, 2)
+		msg := make(map[string]WsRawJSON, 2)
 		if err = json.Unmarshal(recv, &msg); err != nil {
 			ilog.Error(sa.Name() + " spot.ws.public recv invalid msg:" + string(recv))
 			continue
@@ -232,7 +232,7 @@ func (sa *Safetrade) spotWsLoadDepth(symbol, id string) {
 	sa.spotWsOrderBookAsks[symbol] = asks
 	sa.spotWsPublicConnMtx.Unlock()
 }
-func (sa *Safetrade) spotWsHandleDepth(symbol string, data json.RawMessage, ch chan<- any) {
+func (sa *Safetrade) spotWsHandleDepth(symbol string, data []byte, ch chan<- any) {
 	recv := struct {
 		Asks [][2]decimal.Decimal `json:"asks"`
 		Bids [][2]decimal.Decimal `json:"bids"`

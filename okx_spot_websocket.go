@@ -261,7 +261,7 @@ func (ok *Okx) SpotWsPublicClose() {
 	ok.spotWsPublicClosed = true
 	ok.spotWsPublicConn.Close()
 }
-func (ok *Okx) spotWsHandleOrderBook5(symbol string, data json.RawMessage, ch chan<- any) {
+func (ok *Okx) spotWsHandleOrderBook5(symbol string, data []byte, ch chan<- any) {
 	before, after, ok0 := strings.Cut(symbol, "-")
 	if !ok0 {
 		return
@@ -292,7 +292,7 @@ func (ok *Okx) spotWsHandleOrderBook5(symbol string, data json.RawMessage, ch ch
 		}
 	}
 }
-func (ok *Okx) spotWsHandleBBO(symbol string, data json.RawMessage, ch chan<- any) {
+func (ok *Okx) spotWsHandleBBO(symbol string, data []byte, ch chan<- any) {
 	before, after, ok0 := strings.Cut(symbol, "-")
 	if !ok0 {
 		return
@@ -319,7 +319,7 @@ func (ok *Okx) spotWsHandleBBO(symbol string, data json.RawMessage, ch chan<- an
 		}
 	}
 }
-func (ok *Okx) spotWsHandle24hTickers(data json.RawMessage, ch chan<- any) {
+func (ok *Okx) spotWsHandle24hTickers(data []byte, ch chan<- any) {
 	tickers := ok.spotWsPublicTickerInnerPool.Get().([]Okx24hTicker)
 	defer ok.spotWsPublicTickerInnerPool.Put(tickers)
 	if err := json.Unmarshal(data, &tickers); err == nil {
@@ -433,8 +433,8 @@ type OkxWsPrivMsg struct {
 	Arg struct {
 		Channel string `json:"channel,omitempty"`
 	} `json:"arg"`
-	Event string          `json:"event,omitempty"`
-	Data  json.RawMessage `json:"data,omitempty"`
+	Event string    `json:"event,omitempty"`
+	Data  WsRawJSON `json:"data,omitempty"`
 }
 
 func (v *OkxWsPrivMsg) reset() {
@@ -543,7 +543,7 @@ func (ok *Okx) SpotWsPrivateClose() {
 	ok.spotWsPrivateClosed = true
 	ok.spotWsPrivateConn.Close()
 }
-func (ok *Okx) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
+func (ok *Okx) spotWsHandleOrder(data []byte, ch chan<- any) {
 	orders := []struct {
 		InstType    string          `json:"instType"`
 		Symbol      string          `json:"instId"`
@@ -594,7 +594,7 @@ func (ok *Okx) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
 		}
 	}
 }
-func (ok *Okx) spotWsHandleBalanceUpdate(data json.RawMessage, ch chan<- any) {
+func (ok *Okx) spotWsHandleBalanceUpdate(data []byte, ch chan<- any) {
 	msg := []struct {
 		B []struct {
 			Symbol  string          `json:"ccy"` // symbol
@@ -613,7 +613,7 @@ func (ok *Okx) spotWsHandleBalanceUpdate(data json.RawMessage, ch chan<- any) {
 		}
 	}
 }
-func (ok *Okx) spotWsHandlePlaceOrderResp(reqId string, data json.RawMessage, ch chan<- any) {
+func (ok *Okx) spotWsHandlePlaceOrderResp(reqId string, data []byte, ch chan<- any) {
 	ret := []struct {
 		OrderId  string `json:"ordId,omitempty"`
 		ClientId string `json:"clOrdId,omitempty"`
@@ -640,7 +640,7 @@ func (ok *Okx) spotWsHandlePlaceOrderResp(reqId string, data json.RawMessage, ch
 		}
 	}
 }
-func (ok *Okx) spotWsHandleCancelOrderResp(reqId string, data json.RawMessage, ch chan<- any) {
+func (ok *Okx) spotWsHandleCancelOrderResp(reqId string, data []byte, ch chan<- any) {
 	ret := []struct {
 		OrderId string `json:"ordId,omitempty"`
 		Code    string `json:"sCode,omitempty"`

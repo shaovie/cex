@@ -133,9 +133,9 @@ func (bn *Binance) UnifiedWsLoop(ch chan<- any) {
 	}(listenKeyExit)
 
 	type Msg struct {
-		Event  string          `json:"e,omitempty"`
-		Time   int64           `json:"E,omitempty"` // msec
-		Result json.RawMessage `json:"B,omitempty"`
+		Event  string    `json:"e,omitempty"`
+		Time   int64     `json:"E,omitempty"` // msec
+		Result WsRawJSON `json:"B,omitempty"`
 	}
 	for {
 		_, recv, err := bn.unifiedWsConn.ReadMessage()
@@ -156,7 +156,7 @@ func (bn *Binance) UnifiedWsLoop(ch chan<- any) {
 		}
 	}
 }
-func (bn *Binance) unifiedWsHandleBalance(data json.RawMessage, ch chan<- any) {
+func (bn *Binance) unifiedWsHandleBalance(data []byte, ch chan<- any) {
 	bl := []struct {
 		Symbol string          `json:"a"`
 		Avail  decimal.Decimal `json:"f"`

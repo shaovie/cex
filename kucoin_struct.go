@@ -1,17 +1,15 @@
 package cex
 
 import (
-	"encoding/json"
-
 	"github.com/shopspring/decimal"
 )
 
 type KucoinWsPubMsg struct {
-	Type    string          `json:"type"`
-	Channel string          `json:"T"`
-	T       string          `json:"t"`
-	Depth   string          `json:"dp"`
-	Data    json.RawMessage `json:"d"`
+	Type    string    `json:"type"`
+	Channel string    `json:"T"`
+	T       string    `json:"t"`
+	Depth   string    `json:"dp"`
+	Data    WsRawJSON `json:"d"`
 }
 
 func (v *KucoinWsPubMsg) reset() {

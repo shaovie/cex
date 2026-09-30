@@ -181,7 +181,6 @@ func (bn *Binance) SpotWsPublicLoop(ch chan<- any) {
 	}(pingExit)
 
 	l := 0
-	var data json.RawMessage
 	for {
 		_, recv, err := bn.spotWsPublicConn.ReadMessage()
 		if err != nil {
@@ -200,16 +199,15 @@ func (bn *Binance) SpotWsPublicLoop(ch chan<- any) {
 			ilog.Error(bn.Name() + " spot.ws.public recv subscribe err:" + string(recv))
 			goto END
 		}
-		data = json.RawMessage(msg.Data)
 		l = len(msg.Stream)
 		if l > 11 && msg.Stream[l-11:l] == "@bookTicker" {
-			bn.spotWsHandleBBO(data, ch)
+			bn.spotWsHandleBBO(msg.Data, ch)
 		} else if l > 13 && msg.Stream[l-13:l] == "@depth5@100ms" {
-			bn.spotWsHandleOrderBook5(strings.ToUpper(msg.Stream[0:l-13]), data, ch)
+			bn.spotWsHandleOrderBook5(strings.ToUpper(msg.Stream[0:l-13]), msg.Data, ch)
 		} else if l > 11 && msg.Stream[l-11:l] == "@miniTicker" {
-			bn.spotWsHandle24hTickers(data, ch)
+			bn.spotWsHandle24hTickers(msg.Data, ch)
 		} else if l > 9 && msg.Stream[l-9:l] == "@aggTrade" {
-			bn.spotWsHandlePublicTrade(data, ch)
+			bn.spotWsHandlePublicTrade(msg.Data, ch)
 		} else {
 			if !bytes.Contains(recv, []byte(`"result":null`)) {
 				ilog.Error(bn.Name() + " spot.ws.public recv unknown msg: " + string(recv))
@@ -233,7 +231,7 @@ func (bn *Binance) SpotWsPublicClose() {
 	bn.spotWsPublicClosed = true
 	bn.spotWsPublicConn.Close()
 }
-func (bn *Binance) spotWsHandleOrderBook5(symbol string, data json.RawMessage, ch chan<- any) {
+func (bn *Binance) spotWsHandleOrderBook5(symbol string, data []byte, ch chan<- any) {
 	depth := bnSpotWsPublicOrderBookInnerPool.Get().(*BinanceSpotOrderBook)
 	defer bnSpotWsPublicOrderBookInnerPool.Put(depth)
 	depth.reset()
@@ -259,7 +257,7 @@ func (bn *Binance) spotWsHandleOrderBook5(symbol string, data json.RawMessage, c
 		ch <- obd
 	}
 }
-func (bn *Binance) spotWsHandleBBO(data json.RawMessage, ch chan<- any) {
+func (bn *Binance) spotWsHandleBBO(data []byte, ch chan<- any) {
 	bbo := bnSpotWsPublicBBOInnerPool.Get().(*BinanceSpotBBO)
 	defer bnSpotWsPublicBBOInnerPool.Put(bbo)
 	if err := easyjson.Unmarshal(data, bbo); err == nil {
@@ -273,7 +271,7 @@ func (bn *Binance) spotWsHandleBBO(data json.RawMessage, ch chan<- any) {
 		ch <- obd
 	}
 }
-func (bn *Binance) spotWsHandle24hTickers(data json.RawMessage, ch chan<- any) {
+func (bn *Binance) spotWsHandle24hTickers(data []byte, ch chan<- any) {
 	ticker := bnSpotWsPublicTickerInnerPool.Get().(*BinanceSpot24hTicker)
 	defer bnSpotWsPublicTickerInnerPool.Put(ticker)
 	if err := json.Unmarshal(data, ticker); err == nil {
@@ -285,7 +283,7 @@ func (bn *Binance) spotWsHandle24hTickers(data json.RawMessage, ch chan<- any) {
 		ch <- tk
 	}
 }
-func (bn *Binance) spotWsHandlePublicTrade(data json.RawMessage, ch chan<- any) {
+func (bn *Binance) spotWsHandlePublicTrade(data []byte, ch chan<- any) {
 	tr := bnSpotWsPublicTradeInnerPool.Get().(*BinanceSpotPublicTrade)
 	defer bnSpotWsPublicTradeInnerPool.Put(tr)
 	if err := easyjson.Unmarshal(data, tr); err == nil {
@@ -388,7 +386,7 @@ type BnSpotWsPrivMsg struct {
 		Code int    `json:"code,omitempty"`
 		Msg  string `json:"msg,omitempty"`
 	} `json:"error"`
-	Result json.RawMessage `json:"result,omitempty"`
+	Result WsRawJSON `json:"result,omitempty"`
 
 	Data struct {
 		Event string `json:"e,omitempty"`
@@ -476,7 +474,7 @@ func (bn *Binance) SpotWsPrivateLoop(ch chan<- any) {
 		bnSpotWsPrivMsgPool.Put(msg)
 	}
 }
-func (bn *Binance) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
+func (bn *Binance) spotWsHandleOrder(data []byte, ch chan<- any) {
 	order := struct {
 		Data struct {
 			ClientId     string          `json:"c,omitempty"` //
@@ -528,7 +526,7 @@ func (bn *Binance) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
 		}
 	}
 }
-func (bn *Binance) spotWsHandleBalanceUpdate(data json.RawMessage, ch chan<- any) {
+func (bn *Binance) spotWsHandleBalanceUpdate(data []byte, ch chan<- any) {
 	msg := struct {
 		Event struct {
 			B []struct {
@@ -550,7 +548,7 @@ func (bn *Binance) spotWsHandleBalanceUpdate(data json.RawMessage, ch chan<- any
 	}
 }
 func (bn *Binance) spotWsHandlePlaceOrderResp(reqId, errS string,
-	data json.RawMessage, ch chan<- any) {
+	data []byte, ch chan<- any) {
 	if errS != "" {
 		order := &SpotOrder{
 			RequestId: reqId,

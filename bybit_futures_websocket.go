@@ -171,7 +171,7 @@ func (bb *Bybit) FuturesWsPrivateLoop(ch chan<- any) {
 		bbWsPrivMsgPool.Put(msg)
 	}
 }
-func (bb *Bybit) futuresWsHandleOrder(data json.RawMessage, ch chan<- any) {
+func (bb *Bybit) futuresWsHandleOrder(data []byte, ch chan<- any) {
 	orders := []struct {
 		Symbol       string            `json:"symbol"` // BTCUSDT
 		OrderId      string            `json:"orderId"`
@@ -219,7 +219,7 @@ func (bb *Bybit) futuresWsHandleOrder(data json.RawMessage, ch chan<- any) {
 		}
 	}
 }
-func (bb *Bybit) futuresWsHandlePosition(data json.RawMessage, ch chan<- any) {
+func (bb *Bybit) futuresWsHandlePosition(data []byte, ch chan<- any) {
 	posL := []struct {
 		Symbol        string          `json:"symbol"` // BTCUSDT
 		Side          string          `json:"side"`   // Buy/Sell,空仓时为""
@@ -255,7 +255,7 @@ func (bb *Bybit) futuresWsHandlePosition(data json.RawMessage, ch chan<- any) {
 		}
 	}
 }
-func (bb *Bybit) futuresWsHandleWallet(data json.RawMessage, ch chan<- any) {
+func (bb *Bybit) futuresWsHandleWallet(data []byte, ch chan<- any) {
 	wallets := []struct {
 		Coin []struct {
 			Symbol string          `json:"coin"`

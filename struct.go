@@ -3,8 +3,33 @@ package cex
 import (
 	"sync"
 
+	"github.com/mailru/easyjson/jlexer"
 	"github.com/shopspring/decimal"
 )
+
+// AI优化，想恢复的话直接把 WsRawJSON改成json.RawMessage，然后重新生成easyjson代码即可
+// WsRawJSON 零拷贝取WS报文里的原始JSON值: 直接指向输入缓冲, 不复制.
+// json.RawMessage的UnmarshalJSON会append一份拷贝, WS热路径上不需要
+type WsRawJSON []byte
+
+// 走easyjson的解码路径
+func (m *WsRawJSON) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	*m = l.Raw()
+}
+
+// 走标准库的解码路径(传进来的同样是输入缓冲的子切片)
+func (m *WsRawJSON) UnmarshalJSON(b []byte) error {
+	*m = b
+	return nil
+}
+
+// 编码路径(WS结构体只解码, 这里是为了生成的encoder能编译)
+func (m WsRawJSON) MarshalJSON() ([]byte, error) {
+	if len(m) == 0 {
+		return []byte("null"), nil
+	}
+	return m, nil
+}
 
 var (
 	wsPublicTickerPool     *sync.Pool

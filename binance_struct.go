@@ -1,18 +1,8 @@
 package cex
 
 import (
-	"github.com/mailru/easyjson/jlexer"
 	"github.com/shopspring/decimal"
 )
-
-// DeespSeek优化
-// BnRawJSON 零拷贝取原始JSON值: 直接指向输入缓冲, 不复制.
-// json.RawMessage的UnmarshalJSON会append一份拷贝, WS热路径上不需要
-type BnRawJSON []byte
-
-func (m *BnRawJSON) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	*m = l.Raw()
-}
 
 type BinanceSpot24hTicker struct {
 	Symbol      string          `json:"s"`
@@ -29,7 +19,7 @@ type BinanceFutures24hTicker struct {
 type BinanceWsPubMsg struct {
 	Code   int       `json:"code,omitempty"`
 	Stream string    `json:"stream,omitempty"`
-	Data   BnRawJSON `json:"data,omitempty"`
+	Data   WsRawJSON `json:"data,omitempty"`
 }
 
 func (v *BinanceWsPubMsg) reset() {

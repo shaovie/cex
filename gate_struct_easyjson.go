@@ -48,9 +48,7 @@ func easyjsonC89930e1DecodeGithubComShaovieCex(in *jlexer.Lexer, out *GateWsSpot
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.Data).UnmarshalJSON(data))
-				}
+				(out.Data).UnmarshalEasyJSON(in)
 			}
 		default:
 			in.SkipRecursive()
@@ -148,9 +146,7 @@ func easyjsonC89930e1DecodeGithubComShaovieCex1(in *jlexer.Lexer, out *GateWsCon
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.Data).UnmarshalJSON(data))
-				}
+				(out.Data).UnmarshalEasyJSON(in)
 			}
 		default:
 			in.SkipRecursive()

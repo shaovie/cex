@@ -1,7 +1,6 @@
 package cex
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -164,7 +163,7 @@ func (kc *Kucoin) SpotWsPublicClose() {
 	kc.spotWsPublicClosed = true
 	kc.spotWsPublicConn.Close()
 }
-func (kc *Kucoin) spotWsHandleBBO(data json.RawMessage, ch chan<- any) {
+func (kc *Kucoin) spotWsHandleBBO(data []byte, ch chan<- any) {
 	bbo := KucoinTicker{}
 	if err := easyjson.Unmarshal(data, &bbo); err == nil && len(bbo.Bids) > 0 && len(bbo.Asks) > 0 {
 		obd := wsPublicBBOPool.Get().(*BestBidAsk)

@@ -219,7 +219,6 @@ func (bn *Binance) FuturesWsPublicLoop(ch chan<- any) {
 	}(pingExit)
 
 	l := 0
-	var data json.RawMessage
 	for {
 		_, recv, err := bn.futuresWsPublicConn.ReadMessage()
 		if err != nil {
@@ -238,14 +237,13 @@ func (bn *Binance) FuturesWsPublicLoop(ch chan<- any) {
 			ilog.Error(bn.Name() + " futures.ws.public recv subscribe err:" + string(recv))
 			goto END
 		}
-		data = json.RawMessage(msg.Data)
 		l = len(msg.Stream)
 		if l > 13 && msg.Stream[l-13:l] == "@depth5@100ms" {
-			bn.futuresWsHandleOrderBook5(data, ch)
+			bn.futuresWsHandleOrderBook5(msg.Data, ch)
 		} else if l > 11 && msg.Stream[l-11:l] == "@bookTicker" {
-			bn.futuresWsHandleBBO(data, ch)
+			bn.futuresWsHandleBBO(msg.Data, ch)
 		} else if l > 11 && msg.Stream[l-11:l] == "@miniTicker" {
-			bn.futuresWsHandle24hTickers(data, ch)
+			bn.futuresWsHandle24hTickers(msg.Data, ch)
 		} else {
 			if !bytes.Contains(recv, []byte(`"result":null`)) {
 				ilog.Error(bn.Name() + " futures.ws.public recv unknown msg: " + string(recv))
@@ -269,7 +267,7 @@ func (bn *Binance) FuturesWsPublicClose() {
 	bn.futuresWsPublicClosed = true
 	bn.futuresWsPublicConn.Close()
 }
-func (bn *Binance) futuresWsHandleOrderBook5(data json.RawMessage, ch chan<- any) {
+func (bn *Binance) futuresWsHandleOrderBook5(data []byte, ch chan<- any) {
 	depth := bnFuturesWsPublicOrderBookInnerPool.Get().(*BinanceFuturesOrderBook)
 	defer bnFuturesWsPublicOrderBookInnerPool.Put(depth)
 	depth.reset()
@@ -299,7 +297,7 @@ func (bn *Binance) futuresWsHandleOrderBook5(data json.RawMessage, ch chan<- any
 		ch <- obd
 	}
 }
-func (bn *Binance) futuresWsHandleBBO(data json.RawMessage, ch chan<- any) {
+func (bn *Binance) futuresWsHandleBBO(data []byte, ch chan<- any) {
 	bbo := bnFuturesWsPublicBBOInnerPool.Get().(*BinanceFuturesBBO)
 	defer bnFuturesWsPublicBBOInnerPool.Put(bbo)
 	if err := easyjson.Unmarshal(data, bbo); err == nil {
@@ -317,7 +315,7 @@ func (bn *Binance) futuresWsHandleBBO(data json.RawMessage, ch chan<- any) {
 		ch <- obd
 	}
 }
-func (bn *Binance) futuresWsHandle24hTickers(data json.RawMessage, ch chan<- any) {
+func (bn *Binance) futuresWsHandle24hTickers(data []byte, ch chan<- any) {
 	ticker := bnFuturesWsPublicTickerInnerPool.Get().(*BinanceFutures24hTicker)
 	defer bnFuturesWsPublicTickerInnerPool.Put(ticker)
 	if err := json.Unmarshal(data, ticker); err == nil {
@@ -486,10 +484,10 @@ func (bn *Binance) FuturesWsPrivateLoop(ch chan<- any) {
 }
 
 type BnFuturesWsPrivMsg struct {
-	Event     string          `json:"e,omitempty"`
-	Time      int64           `json:"E,omitempty"` // msec
-	Result    json.RawMessage `json:"o,omitempty"`
-	ResultPos json.RawMessage `json:"a,omitempty"`
+	Event     string    `json:"e,omitempty"`
+	Time      int64     `json:"E,omitempty"` // msec
+	Result    WsRawJSON `json:"o,omitempty"`
+	ResultPos WsRawJSON `json:"a,omitempty"`
 }
 
 func (v *BnFuturesWsPrivMsg) reset() {
@@ -577,7 +575,7 @@ func (bn *Binance) futuresWsPrivateLoop(ch chan<- any, wg *sync.WaitGroup) {
 		bnFuturesWsPrivMsgPool.Put(msg)
 	}
 }
-func (bn *Binance) futuresWsHandleOrder(data json.RawMessage, ch chan<- any) {
+func (bn *Binance) futuresWsHandleOrder(data []byte, ch chan<- any) {
 	order := struct {
 		ClientId      string          `json:"c"` //
 		OrderId       int64           `json:"i"` //
@@ -631,7 +629,7 @@ func (bn *Binance) futuresWsHandleOrder(data json.RawMessage, ch chan<- any) {
 		ch <- fo
 	}
 }
-func (bn *Binance) futuresWsHandlePosition(data json.RawMessage, ch chan<- any, t int64) {
+func (bn *Binance) futuresWsHandlePosition(data []byte, ch chan<- any, t int64) {
 	pl := struct {
 		Event string `json:"m"`
 		B     []struct {
@@ -718,9 +716,9 @@ func (bn *Binance) futuresWsPrivateApiLoop(ch chan<- any, wg *sync.WaitGroup) {
 	}(pingExit)
 
 	type Msg struct {
-		Id     string          `json:"id"`
-		Status int             `json:"status"`
-		Result json.RawMessage `json:"result"`
+		Id     string    `json:"id"`
+		Status int       `json:"status"`
+		Result WsRawJSON `json:"result"`
 		Err    struct {
 			Code int    `json:"code"`
 			Msg  string `json:"msg"`
@@ -749,7 +747,7 @@ func (bn *Binance) futuresWsPrivateApiLoop(ch chan<- any, wg *sync.WaitGroup) {
 	}
 }
 func (bn *Binance) futuresWsHandlePlaceOrderResp(reqId, errS string,
-	data json.RawMessage, ch chan<- any) {
+	data []byte, ch chan<- any) {
 	if errS != "" {
 		order := &FuturesOrder{
 			RequestId: reqId,

@@ -369,9 +369,9 @@ func (bb *Bybit) SpotWsPrivateClose() {
 }
 
 type BybitWsPrivMsg struct {
-	Op    string          `json:"op"`
-	Topic string          `json:"topic"`
-	Data  json.RawMessage `json:"data"`
+	Op    string    `json:"op"`
+	Topic string    `json:"topic"`
+	Data  WsRawJSON `json:"data"`
 }
 
 func (v *BybitWsPrivMsg) reset() {
@@ -445,7 +445,7 @@ func (bb *Bybit) SpotWsPrivateLoop(ch chan<- any) {
 		bbWsPrivMsgPool.Put(msg)
 	}
 }
-func (bb *Bybit) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
+func (bb *Bybit) spotWsHandleOrder(data []byte, ch chan<- any) {
 	orders := []struct {
 		Symbol       string            `json:"symbol"` // BTCUSDT
 		OrderId      string            `json:"orderId"`
@@ -490,7 +490,7 @@ func (bb *Bybit) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
 		}
 	}
 }
-func (bb *Bybit) spotWsHandleBalanceUpdate(data json.RawMessage, ch chan<- any) {
+func (bb *Bybit) spotWsHandleBalanceUpdate(data []byte, ch chan<- any) {
 	bls := []struct {
 		Coin []struct {
 			Symbol string          `json:"coin"`

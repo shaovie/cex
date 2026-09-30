@@ -250,7 +250,7 @@ func (gt *Gate) SpotWsPublicClose() {
 	gt.spotWsPublicClosed = true
 	gt.spotWsPublicConn.Close()
 }
-func (gt *Gate) spotWsHandleOrderBook(data json.RawMessage, ch chan<- any) {
+func (gt *Gate) spotWsHandleOrderBook(data []byte, ch chan<- any) {
 	depth := gt.spotWsPublicOrderBookInnerPool.Get().(*GateSpotOrderBook)
 	defer gt.spotWsPublicOrderBookInnerPool.Put(depth)
 	depth.Bids = depth.Bids[:0]
@@ -277,7 +277,7 @@ func (gt *Gate) spotWsHandleOrderBook(data json.RawMessage, ch chan<- any) {
 		ch <- obd
 	}
 }
-func (gt *Gate) spotWsHandleBBO(data json.RawMessage, ch chan<- any) {
+func (gt *Gate) spotWsHandleBBO(data []byte, ch chan<- any) {
 	bbo := gtSpotWsPublicBBOInnerPool.Get().(*GateSpotBBO)
 	defer gtSpotWsPublicBBOInnerPool.Put(bbo)
 	if err := easyjson.Unmarshal(data, bbo); err == nil {
@@ -291,7 +291,7 @@ func (gt *Gate) spotWsHandleBBO(data json.RawMessage, ch chan<- any) {
 		ch <- obd
 	}
 }
-func (gt *Gate) spotWsHandle24hTickers(data json.RawMessage, ch chan<- any) {
+func (gt *Gate) spotWsHandle24hTickers(data []byte, ch chan<- any) {
 	ticker := gt.spotWsPublicTickerInnerPool.Get().(*GateSpot24hTicker)
 	defer gt.spotWsPublicTickerInnerPool.Put(ticker)
 	if err := json.Unmarshal(data, ticker); err == nil {
@@ -419,9 +419,9 @@ func (gt *Gate) SpotWsPrivateClose() {
 }
 
 type GtWsPrivMsg struct {
-	Channel string          `json:"channel,omitempty"`
-	Event   string          `json:"event,omitempty"`
-	Data    json.RawMessage `json:"result,omitempty"`
+	Channel string    `json:"channel,omitempty"`
+	Event   string    `json:"event,omitempty"`
+	Data    WsRawJSON `json:"result,omitempty"`
 
 	// api
 	RequestId string `json:"request_id,omitempty"`
@@ -431,7 +431,7 @@ type GtWsPrivMsg struct {
 		Status  string `json:"status,omitempty"` // 200 is ok
 	} `json:"header"`
 	RespData struct {
-		Result json.RawMessage `json:"result,omitempty"`
+		Result WsRawJSON `json:"result,omitempty"`
 		Errs   struct {
 			Label   string `json:"label,omitempty"`
 			Message string `json:"message,omitempty"`
@@ -529,7 +529,7 @@ func (gt *Gate) SpotWsPrivateLoop(ch chan<- any) {
 		gtWsPrivMsgPool.Put(msg)
 	}
 }
-func (gt *Gate) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
+func (gt *Gate) spotWsHandleOrder(data []byte, ch chan<- any) {
 	orders := []struct {
 		Symbol       string          `json:"currency_pair,omitempty"`
 		OrderId      string          `json:"id,omitempty"`
@@ -603,7 +603,7 @@ func (gt *Gate) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
 		}
 	}
 }
-func (gt *Gate) spotWsHandleBalanceUpdate(data json.RawMessage, ch chan<- any) {
+func (gt *Gate) spotWsHandleBalanceUpdate(data []byte, ch chan<- any) {
 	res := []struct {
 		Symbol  string          `json:"currency"` // symbol
 		Total   decimal.Decimal `json:"total"`
@@ -622,7 +622,7 @@ func (gt *Gate) spotWsHandleBalanceUpdate(data json.RawMessage, ch chan<- any) {
 	}
 }
 func (gt *Gate) spotWsHandlePlaceOrderResp(reqId, errS string,
-	data json.RawMessage, ch chan<- any) {
+	data []byte, ch chan<- any) {
 	if errS != "" {
 		order := &SpotOrder{
 			RequestId: reqId,
