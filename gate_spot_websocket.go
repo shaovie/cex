@@ -261,7 +261,7 @@ func (gt *Gate) spotWsHandleOrderBook(data json.RawMessage, ch chan<- any) {
 			return
 		}
 		obd := wsPublicOrderBook5Pool.Get().(*OrderBookDepth)
-		obd.Symbol = strings.ReplaceAll(depth.Symbol, "_", "")
+		obd.Symbol = gt.convSymbol(gt.spotWsPublicSymbolMap, depth.Symbol)
 		obd.Level = len(depth.Bids)
 		obd.Time = depth.Time
 		obd.Bids = obd.Bids[:0]
@@ -282,7 +282,7 @@ func (gt *Gate) spotWsHandleBBO(data json.RawMessage, ch chan<- any) {
 	defer gtSpotWsPublicBBOInnerPool.Put(bbo)
 	if err := easyjson.Unmarshal(data, bbo); err == nil {
 		obd := wsPublicBBOPool.Get().(*BestBidAsk)
-		obd.Symbol = strings.ReplaceAll(bbo.Symbol, "_", "")
+		obd.Symbol = gt.convSymbol(gt.spotWsPublicSymbolMap, bbo.Symbol)
 		obd.Time = bbo.Time // msec
 		obd.BidPrice = bbo.BidPrice
 		obd.BidQty = bbo.BidQty
@@ -296,7 +296,7 @@ func (gt *Gate) spotWsHandle24hTickers(data json.RawMessage, ch chan<- any) {
 	defer gt.spotWsPublicTickerInnerPool.Put(ticker)
 	if err := json.Unmarshal(data, ticker); err == nil {
 		tk := wsPublicTickerPool.Get().(*Pub24hTicker)
-		tk.Symbol = strings.ReplaceAll(ticker.Symbol, "_", "")
+		tk.Symbol = gt.convSymbol(gt.spotWsPublicSymbolMap, ticker.Symbol)
 		tk.LastPrice = ticker.Last
 		tk.Volume = ticker.Volume
 		tk.QuoteVolume = ticker.QuoteVolume
@@ -584,7 +584,7 @@ func (gt *Gate) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
 			t, _ := strconv.ParseInt(order.Time, 10, 64)
 			ut, _ := strconv.ParseInt(order.UTime, 10, 64)
 			ch <- &SpotOrder{
-				Symbol:      strings.ReplaceAll(order.Symbol, "_", ""),
+				Symbol:      gt.convSymbol(gt.spotWsPrivateSymbolMap, order.Symbol),
 				OrderId:     order.OrderId,
 				ClientId:    clientId,
 				Price:       order.Price,

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,11 +32,14 @@ type Gate struct {
 	spotWsPublicClosedMtx          sync.RWMutex
 	spotWsPublicTickerInnerPool    *sync.Pool
 	spotWsPublicOrderBookInnerPool *sync.Pool
+	// 交易所符号 -> 标准符号缓存(BTC_USDT -> BTCUSDT)
+	spotWsPublicSymbolMap map[string]string
 
 	spotWsPrivateConn      *websocket.Conn
 	spotWsPrivateConnMtx   sync.Mutex
 	spotWsPrivateClosed    bool
 	spotWsPrivateClosedMtx sync.RWMutex
+	spotWsPrivateSymbolMap map[string]string
 
 	// contract websocket
 	wsContractPubCon              *websocket.Conn
@@ -137,6 +141,12 @@ func (gt *Gate) Init() error {
 			},
 		}
 	}
+	if gt.spotWsPublicSymbolMap == nil {
+		gt.spotWsPublicSymbolMap = make(map[string]string, 128)
+	}
+	if gt.spotWsPrivateSymbolMap == nil {
+		gt.spotWsPrivateSymbolMap = make(map[string]string, 16)
+	}
 	return nil
 }
 func (gt *Gate) buildHeaders(method, path, params, body string) map[string]string {
@@ -159,6 +169,17 @@ func (gt *Gate) getContractSymbol(symbol string) string {
 	gtContractSymbolMapMtx.RLock()
 	defer gtContractSymbolMapMtx.RUnlock()
 	return gtContractSymbolMap[symbol]
+}
+
+// convSymbol 交易所符号转标准符号(BTC_USDT -> BTCUSDT)
+// m为调用方独占的表(每条流各一个goroutine), 因此不加锁; 命中时零分配
+func (gt *Gate) convSymbol(m map[string]string, symbol string) string {
+	if std, ok := m[symbol]; ok {
+		return std
+	}
+	std := strings.ReplaceAll(symbol, "_", "")
+	m[symbol] = std
+	return std
 }
 func (gt *Gate) handleExceptionResp(api string, resp []byte) error {
 	if len(resp) == 0 {

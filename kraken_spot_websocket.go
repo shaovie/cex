@@ -285,11 +285,10 @@ func (kk *Kraken) spotWsHandleOrderBookSnap(data json.RawMessage) (string, bool)
 	obs = obs[:0]
 	if err := json.Unmarshal(data, &obs); err == nil && len(obs) > 0 {
 		for i := range obs {
-			before, after, ok0 := strings.Cut(obs[i].Symbol, "/")
-			if !ok0 {
+			symbol := kk.convSymbol(kk.spotWsPublicSymbolMap, obs[i].Symbol)
+			if symbol == "" { // 格式不符
 				continue
 			}
-			symbol := before + after
 			kk.spotWsOrderBookSeqId[symbol] = obs[i].Checksum
 			bids := treemap.NewWith[decimal.Decimal, decimal.Decimal](func(a, b decimal.Decimal) int {
 				return b.Compare(a) // desc
@@ -322,11 +321,10 @@ func (kk *Kraken) spotWsHandleOrderBookUpdate(data json.RawMessage) (string, boo
 	obs = obs[:0]
 	if err := json.Unmarshal(data, &obs); err == nil && len(obs) > 0 {
 		for i := range obs {
-			base, quote, ok0 := strings.Cut(obs[i].Symbol, "/")
-			if !ok0 {
+			symbol := kk.convSymbol(kk.spotWsPublicSymbolMap, obs[i].Symbol)
+			if symbol == "" { // 格式不符
 				continue
 			}
-			symbol := base + quote
 			bids := kk.spotWsOrderBookBids[symbol]
 			asks := kk.spotWsOrderBookAsks[symbol]
 			if bids == nil || asks == nil {
@@ -403,12 +401,12 @@ func (kk *Kraken) spotWsHandleBBO(data json.RawMessage, ch chan<- any) {
 	bbo = bbo[:0]
 	if err := json.Unmarshal(data, &bbo); err == nil && len(bbo) > 0 {
 		for i := range bbo {
-			before, after, ok0 := strings.Cut(bbo[i].Symbol, "/")
-			if !ok0 {
+			symbol := kk.convSymbol(kk.spotWsPublicSymbolMap, bbo[i].Symbol)
+			if symbol == "" { // 格式不符
 				continue
 			}
 			obd := wsPublicBBOPool.Get().(*BestBidAsk)
-			obd.Symbol = before + after
+			obd.Symbol = symbol
 			obd.BidPrice = bbo[i].BidPrice
 			obd.BidQty = bbo[i].BidQty
 			obd.AskPrice = bbo[i].AskPrice
@@ -632,7 +630,10 @@ func (kk *Kraken) spotWsHandleOrder(data json.RawMessage, ch chan<- any) {
 		now := time.Now().UnixMilli()
 		for i := range orders {
 			ts, _ := time.Parse(time.RFC3339, orders[i].Time)
-			symbol := strings.ReplaceAll(orders[i].Symbol, "/", "")
+			symbol := kk.convSymbol(kk.spotWsPrivateSymbolMap, orders[i].Symbol)
+			if symbol == "" {
+				continue
+			}
 			so := &SpotOrder{
 				Symbol:    symbol,
 				OrderId:   orders[i].OrderId,

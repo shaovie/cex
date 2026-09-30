@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -36,6 +37,9 @@ type Kraken struct {
 	spotWsOrderBookBid1Ask1Cache BestBidAsk
 	spotWsOrderCachedInfo        map[string]*KrakenCachedOrder
 
+	// 交易所符号 -> 标准符号缓存(BTC/USDT -> BTCUSDT)
+	spotWsPublicSymbolMap map[string]string
+
 	spotWsPrivateConn             *websocket.Conn
 	spotWsPrivateConnMtx          sync.Mutex
 	spotWsPrivateClosed           bool
@@ -44,6 +48,7 @@ type Kraken struct {
 	spotWsPrivatePongTime         int64
 	spotWsPrivatePingInterval     int64
 	spotWsPrivateExpectedPongTime int64
+	spotWsPrivateSymbolMap        map[string]string
 }
 
 var (
@@ -101,6 +106,12 @@ func (kk *Kraken) Init() error {
 	kk.spotWsOrderBookAsks = make(map[string]*treemap.Map[decimal.Decimal, decimal.Decimal], 512)
 	kk.spotWsOrderBookSeqId = make(map[string]int64, 16)
 	kk.spotWsOrderCachedInfo = make(map[string]*KrakenCachedOrder, 16)
+	if kk.spotWsPublicSymbolMap == nil {
+		kk.spotWsPublicSymbolMap = make(map[string]string, 128)
+	}
+	if kk.spotWsPrivateSymbolMap == nil {
+		kk.spotWsPrivateSymbolMap = make(map[string]string, 16)
+	}
 
 	if kk.secretkeyHadDecode == false {
 		sk, _ := base64.StdEncoding.DecodeString(kk.secretkey)
@@ -139,6 +150,21 @@ func (kk *Kraken) getSpotWssSymbol(symbol string) string {
 	kkSpotWssSymbolMapMtx.RLock()
 	defer kkSpotWssSymbolMapMtx.RUnlock()
 	return kkSpotWssSymbolMap[symbol]
+}
+
+// convSymbol 交易所符号转标准符号(BTC/USDT -> BTCUSDT)
+// m为调用方独占的表, 不加锁; 命中时零分配; 格式不符(无分隔符)时返回空串
+func (kk *Kraken) convSymbol(m map[string]string, symbol string) string {
+	if std, ok := m[symbol]; ok {
+		return std
+	}
+	before, after, ok := strings.Cut(symbol, "/")
+	if !ok {
+		return ""
+	}
+	std := before + after
+	m[symbol] = std
+	return std
 }
 func (kk *Kraken) isXStocksSymbol(symbol string) bool {
 	kkXStocksSymbolMapMtx.RLock()
