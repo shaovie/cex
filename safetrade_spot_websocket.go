@@ -18,13 +18,13 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (sa *Safetrade) SpotWsPublicOpen_() error {
+func (sa *Safetrade) SpotWsPublicOpen() error {
 	sa.spotWsPublicClosedMtx.Lock()
 	sa.spotWsPublicClosed = false
 	sa.spotWsPublicClosedMtx.Unlock()
 	return nil
 }
-func (sa *Safetrade) SpotWsPublicOpen() error {
+func (sa *Safetrade) SpotWsPublicOpen_() error {
 	dialer := websocket.Dialer{
 		EnableCompression: true, // 启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
@@ -90,31 +90,33 @@ func (sa *Safetrade) stWsPublicEvent(event string, channels []string) {
 	sa.spotWsPublicConn.WriteMessage(websocket.TextMessage, req)
 	sa.spotWsPublicConnMtx.Unlock()
 }
-func (sa *Safetrade) SpotWsPublicSubscribe_(channels []string) {
-	return
-}
-func (sa *Safetrade) SpotWsPublicUnsubscribe_(channels []string) {
-	return
-}
 func (sa *Safetrade) SpotWsPublicSubscribe(channels []string) {
-	sa.stWsPublicEvent("subscribe", channels)
+	return
 }
 func (sa *Safetrade) SpotWsPublicUnsubscribe(channels []string) {
+	return
+}
+func (sa *Safetrade) SpotWsPublicSubscribe_(channels []string) {
+	sa.stWsPublicEvent("subscribe", channels)
+}
+func (sa *Safetrade) SpotWsPublicUnsubscribe_(channels []string) {
 	sa.stWsPublicEvent("unsubscribe", channels)
 }
 func (sa *Safetrade) SpotWsPublicBBOPoolPut(v any) {
 	wsPublicBBOPool.Put(v)
 }
-func (sa *Safetrade) SpotWsPublicLoop_(ch chan<- any) {
+func (sa *Safetrade) SpotWsPublicLoop(ch chan<- any) {
 	defer close(ch)
 	symbol := "PRLUSDT"
+	var bba BestBidAsk
 	for {
-		time.Sleep(800 * time.Millisecond)
+		time.Sleep(1602 * time.Millisecond)
 		if sa.SpotWsPublicIsClosed() {
 			break
 		}
-		bba, _ := sa.SpotGetBBO(symbol)
+		bba, _ = sa.SpotGetBBO(symbol)
 		if bba.BidPrice.IsZero() {
+			time.Sleep(2000 * time.Millisecond)
 			continue
 		}
 		obd := wsPublicBBOPool.Get().(*BestBidAsk)
@@ -127,7 +129,7 @@ func (sa *Safetrade) SpotWsPublicLoop_(ch chan<- any) {
 		ch <- obd
 	}
 }
-func (sa *Safetrade) SpotWsPublicLoop(ch chan<- any) {
+func (sa *Safetrade) SpotWsPublicLoop_(ch chan<- any) {
 	defer sa.SpotWsPublicClose()
 	defer close(ch)
 
