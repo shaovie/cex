@@ -36,7 +36,7 @@ type HttpConf struct {
 var (
 	// 库内默认参数: 未绑出口IP / 已绑出口IP
 	httpConfDefault = HttpConf{32, 24, 0, 90 * time.Second, 5 * time.Second, 5 * time.Second, 30 * time.Second}
-	httpConfLocalIP = HttpConf{32, 8, 0, 30 * time.Second, 3 * time.Second, 3 * time.Second, 15 * time.Second}
+	httpConfLocalIP = HttpConf{32, 8, 0, 90 * time.Second, 3 * time.Second, 3 * time.Second, 15 * time.Second}
 
 	// 各交易所的定制参数, 未设置的项取上面的默认值
 	httpConfMtx   sync.RWMutex

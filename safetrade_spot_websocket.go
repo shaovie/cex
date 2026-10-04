@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math/rand/v2"
 	"net/http"
+	"sync"
 	//"net/url"
 	"net"
 	"strings"
@@ -107,26 +109,48 @@ func (sa *Safetrade) SpotWsPublicBBOPoolPut(v any) {
 }
 func (sa *Safetrade) SpotWsPublicLoop(ch chan<- any) {
 	defer close(ch)
-	symbol := "PRLUSDT"
+
+	exitChan := make(chan struct{})
+	defer close(exitChan)
+
+	var wa sync.WaitGroup
+	wa.Add(1)
+	go sa.spotWsBBOLoop("PRLUSDT", ch, exitChan, &wa)
+
+	wa.Add(1)
+	go sa.spotWsBBOLoop("QTCUSDT", ch, exitChan, &wa)
+
+	wa.Wait()
+}
+func (sa *Safetrade) spotWsBBOLoop(symbol string, ch chan<- any, exitChan chan struct{}, wa *sync.WaitGroup) {
+	defer wa.Done()
 	var bba BestBidAsk
+	var interval time.Duration
+	interval = time.Duration(1500 + rand.Int64()%200)
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
 	for {
-		time.Sleep(1602 * time.Millisecond)
-		if sa.SpotWsPublicIsClosed() {
-			break
+		select {
+		case <-exitChan:
+			return
+		case <-ticker.C:
+			if sa.SpotWsPublicIsClosed() {
+				break
+			}
+			bba, _ = sa.SpotGetBBO(symbol)
+			if bba.BidPrice.IsZero() {
+				time.Sleep(2000 * time.Millisecond)
+				break // jump out of select
+			}
+			obd := wsPublicBBOPool.Get().(*BestBidAsk)
+			obd.Symbol = symbol
+			obd.Time = 0 // SafeTrade不提供
+			obd.BidPrice = bba.BidPrice
+			obd.BidQty = bba.BidQty
+			obd.AskPrice = bba.AskPrice
+			obd.AskQty = bba.AskQty
+			ch <- obd
 		}
-		bba, _ = sa.SpotGetBBO(symbol)
-		if bba.BidPrice.IsZero() {
-			time.Sleep(2000 * time.Millisecond)
-			continue
-		}
-		obd := wsPublicBBOPool.Get().(*BestBidAsk)
-		obd.Symbol = symbol
-		obd.Time = 0 // SafeTrade不提供
-		obd.BidPrice = bba.BidPrice
-		obd.BidQty = bba.BidQty
-		obd.AskPrice = bba.AskPrice
-		obd.AskQty = bba.AskQty
-		ch <- obd
 	}
 }
 func (sa *Safetrade) SpotWsPublicLoop_(ch chan<- any) {
