@@ -113,16 +113,17 @@ func (sa *Safetrade) SpotWsPublicLoop(ch chan<- any) {
 	exitChan := make(chan struct{})
 	defer close(exitChan)
 
-	var wa sync.WaitGroup
-	wa.Add(1)
-	go sa.spotWsBBOLoop("PRLUSDT", ch, exitChan, &wa)
+	go sa.spotWsBBOLoop("PRLUSDT", ch, exitChan)
+	go sa.spotWsBBOLoop("QTCUSDT", ch, exitChan)
 
-	wa.Add(1)
-	go sa.spotWsBBOLoop("QTCUSDT", ch, exitChan, &wa)
-
-	wa.Wait()
+	for {
+		time.Sleep(1 * time.Second)
+		if sa.SpotWsPublicIsClosed() {
+			break
+		}
+	}
 }
-func (sa *Safetrade) spotWsBBOLoop(symbol string, ch chan<- any, exitChan chan struct{}, wa *sync.WaitGroup) {
+func (sa *Safetrade) spotWsBBOLoop(symbol string, ch chan<- any, exitChan chan struct{}) {
 	defer wa.Done()
 	var bba BestBidAsk
 	var interval time.Duration
@@ -135,7 +136,7 @@ func (sa *Safetrade) spotWsBBOLoop(symbol string, ch chan<- any, exitChan chan s
 			return
 		case <-ticker.C:
 			if sa.SpotWsPublicIsClosed() {
-				break
+				return
 			}
 			bba, _ = sa.SpotGetBBO(symbol)
 			if bba.BidPrice.IsZero() {
