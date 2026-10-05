@@ -162,7 +162,7 @@ func (sa *Safetrade) spotWsBBOLoop(symbol string, ch chan<- any, exitChan chan s
 	var bba BestBidAsk
 	var interval time.Duration
 	// SafeTrade的BBO接口限频1次/秒, 这里加点随机延迟避免同时请求
-	interval = time.Duration(1500+rand.Int64()%200) * time.Millisecond
+	interval = time.Duration(2500+rand.Int64()%200) * time.Millisecond
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
@@ -179,7 +179,7 @@ func (sa *Safetrade) spotWsBBOLoop(symbol string, ch chan<- any, exitChan chan s
 
 			bba, _ = sa.SpotGetBBO(symbol)
 			if bba.BidPrice.IsZero() {
-				time.Sleep(2000 * time.Millisecond)
+				time.Sleep(5000 * time.Millisecond)
 				break // jump out of select
 			}
 			obd := wsPublicBBOPool.Get().(*BestBidAsk)
