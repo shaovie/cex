@@ -16,10 +16,11 @@ type Safetrade struct {
 	localIP string
 
 	// spot websocket
-	spotWsPublicConn      *websocket.Conn
-	spotWsPublicConnMtx   sync.Mutex
-	spotWsPublicClosed    bool
-	spotWsPublicClosedMtx sync.RWMutex
+	spotWsPublicConn       *websocket.Conn
+	spotWsPublicConnMtx    sync.Mutex
+	spotWsPublicClosed     bool
+	spotWsPublicClosedMtx  sync.RWMutex
+	spotWsPublicBBOStreams map[string]bool
 
 	// depth频道推的是增量, 本地按symbol维护盘口; bids降序, asks升序, Min()即最优价
 	spotWsOrderBookBids map[string]*treemap.Map[decimal.Decimal, decimal.Decimal]
@@ -77,6 +78,7 @@ func (sa *Safetrade) Init() error {
 	sa.spotWsPublicClosed = true
 	sa.spotWsOrderBookBids = make(map[string]*treemap.Map[decimal.Decimal, decimal.Decimal], 16)
 	sa.spotWsOrderBookAsks = make(map[string]*treemap.Map[decimal.Decimal, decimal.Decimal], 16)
+	sa.spotWsPublicBBOStreams = make(map[string]bool, 4)
 	return nil
 }
 func (sa *Safetrade) getSpotSymbol(symbol string) string {

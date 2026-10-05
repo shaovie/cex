@@ -7,7 +7,6 @@ import (
 	"errors"
 	"math/rand/v2"
 	"net/http"
-	"sync"
 	//"net/url"
 	"net"
 	"strings"
@@ -60,7 +59,7 @@ func (sa *Safetrade) SpotWsPublicOpen_() error {
 	sa.spotWsPublicClosedMtx.Unlock()
 	return nil
 }
-func (sa *Safetrade) stWsPublicEvent(event string, channels []string) {
+func (sa *Safetrade) stWsPublicEvent_(event string, channels []string) {
 	if len(channels) == 0 {
 		return
 	}
@@ -92,16 +91,32 @@ func (sa *Safetrade) stWsPublicEvent(event string, channels []string) {
 	sa.spotWsPublicConn.WriteMessage(websocket.TextMessage, req)
 	sa.spotWsPublicConnMtx.Unlock()
 }
+func (sa *Safetrade) stWsPublicEvent(event string, channels []string) {
+	if len(channels) == 0 {
+		return
+	}
+	for _, c := range channels {
+		arr := strings.Split(c, "@")
+		if arr[0] == "bbo" { // 用depth实现
+			if len(arr) < 2 || len(arr[1]) == 0 {
+				continue
+			}
+			for _, v := range strings.Split(arr[1], ",") {
+				sa.spotWsPublicConnMtx.Lock()
+				if event == "subscribe" {
+					sa.spotWsPublicBBOStreams[v] = true
+				} else if event == "unsubscribe" {
+					delete(sa.spotWsPublicBBOStreams, v)
+				}
+				sa.spotWsPublicConnMtx.Unlock()
+			}
+		}
+	}
+}
 func (sa *Safetrade) SpotWsPublicSubscribe(channels []string) {
-	return
-}
-func (sa *Safetrade) SpotWsPublicUnsubscribe(channels []string) {
-	return
-}
-func (sa *Safetrade) SpotWsPublicSubscribe_(channels []string) {
 	sa.stWsPublicEvent("subscribe", channels)
 }
-func (sa *Safetrade) SpotWsPublicUnsubscribe_(channels []string) {
+func (sa *Safetrade) SpotWsPublicUnsubscribe(channels []string) {
 	sa.stWsPublicEvent("unsubscribe", channels)
 }
 func (sa *Safetrade) SpotWsPublicBBOPoolPut(v any) {
@@ -113,10 +128,17 @@ func (sa *Safetrade) SpotWsPublicLoop(ch chan<- any) {
 	exitChan := make(chan struct{})
 	defer close(exitChan)
 
-	go sa.spotWsBBOLoop("PRLUSDT", ch, exitChan)
-	go sa.spotWsBBOLoop("QTCUSDT", ch, exitChan)
-
+	streams := make(map[string]bool, 4)
 	for {
+		sa.spotWsPublicConnMtx.Lock()
+		for sym, _ := range sa.spotWsPublicBBOStreams {
+			if streams[sym] == false {
+				streams[sym] = true
+				go sa.spotWsBBOLoop(sym, ch, exitChan)
+			}
+		}
+		sa.spotWsPublicConnMtx.Unlock()
+
 		time.Sleep(1 * time.Second)
 		if sa.SpotWsPublicIsClosed() {
 			break
@@ -124,7 +146,6 @@ func (sa *Safetrade) SpotWsPublicLoop(ch chan<- any) {
 	}
 }
 func (sa *Safetrade) spotWsBBOLoop(symbol string, ch chan<- any, exitChan chan struct{}) {
-	defer wa.Done()
 	var bba BestBidAsk
 	var interval time.Duration
 	interval = time.Duration(1500 + rand.Int64()%200)
@@ -135,9 +156,13 @@ func (sa *Safetrade) spotWsBBOLoop(symbol string, ch chan<- any, exitChan chan s
 		case <-exitChan:
 			return
 		case <-ticker.C:
-			if sa.SpotWsPublicIsClosed() {
+			sa.spotWsPublicConnMtx.Lock()
+			if sa.spotWsPublicBBOStreams[symbol] == false {
+				sa.spotWsPublicConnMtx.Unlock()
 				return
 			}
+			sa.spotWsPublicConnMtx.Unlock()
+
 			bba, _ = sa.SpotGetBBO(symbol)
 			if bba.BidPrice.IsZero() {
 				time.Sleep(2000 * time.Millisecond)
