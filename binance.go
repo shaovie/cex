@@ -77,12 +77,12 @@ var (
 	bnWsPubMsgPool sync.Pool
 )
 
-const bnSpotEndpoint = "https://api2.binance.com"
-const bnMarginEndpoint = "https://api2.binance.com"
+const bnSpotEndpoint = "https://api-gcp.binance.com"
+const bnMarginEndpoint = "https://api-gcp.binance.com"
 const bnUMFuturesEndpoint = "https://fapi.binance.com"
 const bnCMFuturesEndpoint = "https://dapi.binance.com"
 const bnUnifiedEndpoint = "https://papi.binance.com"
-const bnWalletEndpoint = "https://api2.binance.com"
+const bnWalletEndpoint = "https://api-gcp.binance.com"
 const bnApiDeadline = 1200 * time.Millisecond
 
 func init() {
