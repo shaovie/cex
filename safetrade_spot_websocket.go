@@ -7,6 +7,8 @@ import (
 	"errors"
 	"math/rand/v2"
 	"net/http"
+	"sync"
+
 	//"net/url"
 	"net"
 	"strings"
@@ -126,7 +128,7 @@ func (sa *Safetrade) SpotWsPublicLoop(ch chan<- any) {
 	defer close(ch)
 
 	exitChan := make(chan struct{})
-	defer close(exitChan)
+	var bboWg sync.WaitGroup // 等所有BBO协程退出后再close(ch), 否则会往已关闭的channel发送
 
 	streams := make(map[string]bool, 4)
 	for {
@@ -134,7 +136,15 @@ func (sa *Safetrade) SpotWsPublicLoop(ch chan<- any) {
 		for sym, _ := range sa.spotWsPublicBBOStreams {
 			if streams[sym] == false {
 				streams[sym] = true
-				go sa.spotWsBBOLoop(sym, ch, exitChan)
+				bboWg.Add(1)
+				go func(sym string) {
+					defer bboWg.Done()
+					sa.spotWsBBOLoop(sym, ch, exitChan)
+
+					sa.spotWsPublicConnMtx.Lock()
+					delete(streams, sym)
+					sa.spotWsPublicConnMtx.Unlock()
+				}(sym)
 			}
 		}
 		sa.spotWsPublicConnMtx.Unlock()
@@ -144,11 +154,15 @@ func (sa *Safetrade) SpotWsPublicLoop(ch chan<- any) {
 			break
 		}
 	}
+	close(exitChan)
+	bboWg.Wait()
 }
+
 func (sa *Safetrade) spotWsBBOLoop(symbol string, ch chan<- any, exitChan chan struct{}) {
 	var bba BestBidAsk
 	var interval time.Duration
-	interval = time.Duration(1500 + rand.Int64()%200)
+	// SafeTrade的BBO接口限频1次/秒, 这里加点随机延迟避免同时请求
+	interval = time.Duration(1500+rand.Int64()%200) * time.Millisecond
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
@@ -175,7 +189,11 @@ func (sa *Safetrade) spotWsBBOLoop(symbol string, ch chan<- any, exitChan chan s
 			obd.BidQty = bba.BidQty
 			obd.AskPrice = bba.AskPrice
 			obd.AskQty = bba.AskQty
-			ch <- obd
+			select {
+			case ch <- obd:
+			case <-exitChan: // 调用方已不再读ch, 退出避免阻塞
+				return
+			}
 		}
 	}
 }
