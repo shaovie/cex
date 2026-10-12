@@ -352,3 +352,42 @@ func (sa *Safetrade) spotWsHandleDepth(symbol string, data []byte, ch chan<- any
 	obd.AskQty = askQty
 	ch <- obd
 }
+// = priv channel
+func (st *Safetrade) SpotWsPrivateSupported() bool {
+	return true
+}
+func (st *Safetrade) SpotWsPrivateOpen() error {
+	st.spotWsPrivateClosedMtx.Lock()
+	st.spotWsPrivateClosed = false
+	st.spotWsPrivateClosedMtx.Unlock()
+	return nil
+}
+func (st *Safetrade) SpotWsPrivateSubscribe(channels []string) {
+}
+func (st *Safetrade) SpotWsPrivateIsClosed() bool {
+	st.spotWsPrivateClosedMtx.RLock()
+	defer st.spotWsPrivateClosedMtx.RUnlock()
+	return st.spotWsPrivateClosed
+}
+func (st *Safetrade) SpotWsPrivateClose() {
+	st.spotWsPrivateClosedMtx.Lock()
+	defer st.spotWsPrivateClosedMtx.Unlock()
+	if st.spotWsPrivateClosed {
+		return
+	}
+	st.spotWsPrivateClosed = true
+	if st.spotWsPrivateConn != nil {
+		st.spotWsPrivateConn.Close()
+	}
+}
+func (st *Safetrade) SpotWsPrivateLoop(ch chan<- any) {
+	defer st.SpotWsPrivateClose()
+	defer close(ch)
+
+	for {
+		time.Sleep(2 * time.Second)
+		if st.SpotWsPrivateIsClosed() {
+			break
+		}
+	}
+}

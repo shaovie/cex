@@ -198,6 +198,7 @@ func (sa *Safetrade) SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId s
 	if len(ret.Errors) > 0 {
 		return errors.New(sa.Name() + ": " + ret.Errors[0])
 	}
+	return nil
 	if ret.State != "cancel" {
 		return errors.New(sa.Name() + " cancel failed! state now: " + ret.State)
 	}

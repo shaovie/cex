@@ -631,9 +631,6 @@ func (kk *Kraken) spotWsHandleOrder(data []byte, ch chan<- any) {
 		for i := range orders {
 			ts, _ := time.Parse(time.RFC3339, orders[i].Time)
 			symbol := kk.convSymbol(kk.spotWsPrivateSymbolMap, orders[i].Symbol)
-			if symbol == "" {
-				continue
-			}
 			so := &SpotOrder{
 				Symbol:    symbol,
 				OrderId:   orders[i].OrderId,

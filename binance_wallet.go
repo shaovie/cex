@@ -10,6 +10,9 @@ import (
 )
 
 func (bn *Binance) Transfer(symbol, from, to, typ, subAccount string, qty decimal.Decimal) error {
+	if subAccount != "" {
+		return bn.subTransfer(symbol, from, to, typ, subAccount, qty)
+	}
 	var t string
 	if from == "SPOT" && to == "UM_FUTURE" {
 		t = "MAIN_UMFUTURE"
@@ -61,6 +64,56 @@ func (bn *Binance) Transfer(symbol, from, to, typ, subAccount string, qty decima
 		Code   int    `json:"code,omitempty"`
 		Msg    string `json:"msg,omitempty"`
 		TranId int64  `json:"tranId,omitempty"`
+	}{}
+	err = json.Unmarshal(resp, &recv)
+	if err != nil {
+		return errors.New(bn.Name() + " transfer unmarshal fail! " + err.Error())
+	}
+	if recv.Code != 0 || len(recv.Msg) != 0 {
+		return errors.New(bn.Name() + " transfer api err! " + recv.Msg)
+	}
+
+	if recv.TranId == 0 {
+		return errors.New(bn.Name() + " transfer fail!")
+	}
+	return nil
+}
+func (bn *Binance) subTransfer(symbol, from, to, typ, subAccount string, qty decimal.Decimal) error {
+	if from == "UM_FUTURE" {
+		from = "USDT_FUTURE"
+	}
+	if from == "CM_FUTURE" {
+		from = "COIN_FUTURE"
+	}
+	if to == "UM_FUTURE" {
+		to = "USDT_FUTURE"
+	}
+	if to == "CM_FUTURE" {
+		to = "COIN_FUTURE"
+	}
+
+	if !qty.IsPositive() {
+		return errors.New(bn.Name() + " transfer qty <= 0. =" + qty.String())
+	}
+	query := fmt.Sprintf("&fromAccountType=%s&toAccountType=%s&asset=%s&amount=%s",
+		from, to, symbol, qty.String())
+	if typ == "SUB_TO_MASTER" {
+		query += "&fromEmail=" + subAccount
+	} else if typ == "MASTER_TO_SUB" {
+		query += "&toEmail=" + subAccount
+	} else {
+		return errors.New(bn.Name() + " not support " + typ)
+	}
+	url := bnWalletEndpoint + "/sapi/v1/sub-account/universalTransfer?" + bn.httpQuerySign(query)
+	_, resp, err := bn.Post(url, nil, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	if err != nil {
+		return errors.New(bn.Name() + " net error! " + err.Error())
+	}
+
+	recv := struct {
+		Code   int    `json:"code"`
+		Msg    string `json:"msg"`
+		TranId int64  `json:"tranId"`
 	}{}
 	err = json.Unmarshal(resp, &recv)
 	if err != nil {
