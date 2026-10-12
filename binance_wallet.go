@@ -10,7 +10,7 @@ import (
 )
 
 func (bn *Binance) Transfer(symbol, from, to, typ, subAccount string, qty decimal.Decimal) error {
-	if subAccount != "" {
+	if subAccount != "" && (typ == "SUB_TO_MASTER" || typ == "MASTER_TO_SUB") {
 		return bn.subTransfer(symbol, from, to, typ, subAccount, qty)
 	}
 	var t string
