@@ -264,3 +264,68 @@ func (sa *Safetrade) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, er
 		UTime:     utime.UnixMilli(),
 	}, nil
 }
+func (sa *Safetrade) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
+	params := "?state=wait,pending&limit=100&page=1"
+	if symbol != "" {
+		id := sa.getSpotSymbol(symbol)
+		if id == "" {
+			return nil, errors.New(sa.Name() + " unknown symbol! " + symbol)
+		}
+		params += "&market=" + id
+	}
+	link := stEndpoint + "/trade/market/orders" + params
+	_, resp, err := sa.Get(link, stApiDeadline, sa.buildHeaders())
+	if err != nil {
+		return nil, errors.New(sa.Name() + " net error! " + err.Error())
+	}
+	if len(resp) == 0 || resp[0] != '[' {
+		return nil, sa.handleExceptionResp("SpotGetOpenOrders", resp)
+	}
+	ret := []struct {
+		Id           int64           `json:"id"`
+		Market       string          `json:"market"`
+		Side         string          `json:"side"`
+		Type         string          `json:"type"`
+		OrdType      string          `json:"ord_type"` // 文档未列出, 实际返回ord_type
+		State        string          `json:"state"`
+		Price        decimal.Decimal `json:"price"`
+		AvgPrice     decimal.Decimal `json:"avg_price"` // 文档未列出
+		OriginAmount decimal.Decimal `json:"origin_amount"`
+		FilledAmount decimal.Decimal `json:"filled_amount"`
+		CreatedAt    string          `json:"created_at,omitempty"`
+		UpdatedAt    string          `json:"updated_at,omitempty"`
+	}{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return nil, errors.New(sa.Name() + " unmarshal fail! " + err.Error())
+	}
+
+	dl := make([]*SpotOrder, 0, len(ret))
+	for i := range ret {
+		ordType := ret[i].OrdType
+		if ordType == "" {
+			ordType = ret[i].Type
+		}
+		ctime, _ := time.Parse(time.RFC3339, ret[i].CreatedAt)
+		utime, _ := time.Parse(time.RFC3339, ret[i].UpdatedAt)
+		status := sa.toStdOrderState(ret[i].State)
+		if status == "NEW" && ret[i].FilledAmount.IsPositive() {
+			status = "PARTIALLY_FILLED"
+		}
+		so := SpotOrder{
+			Symbol:    strings.ToUpper(ret[i].Market),
+			OrderId:   strconv.FormatInt(ret[i].Id, 10),
+			Price:     ret[i].Price,
+			Qty:       ret[i].OriginAmount,
+			FilledQty: ret[i].FilledAmount,
+			FilledAmt: ret[i].FilledAmount.Mul(ret[i].AvgPrice),
+			AvgPrice:  ret[i].AvgPrice,
+			Status:    status,
+			Type:      sa.toStdOrderType(ordType),
+			Side:      sa.toStdSide(ret[i].Side),
+			CTime:     ctime.UnixMilli(),
+			UTime:     utime.UnixMilli(),
+		}
+		dl = append(dl, &so)
+	}
+	return dl, nil
+}
