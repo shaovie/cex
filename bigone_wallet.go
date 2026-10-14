@@ -70,7 +70,7 @@ func (bo *Bigone) Withdrawal(symbol, addr, memo, chain string, qty decimal.Decim
 		`,"guid":"` + guid.String() + `"` +
 		`,"target_address":"` + addr + `"` +
 		`,"memo":"` + memo + `"` +
-		`,"gateway_name":"` + bo.fromStdChainName(chain) + `"` +
+		`,"gateway_name":"` + chain + `"` +
 		`}`
 	header := map[string]string{
 		"Content-Type":  "application/json",

@@ -197,16 +197,6 @@ func (bo *Bigone) toStdOrderStatus(status string) string {
 	}
 	return ""
 }
-func (bo *Bigone) fromStdChainName(c string) string {
-	if c == "TRX" {
-		return "Tron"
-	} else if c == "MOB" {
-		return "Mobilecoin"
-	} else if c == "BSC" {
-		return "BinanceSmartChain"
-	}
-	return ""
-}
 func (bo *Bigone) toStdWithdrawStatus(c string) string {
 	if c == "COMPLETED" {
 		return "COMPLETED"
