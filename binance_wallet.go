@@ -45,7 +45,7 @@ func (bn *Binance) Transfer(symbol, from, to, typ, subAccount string, qty decima
 	} else if from == "MARGIN" && to == "FUNDING" {
 		t = "MARGIN_FUNDING"
 	} else if from == "MARGIN" && to == "SPOT" {
-		t = "MARGIN_SPOT"
+		t = "MARGIN_MAIN"
 	} else {
 		return errors.New("not support")
 	}
