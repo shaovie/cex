@@ -36,13 +36,13 @@ func ruleInit() {
 	wg.Wait()
 
 	go func() {
-		rSleep := 120 + rand.Int63()%10
+		rSleep := 620 + rand.Int63()%10
 		for range time.Tick(time.Duration(rSleep) * time.Second) { // go 1.23+
 			spotUpdateExPairRule()
 		}
 	}()
 	go func() {
-		rSleep := 122 + rand.Int63()%10
+		rSleep := 622 + rand.Int63()%10
 		for range time.Tick(time.Duration(rSleep) * time.Second) { // go 1.23+
 			futuresUpdateExPairRule()
 		}
