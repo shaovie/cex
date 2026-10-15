@@ -3,7 +3,6 @@ package cex
 import (
 	"encoding/json"
 	"errors"
-	"net/url"
 	"strconv"
 	"time"
 
@@ -346,109 +345,6 @@ func (as *Aster) SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId strin
 	return nil
 }
 
-// SpotPlaceOrderMultiple 批量下单, 返回数组里每单可能成功或失败, 只要有成功的就算成功
-func (as *Aster) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
-	if len(orders) == 0 {
-		return errors.New(as.Name() + " orders empty!")
-	}
-	type BatchOrder struct {
-		Symbol           string `json:"symbol"`
-		Side             string `json:"side"`
-		Type             string `json:"type"`
-		TimeInForce      string `json:"timeInForce,omitempty"`
-		Price            string `json:"price,omitempty"`
-		Quantity         string `json:"quantity,omitempty"`
-		QuoteOrderQty    string `json:"quoteOrderQty,omitempty"`
-		NewClientOrderId string `json:"newClientOrderId,omitempty"`
-	}
-	orderL := make([]BatchOrder, 0, len(orders))
-	for i := range orders {
-		if orders[i].Type != "LIMIT" && orders[i].Type != "MARKET" {
-			return errors.New(as.Name() + " not support order type! " + orders[i].Type)
-		}
-		po := BatchOrder{
-			Symbol:           orders[i].Symbol,
-			Side:             as.toStdSide(orders[i].Side),
-			Type:             orders[i].Type,
-			NewClientOrderId: orders[i].ClientId,
-		}
-		if orders[i].Type == "LIMIT" {
-			if orders[i].PostOnly { // 只做Maker
-				po.TimeInForce = "GTX"
-			} else if len(orders[i].TimeInForce) > 0 {
-				po.TimeInForce = as.toStdTimeInForce(orders[i].TimeInForce)
-			}
-			po.Price = orders[i].Price.String()
-			po.Quantity = orders[i].Qty.String()
-		} else if orders[i].Amt.IsPositive() { // 市价买 amt为计价币金额
-			po.QuoteOrderQty = orders[i].Amt.String()
-		} else {
-			po.Quantity = orders[i].Qty.String()
-		}
-		orderL = append(orderL, po)
-	}
-	payload, _ := json.Marshal(orderL)
-	path := "/api/v3/batchOrders"
-	link := asSpotEndpoint + path
-	_, resp, err := as.Post(link, as.buildBody("batchOrders="+url.QueryEscape(string(payload))),
-		asApiDeadline, as.buildHeaders())
-	if err != nil {
-		return errors.New(as.Name() + " net error! " + err.Error())
-	}
-	if len(resp) == 0 || resp[0] != '[' {
-		return as.handleExceptionResp("SpotPlaceOrderMultiple", resp)
-	}
-	ret := []struct {
-		Code    int         `json:"code,omitempty"`
-		Msg     string      `json:"msg,omitempty"`
-		OrderId json.Number `json:"orderId,omitempty"`
-	}{}
-	if err = json.Unmarshal(resp, &ret); err != nil {
-		return errors.New(as.Name() + " unmarshal fail! " + err.Error())
-	}
-	success, failMsg := 0, ""
-	for _, v := range ret {
-		if len(v.OrderId) > 0 {
-			success++
-		} else if len(failMsg) == 0 {
-			failMsg = v.Msg
-		}
-	}
-	if success == 0 {
-		return errors.New(as.Name() + " batch order all fail! " + failMsg)
-	}
-	return nil
-}
-
-// SpotCancelOrderMultiple 批量撤单: 用allOpenOrders+orderIdList实现, 支持部分成功
-func (as *Aster) SpotCancelOrderMultiple(symbol string /*BTCUSDT*/, orderIds, cltIds []string) error {
-	if len(orderIds) == 0 && len(cltIds) == 0 {
-		return errors.New(as.Name() + " orderIds or cltIds empty!")
-	}
-	payload, _ := json.Marshal(orderIds)
-	params := "symbol=" + symbol + "&orderIdList=" + url.QueryEscape(string(payload))
-	if len(orderIds) == 0 {
-		payload, _ = json.Marshal(cltIds)
-		params = "symbol=" + symbol + "&origClientOrderIdList=" + url.QueryEscape(string(payload))
-	}
-	path := "/api/v3/allOpenOrders"
-	link := asSpotEndpoint + path + "?" + as.buildQuery(params)
-	_, resp, err := as.Delete(link, asApiDeadline, nil)
-	if err != nil {
-		return errors.New(as.Name() + " net error! " + err.Error())
-	}
-	ret := struct {
-		Code int    `json:"code,omitempty"`
-		Msg  string `json:"msg,omitempty"`
-	}{}
-	if err = json.Unmarshal(resp, &ret); err != nil {
-		return errors.New(as.Name() + " unmarshal fail! " + err.Error())
-	}
-	if ret.Code != 200 { // 该接口成功返回code=200
-		return as.handleExceptionResp("SpotCancelOrderMultiple", resp)
-	}
-	return nil
-}
 func (as *Aster) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error) {
 	params := "symbol=" + symbol
 	if orderId != "" {

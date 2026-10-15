@@ -34,12 +34,14 @@ func (us *Unsupported) SpotPlaceOrder(symbol, cltId string, price, amt, qty deci
 func (us *Unsupported) SpotPlaceOrderMultiple([]SpotPostOrder) error {
 	return errors.New("not support")
 }
+func (us *Unsupported) SpotPlaceOrderMultipleSupported() bool { return false }
 func (us *Unsupported) SpotCancelOrder(symbol, orderId, cltId string) error {
 	return errors.New("not support")
 }
 func (us *Unsupported) SpotCancelOrderMultiple(symbol string, orderIds, cltIds []string) error {
 	return errors.New("not support")
 }
+func (us *Unsupported) SpotCancelOrderMultipleSupported() bool { return false }
 func (us *Unsupported) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error) {
 	return nil, errors.New("not support")
 }

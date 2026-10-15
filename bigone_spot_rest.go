@@ -181,6 +181,7 @@ func (bo *Bigone) SpotGetBBO(symbol string) (BestBidAsk, error) {
 		AskQty:   recv.Data.Ask.Qty,
 	}, nil
 }
+func (bo *Bigone) SpotPlaceOrderMultipleSupported() bool { return true }
 func (bo *Bigone) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
 	type PostOrder struct {
 		Symbol            string          `json:"asset_pair_name"`
