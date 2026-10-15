@@ -7,3 +7,5 @@ $GOPATH/bin/easyjson -all kraken_struct.go
 $GOPATH/bin/easyjson -all ktx_struct.go
 $GOPATH/bin/easyjson -all kucoin_struct.go
 $GOPATH/bin/easyjson -all safetrade_struct.go
+$GOPATH/bin/easyjson -all bitget_struct.go
+$GOPATH/bin/easyjson -all aster_struct.go
