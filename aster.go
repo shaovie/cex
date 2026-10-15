@@ -209,13 +209,14 @@ func (as *Aster) handleExceptionResp(api string, resp []byte) error {
 		return errors.New(as.Name() + " " + api + " resp empty")
 	}
 	ret := struct {
-		Code int    `json:"code,omitempty"`
-		Msg  string `json:"msg,omitempty"`
+		Code  int    `json:"code,omitempty"`
+		Msg   string `json:"msg,omitempty"`
+		Error string `json:"error,omitempty"` // 有些会返回 error
 	}{}
 	if err := json.Unmarshal(resp, &ret); err != nil {
 		return errors.New(as.Name() + " " + api + " " + err.Error() + " " + string(resp))
 	}
-	return errors.New(as.Name() + " " + api + " " + ret.Msg)
+	return errors.New(as.Name() + " " + api + " " + ret.Msg + " " + ret.Error)
 }
 func (as *Aster) toStdSide(side string) string {
 	if side == "BUY" || side == "Buy" {
