@@ -23,12 +23,22 @@ func (v *BnAlphaWsPubMsg) reset() {
 	v.Data = nil
 }
 
-// BnAlphaBookTicker 最优买卖价 <symbol>@bookTicker
-type BnAlphaBookTicker struct {
-	Symbol   string          `json:"s,omitempty"`
-	BidPrice decimal.Decimal `json:"b"`
-	BidQty   decimal.Decimal `json:"B"`
-	AskPrice decimal.Decimal `json:"a"`
-	AskQty   decimal.Decimal `json:"A"`
-	Time     int64           `json:"E,omitempty"` // msec
+// BnAlphaDepthUpdate 增量盘口 <symbol>@fulldepth@100ms
+// 数量为0表示删掉该档位
+type BnAlphaDepthUpdate struct {
+	Symbol string               `json:"s,omitempty"`
+	Time   int64                `json:"E,omitempty"`  // 事件时间 msec
+	LastId int64                `json:"u,omitempty"`  // 本次更新最后一个updateId
+	PrevId int64                `json:"pu,omitempty"` // 上次推送的updateId
+	Bids   [][2]decimal.Decimal `json:"b,omitempty"`
+	Asks   [][2]decimal.Decimal `json:"a,omitempty"`
+}
+
+func (v *BnAlphaDepthUpdate) reset() {
+	v.Symbol = ""
+	v.Time = 0
+	v.LastId = 0
+	v.PrevId = 0
+	v.Bids = v.Bids[:0]
+	v.Asks = v.Asks[:0]
 }

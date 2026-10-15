@@ -5,19 +5,22 @@ import (
 	"encoding/json"
 	"errors"
 	"net"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/emirpasic/gods/v2/maps/treemap"
 	"github.com/gorilla/websocket"
 	"github.com/mailru/easyjson"
+	"github.com/shopspring/decimal"
 
 	"github.com/shaovie/gutils/ilog"
 )
 
 var (
-	baWsPubMsgPool             sync.Pool
-	baSpotWsPublicBBOInnerPool sync.Pool
+	baWsPubMsgPool          sync.Pool
+	baSpotWsPublicDepthPool sync.Pool
 )
 
 func init() {
@@ -26,9 +29,12 @@ func init() {
 			return &BnAlphaWsPubMsg{}
 		},
 	}
-	baSpotWsPublicBBOInnerPool = sync.Pool{
+	baSpotWsPublicDepthPool = sync.Pool{
 		New: func() any {
-			return &BnAlphaBookTicker{}
+			return &BnAlphaDepthUpdate{
+				Bids: make([][2]decimal.Decimal, 0, 16),
+				Asks: make([][2]decimal.Decimal, 0, 16),
+			}
 		},
 	}
 }
@@ -66,9 +72,11 @@ func (ba *BnAlpha) SpotWsPublicOpen() error {
 	return nil
 }
 
-// spotWsStreams 转换频道参数: bbo@ZKJUSDT -> alpha_173usdt@bookTicker
-func (ba *BnAlpha) spotWsStreams(channels []string) []string {
+// spotWsStreams 转换频道参数: bbo@ZKJUSDT -> alpha_173usdt@fulldepth@100ms
+// bookTicker只推UI挂单(会跟成交价差很远), 这里改用增量深度流本地维护盘口
+func (ba *BnAlpha) spotWsStreams(channels []string, subscribe bool) []string {
 	params := make([]string, 0, 4)
+	streamMap := make(map[string]bool, 4)
 	for _, c := range channels {
 		arr := strings.Split(c, "@")
 		if len(arr) < 2 || len(arr[1]) == 0 {
@@ -81,16 +89,29 @@ func (ba *BnAlpha) spotWsStreams(channels []string) []string {
 			if len(sym) == 0 {
 				continue
 			}
-			if symbolS := ba.getSpotSymbol(sym); len(symbolS) > 0 { // 标准symbol转交易所symbol
-				sym = symbolS
+			if subscribe {
+				ba.spotWsPublicBBOSet[sym] = true
+			} else {
+				delete(ba.spotWsPublicBBOSet, sym)
 			}
-			params = append(params, strings.ToLower(sym)+"@bookTicker")
+			symbolS := ba.getSpotSymbol(sym) // 标准symbol转交易所symbol
+			if len(symbolS) == 0 {
+				symbolS = sym
+			}
+			if subscribe {
+				ba.spotWsGetDepthSnapshot(sym, symbolS) // 订阅时同步取快照
+			}
+			stream := strings.ToLower(symbolS) + "@fulldepth@100ms"
+			if !streamMap[stream] { // 同一个symbol订阅了bbo和盘口时只发一次
+				streamMap[stream] = true
+				params = append(params, stream)
+			}
 		}
 	}
 	return params
 }
 func (ba *BnAlpha) spotWsPublicEvent(method string, channels []string) {
-	params := ba.spotWsStreams(channels)
+	params := ba.spotWsStreams(channels, method == "SUBSCRIBE")
 	if len(params) == 0 {
 		return
 	}
@@ -169,8 +190,8 @@ func (ba *BnAlpha) SpotWsPublicLoop(ch chan<- any) {
 			goto END
 		}
 		if l = len(msg.Stream); l > 0 { // 订阅/退订响应没有stream
-			if l > 11 && msg.Stream[l-11:l] == "@bookTicker" {
-				ba.spotWsHandleBBO(msg.Data, ch)
+			if l > 16 && msg.Stream[l-16:l] == "@fulldepth@100ms" {
+				ba.spotWsHandleFullDepth(msg.Data, ch)
 			} else {
 				ilog.Error(ba.Name() + " spot.ws.public recv unknown stream: " + msg.Stream)
 			}
@@ -195,18 +216,213 @@ func (ba *BnAlpha) SpotWsPublicClose() {
 		ba.spotWsPublicConn.Close()
 	}
 }
-func (ba *BnAlpha) spotWsHandleBBO(data []byte, ch chan<- any) {
-	bboRecv := baSpotWsPublicBBOInnerPool.Get().(*BnAlphaBookTicker)
-	defer baSpotWsPublicBBOInnerPool.Put(bboRecv)
-	if err := easyjson.Unmarshal(data, bboRecv); err != nil || len(bboRecv.Symbol) == 0 {
+
+// spotWsHandleFullDepth 用增量深度维护本地盘口, 买一卖一有变化才推送
+func (ba *BnAlpha) spotWsHandleFullDepth(data []byte, ch chan<- any) {
+	depth := baSpotWsPublicDepthPool.Get().(*BnAlphaDepthUpdate)
+	defer baSpotWsPublicDepthPool.Put(depth)
+	depth.reset()
+	if err := easyjson.Unmarshal(data, depth); err != nil || len(depth.Symbol) == 0 {
 		return
 	}
+	symbol := ba.getStdSymbol(depth.Symbol) // 交易所symbol转标准symbol
+	bids := ba.spotWsOrderBookBids[symbol]
+	if bids == nil { // 首次(或序号断裂后): 取fullDepth快照重建本地盘口
+		if !ba.spotWsInitOrderBook(symbol, depth.Symbol) {
+			return
+		}
+		bids = ba.spotWsOrderBookBids[symbol]
+	}
+	asks := ba.spotWsOrderBookAsks[symbol]
+	snapId := ba.spotWsOrderBookSnapId[symbol]
+	prevId := ba.spotWsOrderBookPrevId[symbol]
+	if prevId == 0 { // 快照之后的第一个可用事件: pu <= lastUpdateId 且 u >= lastUpdateId
+		if depth.LastId < snapId { // 比快照还旧, 丢弃
+			return
+		}
+		if depth.PrevId > snapId { // 快照与事件之间断档, 重新初始化
+			ba.spotWsDropOrderBook(symbol)
+			return
+		}
+	} else if depth.PrevId != prevId { // 序号断裂, 重新初始化
+		ilog.Warning(ba.Name() + " spot.ws.public " + symbol + " depth seq error! " +
+			strconv.FormatInt(depth.PrevId, 10) + " != " + strconv.FormatInt(prevId, 10))
+		ba.spotWsDropOrderBook(symbol)
+		return
+	}
+	for _, v := range depth.Bids {
+		if v[1].IsZero() {
+			bids.Remove(v[0])
+		} else {
+			bids.Put(v[0], v[1])
+		}
+	}
+	for _, v := range depth.Asks {
+		if v[1].IsZero() {
+			asks.Remove(v[0])
+		} else {
+			asks.Put(v[0], v[1])
+		}
+	}
+	ba.spotWsOrderBookPrevId[symbol] = depth.LastId
+	if bids.Empty() || asks.Empty() { // 盘口还没收敛
+		return
+	}
+	if !ba.spotWsPublicBBOSet[symbol] {
+		return
+	}
+	// 原始盘口可能因为UI挂单出现买卖交叉, 先虚拟撮合去交叉
+	bidPrice, bidQty, askPrice, askQty, ok := ba.spotWsVirtualMatch(bids, asks)
+	if !ok { // 某一侧被吃空, 本次数据无效
+		return
+	}
+
+	cached := ba.spotWsBBOCache[symbol]
+	if cached == nil {
+		cached = &BestBidAsk{Symbol: symbol}
+		ba.spotWsBBOCache[symbol] = cached
+	} else if cached.BidPrice.Equal(bidPrice) && cached.BidQty.Equal(bidQty) &&
+		cached.AskPrice.Equal(askPrice) && cached.AskQty.Equal(askQty) {
+		return // 买一卖一没变化
+	}
+	cached.Time = depth.Time
+	cached.BidPrice, cached.BidQty = bidPrice, bidQty
+	cached.AskPrice, cached.AskQty = askPrice, askQty
 	bbo := wsPublicBBOPool.Get().(*BestBidAsk)
-	bbo.Symbol = ba.getStdSymbol(bboRecv.Symbol) // 交易所symbol转标准symbol
-	bbo.Time = bboRecv.Time
-	bbo.BidPrice = bboRecv.BidPrice
-	bbo.BidQty = bboRecv.BidQty
-	bbo.AskPrice = bboRecv.AskPrice
-	bbo.AskQty = bboRecv.AskQty
+	*bbo = *cached
 	ch <- bbo
+}
+
+// spotWsVirtualMatch 虚拟撮合去交叉: 从买卖最优档开始按min(买量,卖量)互相吃, 某一侧吃完就换下一档
+// 返回有效买一/卖一, 某一侧吃空(或还存在交叉)时ok=false
+func (ba *BnAlpha) spotWsVirtualMatch(bids, asks *treemap.Map[decimal.Decimal, decimal.Decimal]) (
+	bidPrice, bidQty, askPrice, askQty decimal.Decimal, ok bool) {
+	bi := bids.Iterator()
+	if !bi.Next() {
+		return
+	}
+	bidPrice, bidQty = bi.Key(), bi.Value()
+	ai := asks.Iterator()
+	if !ai.Next() {
+		return
+	}
+	askPrice, askQty = ai.Key(), ai.Value()
+	for bidPrice.GreaterThanOrEqual(askPrice) {
+		if bidQty.GreaterThan(askQty) {
+			bidQty = bidQty.Sub(askQty)
+			if !ai.Next() {
+				return
+			}
+			askPrice, askQty = ai.Key(), ai.Value()
+		} else if bidQty.LessThan(askQty) {
+			askQty = askQty.Sub(bidQty)
+			if !bi.Next() {
+				return
+			}
+			bidPrice, bidQty = bi.Key(), bi.Value()
+		} else {
+			if !bi.Next() || !ai.Next() {
+				return
+			}
+			bidPrice, bidQty = bi.Key(), bi.Value()
+			askPrice, askQty = ai.Key(), ai.Value()
+		}
+	}
+	// 数量用该档位的原始挂单量(撮合只用于算有效买一/卖一)
+	if v, exists := bids.Get(bidPrice); exists {
+		bidQty = v
+	}
+	if v, exists := asks.Get(askPrice); exists {
+		askQty = v
+	}
+	ok = true
+	return
+}
+
+// spotWsGetDepthSnapshot 订阅时同步取fullDepth快照并缓存
+// 快照和fulldepth流都包含UI和API订单, 共享同一套updateId
+func (ba *BnAlpha) spotWsGetDepthSnapshot(symbol, symbolS string) {
+	if snap := ba.spotWsFetchDepthSnapshot(symbol, symbolS); snap != nil {
+		ba.spotWsSnapMtx.Lock()
+		ba.spotWsSnapCache[symbol] = snap
+		ba.spotWsSnapMtx.Unlock()
+	}
+}
+func (ba *BnAlpha) spotWsFetchDepthSnapshot(symbol, symbolS string) *BnAlphaDepthSnapshot {
+	link := baEndpoint + "/bapi/defi/v1/public/alpha-trade/fullDepth?symbol=" + symbolS + "&limit=100"
+	_, resp, err := ba.Get(link, baApiDeadline, nil)
+	if err != nil {
+		ilog.Warning(ba.Name() + " spot.ws.public " + symbol + " depth snapshot net error! " + err.Error())
+		return nil
+	}
+	recv := struct {
+		Code    string `json:"code,omitempty"`
+		Message string `json:"message,omitempty"`
+		Data    struct {
+			LastUpdateId int64                `json:"lastUpdateId,omitempty"`
+			Bids         [][2]decimal.Decimal `json:"bids,omitempty"`
+			Asks         [][2]decimal.Decimal `json:"asks,omitempty"`
+		} `json:"data"`
+	}{}
+	if err = json.Unmarshal(resp, &recv); err != nil {
+		ilog.Warning(ba.Name() + " spot.ws.public " + symbol + " depth snapshot unmarshal fail! " + err.Error())
+		return nil
+	}
+	if recv.Code != "000000" || recv.Data.LastUpdateId == 0 ||
+		len(recv.Data.Bids) == 0 || len(recv.Data.Asks) == 0 {
+		ilog.Warning(ba.Name() + " spot.ws.public " + symbol + " depth snapshot err! " + string(resp))
+		return nil
+	}
+	return &BnAlphaDepthSnapshot{
+		LastUpdateId: recv.Data.LastUpdateId,
+		Bids:         recv.Data.Bids,
+		Asks:         recv.Data.Asks,
+	}
+}
+
+// spotWsInitOrderBook 用快照(优先用订阅时缓存的)建本地盘口
+func (ba *BnAlpha) spotWsInitOrderBook(symbol, symbolS string) bool {
+	ba.spotWsSnapMtx.Lock()
+	snap := ba.spotWsSnapCache[symbol]
+	delete(ba.spotWsSnapCache, symbol)
+	ba.spotWsSnapMtx.Unlock()
+	if snap == nil { // 没有缓存(比如序号断裂后重建)就现取一份
+		snap = ba.spotWsFetchDepthSnapshot(symbol, symbolS)
+	}
+	if snap == nil {
+		return false
+	}
+	bids := treemap.NewWith[decimal.Decimal, decimal.Decimal](func(a, b decimal.Decimal) int {
+		return b.Compare(a) // desc
+	})
+	asks := treemap.NewWith[decimal.Decimal, decimal.Decimal](func(a, b decimal.Decimal) int {
+		return a.Compare(b) // asc
+	})
+	for _, v := range snap.Bids {
+		if !v[1].IsZero() {
+			bids.Put(v[0], v[1])
+		}
+	}
+	for _, v := range snap.Asks {
+		if !v[1].IsZero() {
+			asks.Put(v[0], v[1])
+		}
+	}
+	ba.spotWsOrderBookBids[symbol] = bids
+	ba.spotWsOrderBookAsks[symbol] = asks
+	ba.spotWsOrderBookSnapId[symbol] = snap.LastUpdateId
+	ba.spotWsOrderBookPrevId[symbol] = 0
+	return true
+}
+
+// spotWsDropOrderBook 序号断裂时丢掉本地盘口, 下一个事件会重新取快照
+func (ba *BnAlpha) spotWsDropOrderBook(symbol string) {
+	ba.spotWsSnapMtx.Lock()
+	delete(ba.spotWsSnapCache, symbol)
+	ba.spotWsSnapMtx.Unlock()
+	delete(ba.spotWsOrderBookBids, symbol)
+	delete(ba.spotWsOrderBookAsks, symbol)
+	delete(ba.spotWsOrderBookSnapId, symbol)
+	delete(ba.spotWsOrderBookPrevId, symbol)
+	delete(ba.spotWsBBOCache, symbol)
 }
