@@ -40,6 +40,18 @@ type Aster struct {
 	spotWsPrivateClosed    bool
 	spotWsPrivateClosedMtx sync.RWMutex
 	spotWsPrivateListenKey string
+
+	// futures websocket
+	futuresWsPublicConn      *websocket.Conn
+	futuresWsPublicConnMtx   sync.Mutex
+	futuresWsPublicClosed    bool
+	futuresWsPublicClosedMtx sync.RWMutex
+
+	futuresWsPrivateConn      *websocket.Conn
+	futuresWsPrivateConnMtx   sync.Mutex
+	futuresWsPrivateClosed    bool
+	futuresWsPrivateClosedMtx sync.RWMutex
+	futuresWsPrivateListenKey string
 }
 
 // AsSubscribeArg 订阅/退订参数, id必须是自增整数
@@ -50,6 +62,7 @@ type AsSubscribeArg struct {
 }
 
 const asSpotEndpoint = "https://sapi.asterdex.com"
+const asFuturesEndpoint = "https://fapi.asterdex.com"
 const asApiDeadline = 1500 * time.Millisecond
 
 func NewAster(account, apikey, secretkey, localIP string) (*Aster, error) {
@@ -95,6 +108,8 @@ func (as *Aster) Debug(v bool) {
 func (as *Aster) Init() error {
 	as.spotWsPublicClosed = true
 	as.spotWsPrivateClosed = true
+	as.futuresWsPublicClosed = true
+	as.futuresWsPrivateClosed = true
 	return nil
 }
 

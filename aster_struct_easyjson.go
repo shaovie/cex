@@ -1347,3 +1347,1036 @@ func (v *AsterSpot24hTicker) UnmarshalJSON(data []byte) error {
 func (v *AsterSpot24hTicker) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjson1caa0d1bDecodeGithubComShaovieCex8(l, v)
 }
+func easyjson1caa0d1bDecodeGithubComShaovieCex9(in *jlexer.Lexer, out *AsterFuturesWsPubMsg) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		switch key {
+		case "id":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Id = int64(in.Int64())
+			}
+		case "code":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Code = int(in.Int())
+			}
+		case "msg":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Msg = string(in.String())
+			}
+		case "result":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				(out.Result).UnmarshalEasyJSON(in)
+			}
+		case "stream":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Stream = string(in.String())
+			}
+		case "data":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				(out.Data).UnmarshalEasyJSON(in)
+			}
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson1caa0d1bEncodeGithubComShaovieCex9(out *jwriter.Writer, in AsterFuturesWsPubMsg) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	if in.Id != 0 {
+		const prefix string = ",\"id\":"
+		first = false
+		out.RawString(prefix[1:])
+		out.Int64(int64(in.Id))
+	}
+	if in.Code != 0 {
+		const prefix string = ",\"code\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int(int(in.Code))
+	}
+	if in.Msg != "" {
+		const prefix string = ",\"msg\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.Msg))
+	}
+	if len(in.Result) != 0 {
+		const prefix string = ",\"result\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Raw((in.Result).MarshalJSON())
+	}
+	if in.Stream != "" {
+		const prefix string = ",\"stream\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.Stream))
+	}
+	if len(in.Data) != 0 {
+		const prefix string = ",\"data\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Raw((in.Data).MarshalJSON())
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v AsterFuturesWsPubMsg) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjson1caa0d1bEncodeGithubComShaovieCex9(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v AsterFuturesWsPubMsg) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjson1caa0d1bEncodeGithubComShaovieCex9(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *AsterFuturesWsPubMsg) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjson1caa0d1bDecodeGithubComShaovieCex9(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *AsterFuturesWsPubMsg) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjson1caa0d1bDecodeGithubComShaovieCex9(l, v)
+}
+func easyjson1caa0d1bDecodeGithubComShaovieCex10(in *jlexer.Lexer, out *AsterFuturesWsPrivMsg) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		switch key {
+		case "e":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Event = string(in.String())
+			}
+		case "E":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Time = int64(in.Int64())
+			}
+		case "o":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				(out.Order).UnmarshalEasyJSON(in)
+			}
+		case "a":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				(out.Account).UnmarshalEasyJSON(in)
+			}
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson1caa0d1bEncodeGithubComShaovieCex10(out *jwriter.Writer, in AsterFuturesWsPrivMsg) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	if in.Event != "" {
+		const prefix string = ",\"e\":"
+		first = false
+		out.RawString(prefix[1:])
+		out.String(string(in.Event))
+	}
+	if in.Time != 0 {
+		const prefix string = ",\"E\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int64(int64(in.Time))
+	}
+	if len(in.Order) != 0 {
+		const prefix string = ",\"o\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Raw((in.Order).MarshalJSON())
+	}
+	if len(in.Account) != 0 {
+		const prefix string = ",\"a\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Raw((in.Account).MarshalJSON())
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v AsterFuturesWsPrivMsg) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjson1caa0d1bEncodeGithubComShaovieCex10(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v AsterFuturesWsPrivMsg) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjson1caa0d1bEncodeGithubComShaovieCex10(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *AsterFuturesWsPrivMsg) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjson1caa0d1bDecodeGithubComShaovieCex10(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *AsterFuturesWsPrivMsg) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjson1caa0d1bDecodeGithubComShaovieCex10(l, v)
+}
+func easyjson1caa0d1bDecodeGithubComShaovieCex11(in *jlexer.Lexer, out *AsterFuturesWsOrder) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		switch key {
+		case "s":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Symbol = string(in.String())
+			}
+		case "c":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.ClientId = string(in.String())
+			}
+		case "S":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Side = string(in.String())
+			}
+		case "o":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.OrderType = string(in.String())
+			}
+		case "f":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.TimeInForce = string(in.String())
+			}
+		case "q":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.Qty).UnmarshalJSON(data))
+				}
+			}
+		case "p":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.Price).UnmarshalJSON(data))
+				}
+			}
+		case "ap":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.AvgPrice).UnmarshalJSON(data))
+				}
+			}
+		case "sp":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.StopPrice).UnmarshalJSON(data))
+				}
+			}
+		case "x":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.EventType = string(in.String())
+			}
+		case "X":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Status = string(in.String())
+			}
+		case "i":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.OrderId = int64(in.Int64())
+			}
+		case "l":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.LaseExecQty).UnmarshalJSON(data))
+				}
+			}
+		case "L":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.LaseExecPrc).UnmarshalJSON(data))
+				}
+			}
+		case "z":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.ExecutedQty).UnmarshalJSON(data))
+				}
+			}
+		case "n":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.FeeQty).UnmarshalJSON(data))
+				}
+			}
+		case "N":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.FeeAsset = string(in.String())
+			}
+		case "T":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.TradeTime = int64(in.Int64())
+			}
+		case "rp":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.Rpnl).UnmarshalJSON(data))
+				}
+			}
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson1caa0d1bEncodeGithubComShaovieCex11(out *jwriter.Writer, in AsterFuturesWsOrder) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	if in.Symbol != "" {
+		const prefix string = ",\"s\":"
+		first = false
+		out.RawString(prefix[1:])
+		out.String(string(in.Symbol))
+	}
+	if in.ClientId != "" {
+		const prefix string = ",\"c\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.ClientId))
+	}
+	if in.Side != "" {
+		const prefix string = ",\"S\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.Side))
+	}
+	if in.OrderType != "" {
+		const prefix string = ",\"o\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.OrderType))
+	}
+	if in.TimeInForce != "" {
+		const prefix string = ",\"f\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.TimeInForce))
+	}
+	{
+		const prefix string = ",\"q\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Raw((in.Qty).MarshalJSON())
+	}
+	{
+		const prefix string = ",\"p\":"
+		out.RawString(prefix)
+		out.Raw((in.Price).MarshalJSON())
+	}
+	{
+		const prefix string = ",\"ap\":"
+		out.RawString(prefix)
+		out.Raw((in.AvgPrice).MarshalJSON())
+	}
+	{
+		const prefix string = ",\"sp\":"
+		out.RawString(prefix)
+		out.Raw((in.StopPrice).MarshalJSON())
+	}
+	if in.EventType != "" {
+		const prefix string = ",\"x\":"
+		out.RawString(prefix)
+		out.String(string(in.EventType))
+	}
+	if in.Status != "" {
+		const prefix string = ",\"X\":"
+		out.RawString(prefix)
+		out.String(string(in.Status))
+	}
+	if in.OrderId != 0 {
+		const prefix string = ",\"i\":"
+		out.RawString(prefix)
+		out.Int64(int64(in.OrderId))
+	}
+	{
+		const prefix string = ",\"l\":"
+		out.RawString(prefix)
+		out.Raw((in.LaseExecQty).MarshalJSON())
+	}
+	{
+		const prefix string = ",\"L\":"
+		out.RawString(prefix)
+		out.Raw((in.LaseExecPrc).MarshalJSON())
+	}
+	{
+		const prefix string = ",\"z\":"
+		out.RawString(prefix)
+		out.Raw((in.ExecutedQty).MarshalJSON())
+	}
+	{
+		const prefix string = ",\"n\":"
+		out.RawString(prefix)
+		out.Raw((in.FeeQty).MarshalJSON())
+	}
+	if in.FeeAsset != "" {
+		const prefix string = ",\"N\":"
+		out.RawString(prefix)
+		out.String(string(in.FeeAsset))
+	}
+	if in.TradeTime != 0 {
+		const prefix string = ",\"T\":"
+		out.RawString(prefix)
+		out.Int64(int64(in.TradeTime))
+	}
+	{
+		const prefix string = ",\"rp\":"
+		out.RawString(prefix)
+		out.Raw((in.Rpnl).MarshalJSON())
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v AsterFuturesWsOrder) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjson1caa0d1bEncodeGithubComShaovieCex11(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v AsterFuturesWsOrder) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjson1caa0d1bEncodeGithubComShaovieCex11(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *AsterFuturesWsOrder) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjson1caa0d1bDecodeGithubComShaovieCex11(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *AsterFuturesWsOrder) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjson1caa0d1bDecodeGithubComShaovieCex11(l, v)
+}
+func easyjson1caa0d1bDecodeGithubComShaovieCex12(in *jlexer.Lexer, out *AsterFuturesOrderBook) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		switch key {
+		case "s":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Symbol = string(in.String())
+			}
+		case "E":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Time = int64(in.Int64())
+			}
+		case "b":
+			if in.IsNull() {
+				in.Skip()
+				out.Bids = nil
+			} else {
+				in.Delim('[')
+				if out.Bids == nil {
+					if !in.IsDelim(']') {
+						out.Bids = make([][2]decimal.Decimal, 0, 2)
+					} else {
+						out.Bids = [][2]decimal.Decimal{}
+					}
+				} else {
+					out.Bids = (out.Bids)[:0]
+				}
+				for !in.IsDelim(']') {
+					var v14 [2]decimal.Decimal
+					if in.IsNull() {
+						in.Skip()
+					} else {
+						in.Delim('[')
+						v15 := 0
+						for !in.IsDelim(']') {
+							if v15 < 2 {
+								if in.IsNull() {
+									in.Skip()
+								} else {
+									if data := in.Raw(); in.Ok() {
+										in.AddError(((v14)[v15]).UnmarshalJSON(data))
+									}
+								}
+								v15++
+							} else {
+								in.SkipRecursive()
+							}
+							in.WantComma()
+						}
+						in.Delim(']')
+					}
+					out.Bids = append(out.Bids, v14)
+					in.WantComma()
+				}
+				in.Delim(']')
+			}
+		case "a":
+			if in.IsNull() {
+				in.Skip()
+				out.Asks = nil
+			} else {
+				in.Delim('[')
+				if out.Asks == nil {
+					if !in.IsDelim(']') {
+						out.Asks = make([][2]decimal.Decimal, 0, 2)
+					} else {
+						out.Asks = [][2]decimal.Decimal{}
+					}
+				} else {
+					out.Asks = (out.Asks)[:0]
+				}
+				for !in.IsDelim(']') {
+					var v16 [2]decimal.Decimal
+					if in.IsNull() {
+						in.Skip()
+					} else {
+						in.Delim('[')
+						v17 := 0
+						for !in.IsDelim(']') {
+							if v17 < 2 {
+								if in.IsNull() {
+									in.Skip()
+								} else {
+									if data := in.Raw(); in.Ok() {
+										in.AddError(((v16)[v17]).UnmarshalJSON(data))
+									}
+								}
+								v17++
+							} else {
+								in.SkipRecursive()
+							}
+							in.WantComma()
+						}
+						in.Delim(']')
+					}
+					out.Asks = append(out.Asks, v16)
+					in.WantComma()
+				}
+				in.Delim(']')
+			}
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson1caa0d1bEncodeGithubComShaovieCex12(out *jwriter.Writer, in AsterFuturesOrderBook) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	if in.Symbol != "" {
+		const prefix string = ",\"s\":"
+		first = false
+		out.RawString(prefix[1:])
+		out.String(string(in.Symbol))
+	}
+	if in.Time != 0 {
+		const prefix string = ",\"E\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int64(int64(in.Time))
+	}
+	if len(in.Bids) != 0 {
+		const prefix string = ",\"b\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		{
+			out.RawByte('[')
+			for v18, v19 := range in.Bids {
+				if v18 > 0 {
+					out.RawByte(',')
+				}
+				out.RawByte('[')
+				for v20 := range v19 {
+					if v20 > 0 {
+						out.RawByte(',')
+					}
+					out.Raw(((v19)[v20]).MarshalJSON())
+				}
+				out.RawByte(']')
+			}
+			out.RawByte(']')
+		}
+	}
+	if len(in.Asks) != 0 {
+		const prefix string = ",\"a\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		{
+			out.RawByte('[')
+			for v21, v22 := range in.Asks {
+				if v21 > 0 {
+					out.RawByte(',')
+				}
+				out.RawByte('[')
+				for v23 := range v22 {
+					if v23 > 0 {
+						out.RawByte(',')
+					}
+					out.Raw(((v22)[v23]).MarshalJSON())
+				}
+				out.RawByte(']')
+			}
+			out.RawByte(']')
+		}
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v AsterFuturesOrderBook) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjson1caa0d1bEncodeGithubComShaovieCex12(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v AsterFuturesOrderBook) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjson1caa0d1bEncodeGithubComShaovieCex12(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *AsterFuturesOrderBook) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjson1caa0d1bDecodeGithubComShaovieCex12(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *AsterFuturesOrderBook) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjson1caa0d1bDecodeGithubComShaovieCex12(l, v)
+}
+func easyjson1caa0d1bDecodeGithubComShaovieCex13(in *jlexer.Lexer, out *AsterFuturesBBO) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		switch key {
+		case "s":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Symbol = string(in.String())
+			}
+		case "b":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.BidPrice).UnmarshalJSON(data))
+				}
+			}
+		case "B":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.BidQty).UnmarshalJSON(data))
+				}
+			}
+		case "a":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.AskPrice).UnmarshalJSON(data))
+				}
+			}
+		case "A":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.AskQty).UnmarshalJSON(data))
+				}
+			}
+		case "E":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Time = int64(in.Int64())
+			}
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson1caa0d1bEncodeGithubComShaovieCex13(out *jwriter.Writer, in AsterFuturesBBO) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	if in.Symbol != "" {
+		const prefix string = ",\"s\":"
+		first = false
+		out.RawString(prefix[1:])
+		out.String(string(in.Symbol))
+	}
+	{
+		const prefix string = ",\"b\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Raw((in.BidPrice).MarshalJSON())
+	}
+	{
+		const prefix string = ",\"B\":"
+		out.RawString(prefix)
+		out.Raw((in.BidQty).MarshalJSON())
+	}
+	{
+		const prefix string = ",\"a\":"
+		out.RawString(prefix)
+		out.Raw((in.AskPrice).MarshalJSON())
+	}
+	{
+		const prefix string = ",\"A\":"
+		out.RawString(prefix)
+		out.Raw((in.AskQty).MarshalJSON())
+	}
+	if in.Time != 0 {
+		const prefix string = ",\"E\":"
+		out.RawString(prefix)
+		out.Int64(int64(in.Time))
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v AsterFuturesBBO) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjson1caa0d1bEncodeGithubComShaovieCex13(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v AsterFuturesBBO) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjson1caa0d1bEncodeGithubComShaovieCex13(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *AsterFuturesBBO) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjson1caa0d1bDecodeGithubComShaovieCex13(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *AsterFuturesBBO) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjson1caa0d1bDecodeGithubComShaovieCex13(l, v)
+}
+func easyjson1caa0d1bDecodeGithubComShaovieCex14(in *jlexer.Lexer, out *AsterFutures24hTicker) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		switch key {
+		case "s":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Symbol = string(in.String())
+			}
+		case "c":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.Last).UnmarshalJSON(data))
+				}
+			}
+		case "v":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.Volume).UnmarshalJSON(data))
+				}
+			}
+		case "q":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				if data := in.Raw(); in.Ok() {
+					in.AddError((out.QuoteVolume).UnmarshalJSON(data))
+				}
+			}
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson1caa0d1bEncodeGithubComShaovieCex14(out *jwriter.Writer, in AsterFutures24hTicker) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	if in.Symbol != "" {
+		const prefix string = ",\"s\":"
+		first = false
+		out.RawString(prefix[1:])
+		out.String(string(in.Symbol))
+	}
+	{
+		const prefix string = ",\"c\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Raw((in.Last).MarshalJSON())
+	}
+	{
+		const prefix string = ",\"v\":"
+		out.RawString(prefix)
+		out.Raw((in.Volume).MarshalJSON())
+	}
+	{
+		const prefix string = ",\"q\":"
+		out.RawString(prefix)
+		out.Raw((in.QuoteVolume).MarshalJSON())
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v AsterFutures24hTicker) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjson1caa0d1bEncodeGithubComShaovieCex14(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v AsterFutures24hTicker) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjson1caa0d1bEncodeGithubComShaovieCex14(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *AsterFutures24hTicker) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjson1caa0d1bDecodeGithubComShaovieCex14(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *AsterFutures24hTicker) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjson1caa0d1bDecodeGithubComShaovieCex14(l, v)
+}
