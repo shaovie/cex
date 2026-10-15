@@ -113,8 +113,8 @@ func (mc *Mexc) SpotWsPublicLoop(ch chan<- any) {
 	defer mc.SpotWsPublicClose()
 	defer close(ch)
 
-	pingInterval := 20 * time.Second
-	pongWait := pingInterval + 10*time.Second
+	pingInterval := 23 * time.Second
+	pongWait := pingInterval + 2*time.Second
 	mc.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
 	pingExit := make(chan struct{})
 	defer close(pingExit)
@@ -361,8 +361,8 @@ func (mc *Mexc) SpotWsPrivateLoop(ch chan<- any) {
 	defer mc.SpotWsPrivateClose()
 	defer close(ch)
 
-	pingInterval := 20 * time.Second
-	pongWait := pingInterval + 10*time.Second
+	pingInterval := 28 * time.Second
+	pongWait := pingInterval + 2*time.Second
 	mc.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
 	pingExit := make(chan struct{})
 	defer close(pingExit)

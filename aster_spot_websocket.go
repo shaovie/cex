@@ -379,7 +379,7 @@ func (as *Aster) SpotWsPrivateLoop(ch chan<- any) {
 	defer as.SpotWsPrivateClose()
 	defer close(ch)
 
-	pingInterval := 20 * time.Second
+	pingInterval := 23 * time.Second
 	pongWait := pingInterval + 10*time.Second
 	as.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
 	as.spotWsPrivateConn.SetPingHandler(func(message string) error {
