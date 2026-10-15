@@ -470,9 +470,6 @@ func (as *Aster) spotWsHandleOrder(data []byte, ch chan<- any) {
 	if err := easyjson.Unmarshal(data, &orderRecv); err != nil || orderRecv.OrderId <= 0 {
 		return
 	}
-	if orderRecv.Status == "CANCELED" {
-		orderRecv.ClientId = orderRecv.ClientIdOrig
-	}
 	ch <- &SpotOrder{
 		Symbol:      orderRecv.Symbol,
 		OrderId:     strconv.FormatInt(orderRecv.OrderId, 10),

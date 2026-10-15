@@ -65,6 +65,7 @@ func (gt *Gate) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error) {
 		Fee      decimal.Decimal `json:"fee"`
 		Status   string          `json:"status"`
 		Txid     string          `json:"txid"`
+		CTime    string          `json:"timestamp"`
 		DoneTime string          `json:"timestamp2"` // second
 	}{}
 	err = json.Unmarshal(resp, &ret)
@@ -75,6 +76,7 @@ func (gt *Gate) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error) {
 	res := make([]WithdrawResult, 0, 4)
 	for _, v2 := range ret {
 		dtime, _ := strconv.ParseInt(v2.DoneTime, 10, 64)
+		ctime, _ := strconv.ParseInt(v2.CTime, 10, 64)
 		a := WithdrawResult{
 			WId:      v2.Id,
 			Symbol:   v2.Symbol,
@@ -82,6 +84,7 @@ func (gt *Gate) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error) {
 			Qty:      v2.Qty,
 			Txid:     v2.Txid,
 			Fee:      v2.Fee,
+			CTime:    ctime,
 			DoneTime: dtime,
 		}
 		if a.Status == "COMPLETED" {

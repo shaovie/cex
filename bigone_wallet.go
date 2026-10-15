@@ -159,6 +159,7 @@ func (bo *Bigone) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error) 
 	res := make([]WithdrawResult, 0, len(ret.Data))
 	for i := range ret.Data {
 		doneTime, _ := time.Parse(time.RFC3339, ret.Data[i].DoneTime)
+		cTime, _ := time.Parse(time.RFC3339, ret.Data[i].CTime)
 		a := WithdrawResult{
 			WId:      strconv.FormatInt(ret.Data[i].Id, 10),
 			Symbol:   ret.Data[i].Symbol,
@@ -166,6 +167,7 @@ func (bo *Bigone) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error) 
 			Status:   bo.toStdWithdrawStatus(ret.Data[i].Status),
 			Qty:      ret.Data[i].Qty,
 			Fee:      ret.Data[i].Fee,
+			CTime:    cTime.Unix(),
 			DoneTime: doneTime.Unix(),
 		}
 		if ret.Data[i].DoneTime == "" {

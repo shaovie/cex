@@ -67,6 +67,7 @@ func (sa *Safetrade) GetWithdrawalHistory(symbol string) ([]WithdrawResult, erro
 		Fee      decimal.Decimal `json:"fee"`
 		Status   string          `json:"status"`
 		Txid     string          `json:"txid"`
+		CTime    string          `json:"created_at,omitempty"`
 		DoneTime string          `json:"completed_at,omitempty"`
 	}{}
 	if err = json.Unmarshal(resp, &ret); err != nil {
@@ -75,10 +76,14 @@ func (sa *Safetrade) GetWithdrawalHistory(symbol string) ([]WithdrawResult, erro
 
 	res := make([]WithdrawResult, 0, len(ret))
 	for _, v := range ret {
-		var doneTime int64 // 未完成时completed_at为空
+		var doneTime, ctime int64 // 未完成时completed_at为空
 		if v.DoneTime != "" {
 			dtime, _ := time.Parse(time.RFC3339, v.DoneTime)
 			doneTime = dtime.Unix()
+		}
+		if v.CTime != "" {
+			dt, _ := time.Parse(time.RFC3339, v.CTime)
+			ctime = dt.Unix()
 		}
 		a := WithdrawResult{
 			WId:      strconv.FormatInt(v.Id, 10),
@@ -87,6 +92,7 @@ func (sa *Safetrade) GetWithdrawalHistory(symbol string) ([]WithdrawResult, erro
 			Txid:     v.Txid,
 			Qty:      v.Qty,
 			Fee:      v.Fee,
+			CTime:    ctime,
 			DoneTime: doneTime,
 		}
 		res = append(res, a)
