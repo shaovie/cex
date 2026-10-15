@@ -149,6 +149,7 @@ func (ba *BnAlpha) SpotWsPublicLoop(ch chan<- any) {
 		}
 	}(pingExit)
 
+	l := 0
 	for {
 		_, recv, err := ba.spotWsPublicConn.ReadMessage()
 		if err != nil {
@@ -167,8 +168,12 @@ func (ba *BnAlpha) SpotWsPublicLoop(ch chan<- any) {
 			ilog.Error(ba.Name() + " spot.ws.public recv err:" + msg.Msg + " " + string(recv))
 			goto END
 		}
-		if len(msg.Stream) > 0 { // 订阅/退订响应没有stream
-			ba.spotWsHandlePublic(msg.Stream, msg.Data, ch)
+		if l = len(msg.Stream); l > 0 { // 订阅/退订响应没有stream
+			if l > 11 && msg.Stream[l-11:l] == "@bookTicker" {
+				ba.spotWsHandleBBO(msg.Data, ch)
+			} else {
+				ilog.Error(ba.Name() + " spot.ws.public recv unknown stream: " + msg.Stream)
+			}
 		}
 	END:
 		baWsPubMsgPool.Put(msg)
@@ -188,14 +193,6 @@ func (ba *BnAlpha) SpotWsPublicClose() {
 	ba.spotWsPublicClosed = true
 	if ba.spotWsPublicConn != nil {
 		ba.spotWsPublicConn.Close()
-	}
-}
-func (ba *BnAlpha) spotWsHandlePublic(stream string, data []byte, ch chan<- any) {
-	l := len(stream)
-	if l > 11 && stream[l-11:l] == "@bookTicker" {
-		ba.spotWsHandleBBO(data, ch)
-	} else {
-		ilog.Error(ba.Name() + " spot.ws.public recv unknown stream: " + stream)
 	}
 }
 func (ba *BnAlpha) spotWsHandleBBO(data []byte, ch chan<- any) {
