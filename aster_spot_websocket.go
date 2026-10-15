@@ -181,7 +181,6 @@ func (as *Aster) SpotWsPublicLoop(ch chan<- any) {
 			}
 			break
 		}
-		as.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
 		msg := asSpotWsPubMsgPool.Get().(*AsterSpotWsPubMsg)
 		msg.reset()
 		if err = easyjson.Unmarshal(recv, msg); err != nil {
@@ -448,7 +447,6 @@ func (as *Aster) SpotWsPrivateLoop(ch chan<- any) {
 		if as.debug {
 			ilog.Rinfo(as.Name() + " spot priv ws: " + string(recv))
 		}
-		as.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
 		msg := asSpotWsPrivMsgPool.Get().(*AsterSpotWsPrivMsg)
 		msg.reset()
 		if err = easyjson.Unmarshal(recv, msg); err != nil {

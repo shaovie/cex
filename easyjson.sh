@@ -9,3 +9,4 @@ $GOPATH/bin/easyjson -all kucoin_struct.go
 $GOPATH/bin/easyjson -all safetrade_struct.go
 $GOPATH/bin/easyjson -all bitget_struct.go
 $GOPATH/bin/easyjson -all aster_struct.go
+$GOPATH/bin/easyjson -all bnalpha_struct.go

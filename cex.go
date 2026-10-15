@@ -226,6 +226,7 @@ func init() {
 	CexList["bitget"] = "Bitget"
 	CexList["mexc"] = "Mexc"
 	CexList["aster"] = "Aster"
+	CexList["bnalpha"] = "BnAlpha"
 
 	CexSXList = make(map[string]string)
 	CexSXList["binance"] = "BN"
@@ -240,6 +241,7 @@ func init() {
 	CexSXList["kucoin"] = "KC"
 	CexSXList["bitget"] = "BG"
 	CexSXList["aster"] = "AS"
+	CexSXList["bnalpha"] = "BA"
 
 	CexFeeCoinMap = make(map[string]string)
 	CexFeeCoinMap["gate"] = "GT"
@@ -280,6 +282,8 @@ func New(cexName, account, apikey, secretkey, passwd, localIp string) (Exchanger
 		cexObj, err = NewMexc(account, apikey, secretkey, localIp)
 	} else if cexName == "aster" {
 		cexObj, err = NewAster(account, apikey, secretkey, localIp)
+	} else if cexName == "bnalpha" {
+		cexObj, err = NewBnAlpha(account, apikey, secretkey, localIp)
 	} else if cexName == "kraken" {
 		cexObj = NewKraken(account, apikey, secretkey)
 	} else {
