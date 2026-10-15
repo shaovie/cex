@@ -37,6 +37,9 @@ func (us *Unsupported) SpotPlaceOrderMultiple([]SpotPostOrder) error {
 func (us *Unsupported) SpotCancelOrder(symbol, orderId, cltId string) error {
 	return errors.New("not support")
 }
+func (us *Unsupported) SpotCancelOrderMultiple(symbol string, orderIds, cltIds []string) error {
+	return errors.New("not support")
+}
 func (us *Unsupported) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error) {
 	return nil, errors.New("not support")
 }

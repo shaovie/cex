@@ -382,6 +382,132 @@ func (bg *Bitget) SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId stri
 	}
 	return nil
 }
+
+// SpotPlaceOrderMultiple 批量下单, 支持部分成功
+func (bg *Bitget) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
+	if len(orders) == 0 {
+		return errors.New(bg.Name() + " orders empty!")
+	}
+	type BatchOrder struct {
+		Category    string `json:"category"`
+		Symbol      string `json:"symbol"`
+		Side        string `json:"side"`
+		OrderType   string `json:"orderType"`
+		TimeInForce string `json:"timeInForce,omitempty"`
+		Price       string `json:"price,omitempty"`
+		Qty         string `json:"qty"`
+		ClientOid   string `json:"clientOid,omitempty"`
+	}
+	orderL := make([]BatchOrder, 0, len(orders))
+	for i := range orders {
+		if orders[i].Type != "LIMIT" && orders[i].Type != "MARKET" {
+			return errors.New(bg.Name() + " not support order type! " + orders[i].Type)
+		}
+		po := BatchOrder{
+			Category:  "SPOT",
+			Symbol:    orders[i].Symbol,
+			Side:      bg.fromStdSide(orders[i].Side),
+			OrderType: bg.fromStdOrderType(orders[i].Type),
+			ClientOid: orders[i].ClientId,
+		}
+		if orders[i].Type == "LIMIT" {
+			po.Price = orders[i].Price.String()
+			po.Qty = orders[i].Qty.String()
+		} else if orders[i].Amt.IsPositive() { // 市价买 qty为计价币金额
+			po.Qty = orders[i].Amt.String()
+		} else {
+			po.Qty = orders[i].Qty.String()
+		}
+		if orders[i].TimeInForce != "" {
+			po.TimeInForce = bg.fromStdTimeInForce(orders[i].TimeInForce)
+			if orders[i].PostOnly && po.TimeInForce == "gtc" {
+				po.TimeInForce = "post_only"
+			}
+		} else if orders[i].Type == "MARKET" {
+			po.TimeInForce = "ioc"
+		}
+		orderL = append(orderL, po)
+	}
+	payload, _ := json.Marshal(orderL)
+	path := "/api/v3/trade/place-batch"
+	link := bgEndpoint + path
+	_, resp, err := bg.Post(link, payload, bgApiDeadline,
+		bg.buildHeaders("POST", path, "", string(payload)))
+	if err != nil {
+		return errors.New(bg.Name() + " net error! " + err.Error())
+	}
+	ret := struct {
+		Code string `json:"code,omitempty"`
+		Msg  string `json:"msg,omitempty"`
+		Data []struct {
+			OrderId string `json:"orderId,omitempty"`
+			Code    string `json:"code,omitempty"`
+			Msg     string `json:"msg,omitempty"`
+		} `json:"data"`
+	}{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return errors.New(bg.Name() + " unmarshal fail! " + err.Error())
+	}
+	if ret.Code != "00000" {
+		return errors.New(bg.Name() + " " + ret.Code + " " + ret.Msg)
+	}
+	success, failMsg := 0, ""
+	for _, v := range ret.Data {
+		if len(v.OrderId) > 0 {
+			success++
+		} else if len(failMsg) == 0 {
+			failMsg = v.Code + " " + v.Msg
+		}
+	}
+	if success == 0 {
+		return errors.New(bg.Name() + " batch order all fail! " + failMsg)
+	}
+	return nil
+}
+
+// SpotCancelOrderMultiple 批量撤单(最多20单), 支持部分成功
+func (bg *Bitget) SpotCancelOrderMultiple(symbol string /*BTCUSDT*/, orderIds, cltIds []string) error {
+	if len(orderIds) == 0 && len(cltIds) == 0 {
+		return errors.New(bg.Name() + " orderIds or cltIds empty!")
+	}
+	type CancelOrder struct {
+		Category  string `json:"category"`
+		Symbol    string `json:"symbol"`
+		OrderId   string `json:"orderId,omitempty"`
+		ClientOid string `json:"clientOid,omitempty"`
+	}
+	orderL := make([]CancelOrder, 0, len(orderIds)+len(cltIds))
+	for _, v := range orderIds {
+		orderL = append(orderL, CancelOrder{Category: "SPOT", Symbol: symbol, OrderId: v})
+	}
+	for _, v := range cltIds {
+		orderL = append(orderL, CancelOrder{Category: "SPOT", Symbol: symbol, ClientOid: v})
+	}
+	payload, _ := json.Marshal(orderL)
+	path := "/api/v3/trade/cancel-batch"
+	link := bgEndpoint + path
+	_, resp, err := bg.Post(link, payload, bgApiDeadline,
+		bg.buildHeaders("POST", path, "", string(payload)))
+	if err != nil {
+		return errors.New(bg.Name() + " net error! " + err.Error())
+	}
+	ret := struct {
+		Code string `json:"code,omitempty"`
+		Msg  string `json:"msg,omitempty"`
+		Data []struct {
+			OrderId string `json:"orderId,omitempty"`
+			Code    string `json:"code,omitempty"`
+			Msg     string `json:"msg,omitempty"`
+		} `json:"data"`
+	}{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return errors.New(bg.Name() + " unmarshal fail! " + err.Error())
+	}
+	if ret.Code != "00000" {
+		return errors.New(bg.Name() + " " + ret.Code + " " + ret.Msg)
+	}
+	return nil
+}
 func (bg *Bitget) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error) {
 	path := "/api/v3/trade/order-info"
 	params := ""

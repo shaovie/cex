@@ -3,6 +3,7 @@ package cex
 import (
 	"encoding/json"
 	"errors"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -310,6 +311,81 @@ func (mc *Mexc) SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId string
 	}
 	if len(ret.OrderId) == 0 {
 		return mc.handleExceptionResp("SpotCancelOrder", resp)
+	}
+	return nil
+}
+
+// SpotPlaceOrderMultiple 批量下单, 一次最多20单且必须是同一交易对(交易所限制)
+// 数组里每单可能成功或失败, 只要有成功的就算成功
+func (mc *Mexc) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
+	if len(orders) == 0 {
+		return errors.New(mc.Name() + " orders empty!")
+	}
+	type BatchOrder struct {
+		Symbol           string `json:"symbol"`
+		Side             string `json:"side"`
+		Type             string `json:"type"`
+		Price            string `json:"price,omitempty"`
+		Quantity         string `json:"quantity,omitempty"`
+		QuoteOrderQty    string `json:"quoteOrderQty,omitempty"`
+		NewClientOrderId string `json:"newClientOrderId,omitempty"`
+	}
+	orderL := make([]BatchOrder, 0, len(orders))
+	for i := range orders {
+		if orders[i].Type != "LIMIT" && orders[i].Type != "MARKET" {
+			return errors.New(mc.Name() + " not support order type! " + orders[i].Type)
+		}
+		po := BatchOrder{
+			Symbol:           orders[i].Symbol,
+			Side:             mc.fromStdSide(orders[i].Side),
+			Type:             orders[i].Type,
+			NewClientOrderId: orders[i].ClientId,
+		}
+		if orders[i].Type == "LIMIT" {
+			if orders[i].PostOnly { // 只做Maker
+				po.Type = "LIMIT_MAKER"
+			} else if orders[i].TimeInForce == "IOC" {
+				po.Type = "IMMEDIATE_OR_CANCEL"
+			} else if orders[i].TimeInForce == "FOK" {
+				po.Type = "FILL_OR_KILL"
+			}
+			po.Price = orders[i].Price.String()
+			po.Quantity = orders[i].Qty.String()
+		} else if orders[i].Amt.IsPositive() { // 市价买 amt为计价币金额
+			po.QuoteOrderQty = orders[i].Amt.String()
+		} else {
+			po.Quantity = orders[i].Qty.String()
+		}
+		orderL = append(orderL, po)
+	}
+	payload, _ := json.Marshal(orderL)
+	path := "/api/v3/batchOrders"
+	link := mcUniEndpoint + path + "?" + mc.buildQuery("batchOrders="+url.QueryEscape(string(payload)))
+	_, resp, err := mc.Post(link, nil, mcApiDeadline, mc.buildHeaders())
+	if err != nil {
+		return errors.New(mc.Name() + " net error! " + err.Error())
+	}
+	if len(resp) == 0 || resp[0] != '[' {
+		return mc.handleExceptionResp("SpotPlaceOrderMultiple", resp)
+	}
+	ret := []struct {
+		Code    int    `json:"code,omitempty"`
+		Msg     string `json:"msg,omitempty"`
+		OrderId string `json:"orderId,omitempty"`
+	}{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return errors.New(mc.Name() + " unmarshal fail! " + err.Error())
+	}
+	success, failMsg := 0, ""
+	for _, v := range ret {
+		if len(v.OrderId) > 0 {
+			success++
+		} else if len(failMsg) == 0 {
+			failMsg = v.Msg
+		}
+	}
+	if success == 0 {
+		return errors.New(mc.Name() + " batch order all fail! " + failMsg)
 	}
 	return nil
 }
