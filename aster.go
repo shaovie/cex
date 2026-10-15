@@ -214,7 +214,7 @@ func (as *Aster) handleExceptionResp(api string, resp []byte) error {
 		Error string `json:"error,omitempty"` // 有些会返回 error
 	}{}
 	if err := json.Unmarshal(resp, &ret); err != nil {
-		return errors.New(as.Name() + " " + api + " " + err.Error() + " " + string(resp))
+		return errors.New(as.Name() + " " + api + " " + err.Error())
 	}
 	return errors.New(as.Name() + " " + api + " " + ret.Msg + " " + ret.Error)
 }
