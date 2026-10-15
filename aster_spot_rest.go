@@ -298,8 +298,8 @@ func (as *Aster) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 		params += "&quantity=" + qty.String()
 	}
 	path := "/api/v3/order"
-	link := asSpotEndpoint + path + "?" + as.buildQuery(params)
-	_, resp, err := as.Post(link, nil, asApiDeadline, nil)
+	link := asSpotEndpoint + path
+	_, resp, err := as.Post(link, as.buildBody(params), asApiDeadline, as.buildHeaders())
 	if err != nil {
 		return "", errors.New(as.Name() + " net error! " + err.Error())
 	}
@@ -389,8 +389,9 @@ func (as *Aster) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
 	}
 	payload, _ := json.Marshal(orderL)
 	path := "/api/v3/batchOrders"
-	link := asSpotEndpoint + path + "?" + as.buildQuery("orders="+url.QueryEscape(string(payload)))
-	_, resp, err := as.Post(link, nil, asApiDeadline, nil)
+	link := asSpotEndpoint + path
+	_, resp, err := as.Post(link, as.buildBody("orders="+url.QueryEscape(string(payload))),
+		asApiDeadline, as.buildHeaders())
 	if err != nil {
 		return errors.New(as.Name() + " net error! " + err.Error())
 	}

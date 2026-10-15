@@ -30,8 +30,8 @@ func (as *Aster) Transfer(symbol, from, to, typ, subAccount string, qty decimal.
 		"&kindType=" + fromType + "_" + toType +
 		"&clientTranId=WC" + strconv.FormatInt(time.Now().UnixNano(), 10)
 	path := "/api/v3/asset/wallet/transfer"
-	link := asSpotEndpoint + path + "?" + as.buildQuery(params)
-	_, resp, err := as.Post(link, nil, asApiDeadline, nil)
+	link := asSpotEndpoint + path
+	_, resp, err := as.Post(link, as.buildBody(params), asApiDeadline, as.buildHeaders())
 	if err != nil {
 		return errors.New(as.Name() + " net error! " + err.Error())
 	}

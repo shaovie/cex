@@ -317,8 +317,8 @@ func (as *Aster) SpotWsPrivateOpen() error {
 }
 func (as *Aster) getSpotWsPrivateListenKey() (string, error) {
 	path := "/api/v3/listenKey"
-	link := asSpotEndpoint + path + "?" + as.buildQuery("")
-	_, resp, err := as.Post(link, nil, asApiDeadline, nil)
+	link := asSpotEndpoint + path
+	_, resp, err := as.Post(link, as.buildBody(""), asApiDeadline, as.buildHeaders())
 	if err != nil {
 		return "", errors.New(as.Name() + " spot.ws.priv get listenKey net error! " + err.Error())
 	}

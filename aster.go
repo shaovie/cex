@@ -1,6 +1,8 @@
 package cex
 
 import (
+	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"strconv"
@@ -9,7 +11,9 @@ import (
 	"time"
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
+	"github.com/decred/dcrd/dcrec/secp256k1/v4/ecdsa"
 	"github.com/gorilla/websocket"
+	"golang.org/x/crypto/sha3"
 )
 
 type Aster struct {
@@ -49,19 +53,6 @@ const asSpotEndpoint = "https://sapi.asterdex.com"
 const asApiDeadline = 1500 * time.Millisecond
 
 func NewAster(account, apikey, secretkey, localIP string) (*Aster, error) {
-	var privKey *secp256k1.PrivateKey
-	if len(secretkey) != 0 { // API Wallet私钥, 用于签名
-		var err error
-		if privKey, err = asPrivKey(secretkey); err != nil {
-			return nil, err
-		}
-		signer := asAddress(privKey)
-		if len(apikey) == 0 {
-			apikey = signer
-		} else if !strings.EqualFold(apikey, signer) {
-			return nil, errors.New("aster signer private key not match address! " + apikey)
-		}
-	}
 	client, err := NewClient("aster", localIP)
 	if err != nil {
 		return nil, err
@@ -75,7 +66,17 @@ func NewAster(account, apikey, secretkey, localIP string) (*Aster, error) {
 		apikey:    apikey,
 		secretkey: secretkey,
 		localIP:   localIP,
-		privKey:   privKey,
+	}
+	if len(secretkey) != 0 { // API Wallet私钥, 用于签名
+		if cexObj.privKey, err = cexObj.parsePrivKey(secretkey); err != nil {
+			return nil, err
+		}
+		signer := cexObj.address(cexObj.privKey)
+		if len(apikey) == 0 {
+			cexObj.apikey = signer
+		} else if !strings.EqualFold(apikey, signer) {
+			return nil, errors.New("aster signer private key not match address! " + apikey)
+		}
 	}
 	return cexObj, nil
 }
@@ -97,15 +98,102 @@ func (as *Aster) Init() error {
 	return nil
 }
 
-// buildQuery 私有接口参数: params+nonce+signer+signature, 统一放query string
-// 签名: EIP-712(API Wallet私钥, params&nonce=xxx&signer=0x...)
+// buildQuery 私有接口参数放query string: params+nonce+signer+signature (GET/DELETE用)
+// 签名: EIP-712(API Wallet私钥, query+body)
 func (as *Aster) buildQuery(params string) string {
 	msg := "nonce=" + strconv.FormatInt(as.nextNonce(), 10) + "&signer=" + as.apikey
 	if params != "" {
 		msg = params + "&" + msg
 	}
-	return msg + "&signature=" + asSign(as.privKey, msg)
+	return msg + "&signature=" + as.sign(msg)
 }
+
+// buildBody 私有接口参数放请求体(POST用): params+nonce+signer+signature
+// 签名: EIP-712(API Wallet私钥, query+body), query为空时就是body本身
+func (as *Aster) buildBody(params string) []byte {
+	msg := "nonce=" + strconv.FormatInt(as.nextNonce(), 10) + "&signer=" + as.apikey
+	if params != "" {
+		msg = params + "&" + msg
+	}
+	return []byte(msg + "&signature=" + as.sign(msg))
+}
+func (as *Aster) buildHeaders() map[string]string {
+	return map[string]string{
+		"Content-Type": "application/x-www-form-urlencoded",
+	}
+}
+
+// parsePrivKey 解析API Wallet私钥, 支持带0x前缀
+func (as *Aster) parsePrivKey(v string) (*secp256k1.PrivateKey, error) {
+	b, err := hex.DecodeString(strings.TrimPrefix(v, "0x"))
+	if err != nil || len(b) != 32 {
+		return nil, errors.New("aster invalid signer private key")
+	}
+	return secp256k1.PrivKeyFromBytes(b), nil
+}
+
+// address 私钥对应的地址
+func (as *Aster) address(priv *secp256k1.PrivateKey) string {
+	return as.pubKeyAddress(priv.PubKey())
+}
+
+// pubKeyAddress 公钥对应的地址
+func (as *Aster) pubKeyAddress(pub *secp256k1.PublicKey) string {
+	raw := pub.SerializeUncompressed() // 65字节, 首字节是0x04
+	sum := as.keccak256(raw[1:])
+	return "0x" + hex.EncodeToString(sum[12:])
+}
+
+func (as *Aster) keccak256(b []byte) []byte {
+	h := sha3.NewLegacyKeccak256()
+	h.Write(b)
+	return h.Sum(nil)
+}
+
+// sign EIP-712签名, 返回0x开头的65字节签名(r+s+v, v为27/28)
+// 被签名的msg是urlencode后的参数串(含nonce和signer), 签名结果放signature参数
+func (as *Aster) sign(msg string) string {
+	if as.privKey == nil { // 没配置API Wallet私钥
+		return ""
+	}
+	compact := ecdsa.SignCompact(as.privKey, as.eip712Digest(msg), false)
+	sig := make([]byte, 65)
+	copy(sig[0:32], compact[1:33])
+	copy(sig[32:64], compact[33:65])
+	sig[64] = compact[0] // 27/28
+	return "0x" + hex.EncodeToString(sig)
+}
+
+// eip712Digest EIP-712摘要: keccak256(0x1901 || domainSeparator || messageHash)
+// domain = {name:"AsterSignTransaction", version:"1", chainId:1666, verifyingContract:0x0}
+// types  = EIP712Domain(name,version,chainId,verifyingContract) + Message(msg string)
+func (as *Aster) eip712Digest(msg string) []byte {
+	domainTypeHash := as.keccak256([]byte("EIP712Domain(string name,string version," +
+		"uint256 chainId,address verifyingContract)"))
+	nameHash := as.keccak256([]byte("AsterSignTransaction"))
+	verHash := as.keccak256([]byte("1"))
+	domain := make([]byte, 0, 160)
+	domain = append(domain, domainTypeHash...)
+	domain = append(domain, nameHash...)
+	domain = append(domain, verHash...)
+	var chainId [32]byte
+	binary.BigEndian.PutUint64(chainId[24:], asChainID)
+	domain = append(domain, chainId[:]...)       // uint256
+	domain = append(domain, make([]byte, 32)...) // address 0x0
+
+	data := make([]byte, 0, 64)
+	data = append(data, as.keccak256([]byte("Message(string msg)"))...)
+	data = append(data, as.keccak256([]byte(msg))...)
+
+	digest := make([]byte, 0, 66)
+	digest = append(digest, 0x19, 0x01)
+	digest = append(digest, as.keccak256(domain)...)
+	digest = append(digest, as.keccak256(data)...)
+	return as.keccak256(digest)
+}
+
+const asChainID = 1666 // 签名域的chainId
+
 func (as *Aster) nextNonce() int64 {
 	as.nonceMtx.Lock()
 	defer as.nonceMtx.Unlock()

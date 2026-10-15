@@ -31,11 +31,11 @@ type Exchanger interface {
 	// 限价 只能qty=base qty, 参数涵义参考 struct SpotOrder
 	SpotPlaceOrder(symbol, cltId string, price, amt, qty decimal.Decimal,
 		side, timeInForce, orderType string, postOnly bool) (string, error)
-	// 批量下单: bigone,mexc,kucoin,bitget,aster (支持部分成功)
+	// 批量下单: bigone,mexc,kucoin,bitget,aster,gate,okx,bybit (支持部分成功)
 	SpotPlaceOrderMultiple([]SpotPostOrder) error
 	// orderId, cltId 二选一
 	SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId string) error
-	// 批量撤单: kucoin,bitget,aster (支持部分成功)
+	// 批量撤单: kucoin,bitget,aster,gate,okx,bybit (支持部分成功)
 	SpotCancelOrderMultiple(symbol string /*BTCUSDT*/, orderIds, cltIds []string) error
 	// orderId, cltId 二选一 (kraken 不支持cltId)
 	SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error)
