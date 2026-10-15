@@ -390,7 +390,7 @@ func (as *Aster) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
 	payload, _ := json.Marshal(orderL)
 	path := "/api/v3/batchOrders"
 	link := asSpotEndpoint + path
-	_, resp, err := as.Post(link, as.buildBody("orders="+url.QueryEscape(string(payload))),
+	_, resp, err := as.Post(link, as.buildBody("batchOrders="+url.QueryEscape(string(payload))),
 		asApiDeadline, as.buildHeaders())
 	if err != nil {
 		return errors.New(as.Name() + " net error! " + err.Error())
