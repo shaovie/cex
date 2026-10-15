@@ -123,12 +123,13 @@ func (ba *BnAlpha) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, erro
 }
 
 // SpotGetBBO 最优买卖价
+// book-ticker只有UI挂单(买卖会交叉, 跟成交价差很远), 这里用fullDepth快照做虚拟撮合去交叉
 func (ba *BnAlpha) SpotGetBBO(symbol string) (BestBidAsk, error) {
 	symbolS := ba.getSpotSymbol(symbol)
 	if len(symbolS) == 0 { // 规则没加载时按原样试一次
 		symbolS = symbol
 	}
-	link := baEndpoint + "/bapi/defi/v1/public/alpha-trade/book-ticker?symbol=" + symbolS
+	link := baEndpoint + "/bapi/defi/v1/public/alpha-trade/fullDepth?symbol=" + symbolS + "&limit=1000"
 	_, resp, err := ba.Get(link, baApiDeadline, nil)
 	if err != nil {
 		return BestBidAsk{}, errors.New(ba.Name() + " net error! " + err.Error())
@@ -137,12 +138,10 @@ func (ba *BnAlpha) SpotGetBBO(symbol string) (BestBidAsk, error) {
 		Code    string `json:"code,omitempty"`
 		Message string `json:"message,omitempty"`
 		Data    struct {
-			Symbol   string          `json:"symbol,omitempty"`
-			BidPrice decimal.Decimal `json:"bidPrice"`
-			BidQty   decimal.Decimal `json:"bidQty"`
-			AskPrice decimal.Decimal `json:"askPrice"`
-			AskQty   decimal.Decimal `json:"askQty"`
-			Time     int64           `json:"time,omitempty"` // msec
+			Symbol string               `json:"symbol,omitempty"`
+			Time   int64                `json:"E,omitempty"` // msec
+			Bids   [][2]decimal.Decimal `json:"bids,omitempty"`
+			Asks   [][2]decimal.Decimal `json:"asks,omitempty"`
 		} `json:"data"`
 	}{}
 	if err = json.Unmarshal(resp, &ret); err != nil {
@@ -151,12 +150,17 @@ func (ba *BnAlpha) SpotGetBBO(symbol string) (BestBidAsk, error) {
 	if ret.Code != "000000" || len(ret.Data.Symbol) == 0 {
 		return BestBidAsk{}, ba.handleExceptionResp("SpotGetBBO", resp)
 	}
+	bids, asks := ba.newOrderBooks(ret.Data.Bids, ret.Data.Asks)
+	bidPrice, bidQty, askPrice, askQty, ok := ba.virtualMatch(bids, asks)
+	if !ok { // 某一侧被吃空, 盘口数据无效
+		return BestBidAsk{}, errors.New(ba.Name() + " SpotGetBBO " + symbol + " orderbook invalid!")
+	}
 	return BestBidAsk{
 		Symbol:   symbol,
 		Time:     ret.Data.Time,
-		BidPrice: ret.Data.BidPrice,
-		BidQty:   ret.Data.BidQty,
-		AskPrice: ret.Data.AskPrice,
-		AskQty:   ret.Data.AskQty,
+		BidPrice: bidPrice,
+		BidQty:   bidQty,
+		AskPrice: askPrice,
+		AskQty:   askQty,
 	}, nil
 }

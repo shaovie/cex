@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/emirpasic/gods/v2/maps/treemap"
 	"github.com/gorilla/websocket"
 	"github.com/mailru/easyjson"
 	"github.com/shopspring/decimal"
@@ -272,7 +271,7 @@ func (ba *BnAlpha) spotWsHandleFullDepth(data []byte, ch chan<- any) {
 		return
 	}
 	// 原始盘口可能因为UI挂单出现买卖交叉, 先虚拟撮合去交叉
-	bidPrice, bidQty, askPrice, askQty, ok := ba.spotWsVirtualMatch(bids, asks)
+	bidPrice, bidQty, askPrice, askQty, ok := ba.virtualMatch(bids, asks)
 	if !ok { // 某一侧被吃空, 本次数据无效
 		return
 	}
@@ -293,52 +292,6 @@ func (ba *BnAlpha) spotWsHandleFullDepth(data []byte, ch chan<- any) {
 	ch <- bbo
 }
 
-// spotWsVirtualMatch 虚拟撮合去交叉: 从买卖最优档开始按min(买量,卖量)互相吃, 某一侧吃完就换下一档
-// 返回有效买一/卖一, 某一侧吃空(或还存在交叉)时ok=false
-func (ba *BnAlpha) spotWsVirtualMatch(bids, asks *treemap.Map[decimal.Decimal, decimal.Decimal]) (
-	bidPrice, bidQty, askPrice, askQty decimal.Decimal, ok bool) {
-	bi := bids.Iterator()
-	if !bi.Next() {
-		return
-	}
-	bidPrice, bidQty = bi.Key(), bi.Value()
-	ai := asks.Iterator()
-	if !ai.Next() {
-		return
-	}
-	askPrice, askQty = ai.Key(), ai.Value()
-	for bidPrice.GreaterThanOrEqual(askPrice) {
-		if bidQty.GreaterThan(askQty) {
-			bidQty = bidQty.Sub(askQty)
-			if !ai.Next() {
-				return
-			}
-			askPrice, askQty = ai.Key(), ai.Value()
-		} else if bidQty.LessThan(askQty) {
-			askQty = askQty.Sub(bidQty)
-			if !bi.Next() {
-				return
-			}
-			bidPrice, bidQty = bi.Key(), bi.Value()
-		} else {
-			if !bi.Next() || !ai.Next() {
-				return
-			}
-			bidPrice, bidQty = bi.Key(), bi.Value()
-			askPrice, askQty = ai.Key(), ai.Value()
-		}
-	}
-	// 数量用该档位的原始挂单量(撮合只用于算有效买一/卖一)
-	if v, exists := bids.Get(bidPrice); exists {
-		bidQty = v
-	}
-	if v, exists := asks.Get(askPrice); exists {
-		askQty = v
-	}
-	ok = true
-	return
-}
-
 // spotWsGetDepthSnapshot 订阅时同步取fullDepth快照并缓存
 // 快照和fulldepth流都包含UI和API订单, 共享同一套updateId
 func (ba *BnAlpha) spotWsGetDepthSnapshot(symbol, symbolS string) {
@@ -349,7 +302,7 @@ func (ba *BnAlpha) spotWsGetDepthSnapshot(symbol, symbolS string) {
 	}
 }
 func (ba *BnAlpha) spotWsFetchDepthSnapshot(symbol, symbolS string) *BnAlphaDepthSnapshot {
-	link := baEndpoint + "/bapi/defi/v1/public/alpha-trade/fullDepth?symbol=" + symbolS + "&limit=100"
+	link := baEndpoint + "/bapi/defi/v1/public/alpha-trade/fullDepth?symbol=" + symbolS + "&limit=1000"
 	_, resp, err := ba.Get(link, baApiDeadline, nil)
 	if err != nil {
 		ilog.Warning(ba.Name() + " spot.ws.public " + symbol + " depth snapshot net error! " + err.Error())
@@ -392,22 +345,7 @@ func (ba *BnAlpha) spotWsInitOrderBook(symbol, symbolS string) bool {
 	if snap == nil {
 		return false
 	}
-	bids := treemap.NewWith[decimal.Decimal, decimal.Decimal](func(a, b decimal.Decimal) int {
-		return b.Compare(a) // desc
-	})
-	asks := treemap.NewWith[decimal.Decimal, decimal.Decimal](func(a, b decimal.Decimal) int {
-		return a.Compare(b) // asc
-	})
-	for _, v := range snap.Bids {
-		if !v[1].IsZero() {
-			bids.Put(v[0], v[1])
-		}
-	}
-	for _, v := range snap.Asks {
-		if !v[1].IsZero() {
-			asks.Put(v[0], v[1])
-		}
-	}
+	bids, asks := ba.newOrderBooks(snap.Bids, snap.Asks)
 	ba.spotWsOrderBookBids[symbol] = bids
 	ba.spotWsOrderBookAsks[symbol] = asks
 	ba.spotWsOrderBookSnapId[symbol] = snap.LastUpdateId

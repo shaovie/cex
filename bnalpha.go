@@ -124,6 +124,74 @@ func (ba *BnAlpha) getStdSymbol(symbol string) string { // 交易所symbol -> �
 	}
 	return symbol
 }
+
+// newOrderBooks 用深度档位建本地盘口: 买盘降序, 卖盘升序
+func (ba *BnAlpha) newOrderBooks(bids, asks [][2]decimal.Decimal) (
+	*treemap.Map[decimal.Decimal, decimal.Decimal], *treemap.Map[decimal.Decimal, decimal.Decimal]) {
+	bidsMap := treemap.NewWith[decimal.Decimal, decimal.Decimal](func(a, b decimal.Decimal) int {
+		return b.Compare(a) // desc
+	})
+	asksMap := treemap.NewWith[decimal.Decimal, decimal.Decimal](func(a, b decimal.Decimal) int {
+		return a.Compare(b) // asc
+	})
+	for _, v := range bids {
+		if !v[1].IsZero() {
+			bidsMap.Put(v[0], v[1])
+		}
+	}
+	for _, v := range asks {
+		if !v[1].IsZero() {
+			asksMap.Put(v[0], v[1])
+		}
+	}
+	return bidsMap, asksMap
+}
+
+// virtualMatch 虚拟撮合去交叉: 原始盘口可能因为有UI挂单而买卖交叉,
+// 从买卖最优档开始按min(买量,卖量)互相吃, 某一侧吃完就换下一档
+// 返回有效买一/卖一(价格用撮合结果, 数量用该档原始挂单量), 某一侧吃空时ok=false
+func (ba *BnAlpha) virtualMatch(bids, asks *treemap.Map[decimal.Decimal, decimal.Decimal]) (
+	bidPrice, bidQty, askPrice, askQty decimal.Decimal, ok bool) {
+	bi := bids.Iterator()
+	if !bi.Next() {
+		return
+	}
+	bidPrice, bidQty = bi.Key(), bi.Value()
+	ai := asks.Iterator()
+	if !ai.Next() {
+		return
+	}
+	askPrice, askQty = ai.Key(), ai.Value()
+	for bidPrice.GreaterThanOrEqual(askPrice) {
+		if bidQty.GreaterThan(askQty) {
+			bidQty = bidQty.Sub(askQty)
+			if !ai.Next() {
+				return
+			}
+			askPrice, askQty = ai.Key(), ai.Value()
+		} else if bidQty.LessThan(askQty) {
+			askQty = askQty.Sub(bidQty)
+			if !bi.Next() {
+				return
+			}
+			bidPrice, bidQty = bi.Key(), bi.Value()
+		} else {
+			if !bi.Next() || !ai.Next() {
+				return
+			}
+			bidPrice, bidQty = bi.Key(), bi.Value()
+			askPrice, askQty = ai.Key(), ai.Value()
+		}
+	}
+	if v, exists := bids.Get(bidPrice); exists { // 数量用原始挂单量
+		bidQty = v
+	}
+	if v, exists := asks.Get(askPrice); exists {
+		askQty = v
+	}
+	ok = true
+	return
+}
 func (ba *BnAlpha) handleExceptionResp(api string, resp []byte) error {
 	if len(resp) == 0 {
 		return errors.New(ba.Name() + " " + api + " resp empty")
