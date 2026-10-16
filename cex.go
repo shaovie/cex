@@ -108,6 +108,7 @@ type Exchanger interface {
 	FuturesSupported(typ string) bool
 	FuturesServerTime(typ string) (int64, error)
 	FuturesLoadAllPairRule(typ string) (map[string]*FuturesExchangePairRule, error)
+	// 合约张数/数量切换
 	FuturesSizeToQty(typ, symbol string, size decimal.Decimal) decimal.Decimal
 	FuturesGetAll24hTicker(typ string) (map[string]Pub24hTicker, error)
 	FuturesGetBBO(typ, symbol string) (BestBidAsk, error)
@@ -123,6 +124,7 @@ type Exchanger interface {
 	FuturesGetKLine(typ, symbol, interval string, startTime, endTime, lmt int64) ([]KLine, error)
 	FuturesGetAllPositionList(typ string) (map[string]*FuturesPosition, error)
 	FuturesGetAllPositions(typ string) (map[string]*FuturesPositions, error)
+	// 合约张数/数量切换
 	FuturesQtyToSize(typ, symbol string, qty decimal.Decimal) decimal.Decimal
 	// CM中 qty为合约张数, positionMode=BOTH,LONG/SHORT
 	FuturesPlaceOrder(typ, symbol, clientId string,
