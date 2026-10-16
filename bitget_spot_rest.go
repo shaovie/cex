@@ -299,7 +299,7 @@ func (bg *Bitget) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 		req.Qty = qty.String()
 	} else if orderType == "MARKET" {
 		// 市价买 qty为计价币金额, 市价卖为交易币数量
-		if amt.IsPositive() {
+		if side == "BUY" {
 			req.Qty = amt.String()
 		} else {
 			req.Qty = qty.String()
