@@ -334,12 +334,48 @@ func (kk *Kraken) SpotCancelOrder(symbol string, orderId, cltId string) error {
 
 func (kk *Kraken) SpotPlaceOrderMultipleSupported() bool { return true }
 
-// SpotPlaceOrderMultiple 批量下单: 文档要求2~15单且只能同一个交易对
+// SpotPlaceOrderMultiple 批量下单: 文档要求一次2~15单且只能同一个交易对
+// 只有1单时用单笔接口, 超过15单自动分批(不足2单的那批也用单笔接口)
 // 整批校验不过会被全部拒绝; 撮合阶段被拒的只拒单笔, 所以只要有成功的就算成功
 func (kk *Kraken) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
-	if len(orders) < 2 || len(orders) > 15 {
-		return errors.New(kk.Name() + " batch orders must be 2~15!")
+	if len(orders) == 0 {
+		return errors.New(kk.Name() + " orders empty!")
 	}
+	symbol := orders[0].Symbol
+	for i := range orders { // 一批只能一个交易对
+		if orders[i].Symbol != symbol {
+			return errors.New(kk.Name() + " batch orders must be same symbol!")
+		}
+		if len(orders[i].ClientId) > 18 {
+			return errors.New(kk.Name() + " cltId too long! must le 18")
+		}
+		if orders[i].Type != "LIMIT" && orders[i].Type != "MARKET" {
+			return errors.New(kk.Name() + " not support order type! " + orders[i].Type)
+		}
+	}
+	for i := 0; i < len(orders); i += 15 {
+		end := i + 15
+		if end > len(orders) {
+			end = len(orders)
+		}
+		if end-i == 1 { // 交易所不接受单笔批量, 换成单笔下单
+			if err := kk.spotPlaceOrderSingle(orders[i]); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := kk.spotPlaceOrderBatch(orders[i:end]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (kk *Kraken) spotPlaceOrderSingle(order SpotPostOrder) error {
+	_, err := kk.SpotPlaceOrder(order.Symbol, order.ClientId, order.Price, order.Amt,
+		order.Qty, order.Side, order.TimeInForce, order.Type, order.PostOnly)
+	return err
+}
+func (kk *Kraken) spotPlaceOrderBatch(orders []SpotPostOrder) error {
 	symbol := orders[0].Symbol
 	symbolS := kk.getSpotSymbol(symbol)
 	if symbolS == "" {
@@ -357,15 +393,6 @@ func (kk *Kraken) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
 	}
 	orderL := make([]BatchOrder, 0, len(orders))
 	for i := range orders {
-		if orders[i].Symbol != symbol { // 一批只能一个交易对
-			return errors.New(kk.Name() + " batch orders must be same symbol!")
-		}
-		if len(orders[i].ClientId) > 18 {
-			return errors.New(kk.Name() + " cltId too long! must le 18")
-		}
-		if orders[i].Type != "LIMIT" && orders[i].Type != "MARKET" {
-			return errors.New(kk.Name() + " not support order type! " + orders[i].Type)
-		}
 		po := BatchOrder{
 			Type:        kk.fromStdSide(orders[i].Side),
 			OrdType:     kk.fromStdOrderType(orders[i].Type),
@@ -435,6 +462,12 @@ func (kk *Kraken) SpotCancelOrderMultipleSupported() bool { return true }
 func (kk *Kraken) SpotCancelOrderMultiple(symbol string, orderIds, cltIds []string) error {
 	if len(orderIds) == 0 && len(cltIds) == 0 {
 		return errors.New(kk.Name() + " orderIds or cltIds empty!")
+	}
+	if len(orderIds)+len(cltIds) == 1 { // 只有1单时用单笔接口
+		if len(orderIds) == 1 {
+			return kk.SpotCancelOrder(symbol, orderIds[0], "")
+		}
+		return kk.SpotCancelOrder(symbol, "", cltIds[0])
 	}
 	nonce := kk.nextNonce()
 	req := struct {
