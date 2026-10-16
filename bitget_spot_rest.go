@@ -288,13 +288,13 @@ func (bg *Bitget) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 		Price       string `json:"price,omitempty"`
 		Qty         string `json:"qty"`
 		ClientOid   string `json:"clientOid,omitempty"`
-		StpMode string  `json:"stpMode,omitempty"`
+		StpMode     string `json:"stpMode,omitempty"`
 	}{
 		Category:  "SPOT",
 		Symbol:    symbol,
 		Side:      bg.fromStdSide(side),
 		OrderType: bg.fromStdOrderType(orderType),
-		StpMode: "cancel_both", // 做市需要
+		StpMode:   "cancel_both", // 做市需要
 	}
 	if orderType == "LIMIT" {
 		req.Price = price.String()
@@ -347,6 +347,99 @@ func (bg *Bitget) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 	}
 	return ret.Data.OrderId, nil
 }
+
+func (bg *Bitget) SpotPlaceOrderMultipleSupported() bool { return true }
+
+// SpotPlaceOrderMultiple 批量下单: 一次最多20单, 超过自动分批; 支持部分成功
+// 市价买qty用计价币金额, 市价卖用交易币数量; postOnly优先
+func (bg *Bitget) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
+	if len(orders) == 0 {
+		return errors.New(bg.Name() + " orders empty!")
+	}
+	type BatchOrder struct {
+		Category    string `json:"category"`
+		Symbol      string `json:"symbol"`
+		Side        string `json:"side"`
+		OrderType   string `json:"orderType"`
+		TimeInForce string `json:"timeInForce,omitempty"`
+		Price       string `json:"price,omitempty"`
+		Qty         string `json:"qty"`
+		ClientOid   string `json:"clientOid,omitempty"`
+		StpMode     string `json:"stpMode,omitempty"`
+	}
+	orderL := make([]BatchOrder, 0, len(orders))
+	for i := range orders {
+		if orders[i].Type != "LIMIT" && orders[i].Type != "MARKET" {
+			return errors.New(bg.Name() + " not support order type! " + orders[i].Type)
+		}
+		po := BatchOrder{
+			Category:  "SPOT",
+			Symbol:    orders[i].Symbol,
+			Side:      bg.fromStdSide(orders[i].Side),
+			OrderType: bg.fromStdOrderType(orders[i].Type),
+			ClientOid: orders[i].ClientId,
+			StpMode:   "cancel_both", // 做市需要
+		}
+		if orders[i].Type == "LIMIT" {
+			po.Price = orders[i].Price.String()
+			po.Qty = orders[i].Qty.String()
+		} else if orders[i].Side == "BUY" { // 市价买 qty为计价币金额
+			po.Qty = orders[i].Amt.String()
+		} else { // 市价卖为交易币数量
+			po.Qty = orders[i].Qty.String()
+		}
+		if orders[i].PostOnly {
+			po.TimeInForce = "post_only"
+		} else if orders[i].TimeInForce != "" {
+			po.TimeInForce = bg.fromStdTimeInForce(orders[i].TimeInForce)
+		} else if orders[i].Type == "MARKET" {
+			po.TimeInForce = "ioc"
+		}
+		orderL = append(orderL, po)
+	}
+	for i := 0; i < len(orderL); i += 20 { // 一次最多20单
+		end := i + 20
+		if end > len(orderL) {
+			end = len(orderL)
+		}
+		payload, _ := json.Marshal(orderL[i:end])
+		path := "/api/v3/trade/place-batch"
+		link := bgEndpoint + path
+		_, resp, err := bg.Post(link, payload, bgApiDeadline,
+			bg.buildHeaders("POST", path, "", string(payload)))
+		if err != nil {
+			return errors.New(bg.Name() + " net error! " + err.Error())
+		}
+		ret := struct {
+			Code string `json:"code,omitempty"`
+			Msg  string `json:"msg,omitempty"`
+			Data []struct {
+				OrderId   string `json:"orderId,omitempty"`
+				ClientOid string `json:"clientOid,omitempty"`
+				Code      string `json:"code,omitempty"`
+				Msg       string `json:"msg,omitempty"`
+			} `json:"data"`
+		}{}
+		if err = json.Unmarshal(resp, &ret); err != nil {
+			return errors.New(bg.Name() + " unmarshal fail! " + err.Error())
+		}
+		if ret.Code != "00000" {
+			return errors.New(bg.Name() + " " + ret.Code + " " + ret.Msg)
+		}
+		success, failMsg := 0, ""
+		for _, v := range ret.Data {
+			if len(v.OrderId) > 0 {
+				success++
+			} else if len(failMsg) == 0 {
+				failMsg = v.Code + " " + v.Msg
+			}
+		}
+		if success == 0 {
+			return errors.New(bg.Name() + " batch order all fail! " + failMsg)
+		}
+	}
+	return nil
+}
 func (bg *Bitget) SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId string) error {
 	req := struct {
 		Category  string `json:"category"`
@@ -385,6 +478,88 @@ func (bg *Bitget) SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId stri
 	return nil
 }
 
+func (bg *Bitget) SpotCancelOrderMultipleSupported() bool { return true }
+
+// SpotCancelOrderMultiple 批量撤单: 一次最多20单, 超过自动分批; 支持部分成功
+// 文档要求同一请求只能用orderId或clientOid其中一种, 所以orderIds和cltIds分开各发一次
+func (bg *Bitget) SpotCancelOrderMultiple(symbol string, orderIds, cltIds []string) error {
+	if len(orderIds) == 0 && len(cltIds) == 0 {
+		return errors.New(bg.Name() + " orderIds or cltIds empty!")
+	}
+	type CancelOrder struct {
+		Category  string `json:"category"`
+		Symbol    string `json:"symbol"`
+		OrderId   string `json:"orderId,omitempty"`
+		ClientOid string `json:"clientOid,omitempty"`
+	}
+	orderL := make([]CancelOrder, 0, len(orderIds)+len(cltIds))
+	for _, v := range orderIds {
+		orderL = append(orderL, CancelOrder{Category: "SPOT", Symbol: symbol, OrderId: v})
+	}
+	for i := 0; i < len(orderL); i += 20 { // 一次最多20单
+		end := i + 20
+		if end > len(orderL) {
+			end = len(orderL)
+		}
+		payload, _ := json.Marshal(orderL[i:end])
+		if err := bg.spotCancelOrderBatch(payload); err != nil {
+			return err
+		}
+	}
+	orderL = orderL[:0]
+	for _, v := range cltIds {
+		orderL = append(orderL, CancelOrder{Category: "SPOT", Symbol: symbol, ClientOid: v})
+	}
+	for i := 0; i < len(orderL); i += 20 {
+		end := i + 20
+		if end > len(orderL) {
+			end = len(orderL)
+		}
+		payload, _ := json.Marshal(orderL[i:end])
+		if err := bg.spotCancelOrderBatch(payload); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (bg *Bitget) spotCancelOrderBatch(payload []byte) error {
+	path := "/api/v3/trade/cancel-batch"
+	link := bgEndpoint + path
+	_, resp, err := bg.Post(link, payload, bgApiDeadline,
+		bg.buildHeaders("POST", path, "", string(payload)))
+	if err != nil {
+		return errors.New(bg.Name() + " net error! " + err.Error())
+	}
+	ret := struct {
+		Code string `json:"code,omitempty"`
+		Msg  string `json:"msg,omitempty"`
+		Data []struct {
+			OrderId   string `json:"orderId,omitempty"`
+			ClientOid string `json:"clientOid,omitempty"`
+			Code      string `json:"code,omitempty"`
+			Msg       string `json:"msg,omitempty"`
+		} `json:"data"`
+	}{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return errors.New(bg.Name() + " unmarshal fail! " + err.Error())
+	}
+	if ret.Code != "00000" {
+		return errors.New(bg.Name() + " " + ret.Code + " " + ret.Msg)
+	}
+	success, failMsg := 0, ""
+	for _, v := range ret.Data {
+		if len(v.Code) == 0 || v.Code == "00000" {
+			success++
+		} else if len(failMsg) == 0 {
+			failMsg = v.Code + " " + v.Msg
+		}
+	}
+	if success == 0 {
+		return errors.New(bg.Name() + " batch cancel all fail! " + failMsg)
+	}
+	return nil
+}
+
 func (bg *Bitget) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error) {
 	path := "/api/v3/trade/order-info"
 	params := ""
@@ -418,31 +593,42 @@ func (bg *Bitget) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error
 }
 func (bg *Bitget) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 	path := "/api/v3/trade/unfilled-orders"
-	params := "category=SPOT&limit=100"
-	if symbol != "" {
-		params += "&symbol=" + symbol
-	}
-	link := bgEndpoint + path + "?" + params
-	_, resp, err := bg.Get(link, bgApiDeadline, bg.buildHeaders("GET", path, params, ""))
-	if err != nil {
-		return nil, errors.New(bg.Name() + " net error! " + err.Error())
-	}
-	recv := struct {
-		Code string `json:"code,omitempty"`
-		Msg  string `json:"msg,omitempty"`
-		Data struct {
-			List []BitgetSpotOrder `json:"list"`
-		} `json:"data"`
-	}{}
-	if err = json.Unmarshal(resp, &recv); err != nil {
-		return nil, errors.New(bg.Name() + " unmarshal fail! " + err.Error())
-	}
-	if recv.Code != "00000" {
-		return nil, errors.New(bg.Name() + " " + recv.Code + " " + recv.Msg)
-	}
-	dl := make([]*SpotOrder, 0, len(recv.Data.List))
-	for i := range recv.Data.List {
-		dl = append(dl, bg.toStdOrder(&recv.Data.List[i]))
+	dl := make([]*SpotOrder, 0, 128)
+	cursor, lastCursor := "", "" // 游标翻页: 不带cursor取第一页, 之后用上一页返回的cursor
+	for {
+		params := "category=SPOT&limit=100"
+		if symbol != "" {
+			params += "&symbol=" + symbol
+		}
+		if cursor != "" {
+			params += "&cursor=" + cursor
+		}
+		link := bgEndpoint + path + "?" + params
+		_, resp, err := bg.Get(link, bgApiDeadline, bg.buildHeaders("GET", path, params, ""))
+		if err != nil {
+			return nil, errors.New(bg.Name() + " net error! " + err.Error())
+		}
+		recv := struct {
+			Code string `json:"code,omitempty"`
+			Msg  string `json:"msg,omitempty"`
+			Data struct {
+				List   []BitgetSpotOrder `json:"list"`
+				Cursor string            `json:"cursor"`
+			} `json:"data"`
+		}{}
+		if err = json.Unmarshal(resp, &recv); err != nil {
+			return nil, errors.New(bg.Name() + " unmarshal fail! " + err.Error())
+		}
+		if recv.Code != "00000" {
+			return nil, errors.New(bg.Name() + " " + recv.Code + " " + recv.Msg)
+		}
+		for i := range recv.Data.List {
+			dl = append(dl, bg.toStdOrder(&recv.Data.List[i]))
+		}
+		if len(recv.Data.List) == 0 || recv.Data.Cursor == "" || recv.Data.Cursor == lastCursor {
+			break
+		}
+		lastCursor, cursor = cursor, recv.Data.Cursor
 	}
 	return dl, nil
 }

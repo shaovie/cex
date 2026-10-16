@@ -130,8 +130,8 @@ func (bg *Bitget) SpotWsPublicLoop(ch chan<- any) {
 	defer bg.SpotWsPublicClose()
 	defer close(ch)
 
-	pingInterval := 15 * time.Second
-	pongWait := pingInterval + 10*time.Second
+	pingInterval := 35 * time.Second
+	pongWait := pingInterval + 2*time.Second
 	bg.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
 	pingExit := make(chan struct{})
 	defer close(pingExit)
@@ -374,8 +374,8 @@ func (bg *Bitget) SpotWsPrivateLoop(ch chan<- any) {
 	defer bg.SpotWsPrivateClose()
 	defer close(ch)
 
-	pingInterval := 15 * time.Second
-	pongWait := pingInterval + 10*time.Second
+	pingInterval := 38 * time.Second
+	pongWait := pingInterval + 2*time.Second
 	bg.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
 	pingExit := make(chan struct{})
 	defer close(pingExit)
