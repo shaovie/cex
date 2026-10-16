@@ -123,7 +123,7 @@ func testRest(cexObj cex.Exchanger, typ string) {
 		ilog.Rinfo("switch trade mode fail: %s", err.Error())
 	}
 	orderId, err := cexObj.FuturesPlaceOrder(typ, "BTCUSDT", cltId,
-		price, qty, "BUY", "LIMIT", "GTC", 0, 0, 0)
+		price, qty, "BUY", "LIMIT", "GTC", "BOTH", 0, 0)
 	if err != nil {
 		ilog.Rinfo("place order fail: %s", err.Error())
 	} else {
@@ -204,7 +204,7 @@ func testPrivWs(cexObj cex.Exchanger, typ string) {
 	cltId := gutils.RandomStr(24)
 	ilog.Rinfo("to palce order: price=%s qty=%s", price.String(), qty.String())
 	reqId, err := cexObj.FuturesWsPlaceOrder("BTCUSDT", cltId,
-		price, qty, "BUY", "LIMIT", "GTC", 0, 0, 0)
+		price, qty, "BUY", "LIMIT", "GTC", "BOTH", 0, 0)
 	if err != nil {
 		ilog.Rinfo("ws place order fail: %s", err.Error())
 	} else {
@@ -229,7 +229,8 @@ func main() {
 	passphrase := os.Getenv("PASSPHRASE")
 	ilog.Rinfo("cex=%s typ=%s", cexName, typ)
 	// ok,gate,bybit,binance
-	cexObj, _ := cex.New(cexName, "", apiKey, secretKey, passphrase)
+	cexObj, _ := cex.NewPrivate(cexName, "", apiKey, secretKey, passphrase)
+	/*
 	if lbs, err := cexObj.FuturesMaintMargin(typ, "ETHUSDT"); err != nil {
 		ilog.Rinfo("get FuturesMaintMargin fail: " + err.Error())
 	} else {
@@ -245,9 +246,19 @@ func main() {
 			ilog.Rinfo("%s ProfitLossHistory %v %s", "ETHUSDT", plh[i], time.UnixMilli(plh[i].Time).Format("2006-01-02 15:04:05"))
 		}
 	}
-	if err = cexObj.Transfer("BTC", "CM_FUTURE", "SPOT", decimal.NewFromFloat(0.33)); err != nil {
+	if err = cexObj.Transfer("BTC", "CM_FUTURE", "SPOT", "NORMAL", "", decimal.NewFromFloat(0.33)); err != nil {
 		ilog.Rinfo("transfer fail: " + err.Error())
 	}
+	*/
+	allAssets, err := cexObj.FuturesGetAllAssets(typ)
+	if err != nil {
+		ilog.Rinfo("get all asset fail: " + err.Error())
+	} else {
+		for symbol, as := range allAssets {
+			ilog.Rinfo(cexObj.Name() + " " + typ + " " + symbol + " avail: " + as.Avail.String())
+		}
+	}
+	return
 	testRest(cexObj, typ)
 	testPrivWs(cexObj, typ)
 	go testPubWs(cexObj, typ)
