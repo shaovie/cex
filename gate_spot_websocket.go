@@ -172,6 +172,9 @@ func (gt *Gate) SpotWsPublicTickerPoolPut(v any) {
 func (gt *Gate) SpotWsPublicOrderBook5PoolPut(v any) {
 	wsPublicOrderBook5Pool.Put(v)
 }
+func (gt *Gate) SpotWsPublicBBOPoolPut(v any) {
+	wsPublicBBOPool.Put(v)
+}
 func (gt *Gate) SpotWsPublicLoop(ch chan<- any) {
 	defer gt.SpotWsPublicClose()
 	defer close(ch)

@@ -172,6 +172,9 @@ func (ok *Okx) SpotWsPublicTickerPoolPut(v any) {
 func (ok *Okx) SpotWsPublicOrderBook5PoolPut(v any) {
 	wsPublicOrderBook5Pool.Put(v)
 }
+func (ok *Okx) SpotWsPublicBBOPoolPut(v any) {
+	wsPublicBBOPool.Put(v)
+}
 func (ok *Okx) SpotWsPublicLoop(ch chan<- any) {
 	defer ok.SpotWsPublicClose()
 	defer close(ch)

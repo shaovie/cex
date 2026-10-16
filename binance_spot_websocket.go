@@ -149,6 +149,9 @@ func (bn *Binance) SpotWsPublicOrderBook5PoolPut(v any) {
 func (bn *Binance) SpotWsPublicBBOPoolPut(v any) {
 	wsPublicBBOPool.Put(v)
 }
+func (bn *Binance) SpotWsPublicTradePoolPut(v any) {
+	wsPublicTradePool.Put(v)
+}
 func (bn *Binance) SpotWsPublicLoop(ch chan<- any) {
 	defer bn.SpotWsPublicClose()
 	defer close(ch)

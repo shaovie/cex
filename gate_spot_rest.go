@@ -3,6 +3,7 @@ package cex
 import (
 	"encoding/json"
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 
@@ -199,7 +200,9 @@ func (gt *Gate) SpotPlaceOrder(symbol, clientId string,
 	} else if orderType == "MARKET" && side == "BUY" {
 		qty = amt
 	}
-	if timeInForce != "" {
+	if orderType == "LIMIT" && postOnly { // 只做Maker
+		payload += `,"time_in_force":"poc"`
+	} else if timeInForce != "" {
 		payload += `,"time_in_force":"` + gt.fromStdTimeInForce(timeInForce) + `"`
 	} else if orderType == "MARKET" {
 		payload += `,"time_in_force":"ioc"`
@@ -293,7 +296,9 @@ func (gt *Gate) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
 				if orderL[k].Type == "LIMIT" {
 					po.Price = orderL[k].Price.String()
 				}
-				if orderL[k].TimeInForce != "" {
+				if orderL[k].Type == "LIMIT" && orderL[k].PostOnly { // 只做Maker
+					po.TimeInForce = "poc"
+				} else if orderL[k].TimeInForce != "" {
 					po.TimeInForce = gt.fromStdTimeInForce(orderL[k].TimeInForce)
 				} else if orderL[k].Type == "MARKET" {
 					po.TimeInForce = "ioc"
@@ -527,19 +532,33 @@ func (gt *Gate) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error) 
 		UTime:       order.UTime,
 	}, nil
 }
-func (gt *Gate) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
-	path := "/api/v4/spot/open_orders"
-	url := gtUniEndpoint + path
-	headers := gt.buildHeaders("GET", path, "", "")
-	_, resp, err := gt.Get(url, gtApiDeadline, headers)
-	if err != nil {
-		return nil, errors.New(gt.Name() + " net error! " + err.Error())
+
+// spotGetOrderList 查订单列表: status=open挂单 / status=finished已结束(全成/已撤)
+// 交易所按页返回(挂单limit上限100), 这里按页取完; 挂单的currency_pair必填, 已结束的可选
+func (gt *Gate) spotGetOrderList(api, status, symbol string) ([]*SpotOrder, error) {
+	path := "/api/v4/spot/orders"
+	symbolS := ""
+	if symbol != "" {
+		symbolS = gt.getSpotSymbol(symbol)
+		if len(symbolS) == 0 {
+			return nil, errors.New(gt.Name() + " unknown symbol! " + symbol)
+		}
 	}
-	if len(resp) == 0 || resp[0] != '[' {
-		return nil, gt.handleExceptionResp("SpotGetOpenOrders", resp)
-	}
-	orders := []struct {
-		L []struct {
+	dl := make([]*SpotOrder, 0, 128)
+	for page := 1; ; page++ {
+		params := "status=" + status + "&limit=100&page=" + strconv.Itoa(page)
+		if symbolS != "" {
+			params += "&currency_pair=" + symbolS
+		}
+		headers := gt.buildHeaders("GET", path, params, "")
+		_, resp, err := gt.Get(gtUniEndpoint+path+"?"+params, gtApiDeadline, headers)
+		if err != nil {
+			return nil, errors.New(gt.Name() + " net error! " + err.Error())
+		}
+		if len(resp) == 0 || resp[0] != '[' {
+			return nil, gt.handleExceptionResp(api, resp)
+		}
+		orders := []struct {
 			Symbol       string          `json:"currency_pair"`
 			OrderId      string          `json:"id"`
 			ClientId     string          `json:"text"`
@@ -554,140 +573,58 @@ func (gt *Gate) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 			Side         string          `json:"side"`
 			FeeCoin      string          `json:"fee_currency"`
 			FeeQty       decimal.Decimal `json:"fee"`
-			GtQty        decimal.Decimal `json:"gt_fee"`    //
-			Event        string          `json:"event"`     //
-			FinishAs     string          `json:"finish_as"` //
+			GtQty        decimal.Decimal `json:"gt_fee"` //
 			Time         int64           `json:"create_time_ms"`
 			UTime        int64           `json:"update_time_ms"`
-		} `json:"orders"`
-	}{}
-	err = json.Unmarshal(resp, &orders)
-	if err != nil {
-		return nil, errors.New(gt.Name() + " unmarshal fail! " + err.Error())
-	}
-
-	dl := make([]*SpotOrder, 0, len(orders))
-	for _, vl := range orders {
-		for _, order := range vl.L {
+		}{}
+		if err = json.Unmarshal(resp, &orders); err != nil {
+			return nil, errors.New(gt.Name() + " unmarshal fail! " + err.Error())
+		}
+		for i := range orders {
 			clientId := ""
-			idx := strings.Index(order.ClientId, "t-")
-			if idx != -1 && len(order.ClientId) > 2 {
-				clientId = order.ClientId[2:]
+			idx := strings.Index(orders[i].ClientId, "t-")
+			if idx != -1 && len(orders[i].ClientId) > 2 {
+				clientId = orders[i].ClientId[2:]
 			}
-			if !order.GtQty.IsZero() {
-				order.FeeCoin = "GT"
-				order.FeeQty = order.GtQty
+			if !orders[i].GtQty.IsZero() {
+				orders[i].FeeCoin = "GT"
+				orders[i].FeeQty = orders[i].GtQty
 			}
-			if order.Left.IsPositive() && order.Qty.GreaterThan(order.Left) {
-				order.Status = "partially_filled"
+			state := orders[i].Status
+			// 挂单里剩余量小于下单量说明已部分成交; 已结束的单子状态是最终的, 不改
+			if state == "open" && orders[i].Left.IsPositive() && orders[i].Qty.GreaterThan(orders[i].Left) {
+				state = "partially_filled"
 			}
-			if order.Event == "put" {
-				order.Status = "open"
-			} else if order.Event == "update" {
-				if order.FinishAs == "open" {
-					order.Status = "partially_filled"
-				}
-			} else if order.Event == "finish" {
-				if order.FinishAs == "filled" {
-					order.Status = "filled"
-				} else if order.FinishAs == "cancelled" {
-					order.Status = "cancelled"
-				}
-			}
-			if order.Status == "" {
+			if state == "" {
 				ilog.Error(gt.Name() + " unknow s status" + string(resp))
 			}
-			so := SpotOrder{
-				Symbol:      strings.ReplaceAll(order.Symbol, "_", ""),
-				OrderId:     order.OrderId,
+			dl = append(dl, &SpotOrder{
+				Symbol:      strings.ReplaceAll(orders[i].Symbol, "_", ""),
+				OrderId:     orders[i].OrderId,
 				ClientId:    clientId,
-				Price:       order.Price,
-				Qty:         order.Qty,
-				FilledQty:   order.ExecutedQty,
-				FilledAmt:   order.CummQuoteQty,
-				Status:      gt.toStdOrderStatus(order.Status),
-				Type:        gt.toStdOrderType(order.Type),
-				TimeInForce: gt.toStdTimeInForce(order.TimeInForce),
-				Side:        gt.toStdSide(order.Side),
-				FeeQty:      order.FeeQty.Neg(),
-				FeeAsset:    order.FeeCoin,
-				CTime:       order.Time,
-				UTime:       order.UTime,
-			}
-			dl = append(dl, &so)
+				Price:       orders[i].Price,
+				Qty:         orders[i].Qty,
+				FilledQty:   orders[i].ExecutedQty,
+				FilledAmt:   orders[i].CummQuoteQty,
+				Status:      gt.toStdOrderStatus(state),
+				Type:        gt.toStdOrderType(orders[i].Type),
+				TimeInForce: gt.toStdTimeInForce(orders[i].TimeInForce),
+				Side:        gt.toStdSide(orders[i].Side),
+				FeeQty:      orders[i].FeeQty.Neg(),
+				FeeAsset:    orders[i].FeeCoin,
+				CTime:       orders[i].Time,
+				UTime:       orders[i].UTime,
+			})
+		}
+		if len(orders) < 100 { // 不够一页说明取完了
+			break
 		}
 	}
 	return dl, nil
 }
-
-// SpotGetFilledOrders 查已结束的订单(全成/已撤): 按订单结束时间过滤, 不传交易对就是所有
+func (gt *Gate) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
+	return gt.spotGetOrderList("SpotGetOpenOrders", "open", symbol)
+}
 func (gt *Gate) SpotGetFilledOrders(symbol string) ([]*SpotOrder, error) {
-	path := "/api/v4/spot/orders"
-	params := "status=finished&limit=100"
-	if symbol != "" {
-		symbolS := gt.getSpotSymbol(symbol)
-		if len(symbolS) == 0 {
-			return nil, errors.New(gt.Name() + " unknown symbol! " + symbol)
-		}
-		params += "&currency_pair=" + symbolS
-	}
-	headers := gt.buildHeaders("GET", path, params, "")
-	_, resp, err := gt.Get(gtUniEndpoint+path+"?"+params, gtApiDeadline, headers)
-	if err != nil {
-		return nil, errors.New(gt.Name() + " net error! " + err.Error())
-	}
-	if len(resp) == 0 || resp[0] != '[' {
-		return nil, gt.handleExceptionResp("SpotGetFilledOrders", resp)
-	}
-	orders := []struct {
-		Symbol       string          `json:"currency_pair"`
-		OrderId      string          `json:"id"`
-		ClientId     string          `json:"text"`
-		Price        decimal.Decimal `json:"price"`
-		Qty          decimal.Decimal `json:"amount"`
-		ExecutedQty  decimal.Decimal `json:"filled_amount"`
-		CummQuoteQty decimal.Decimal `json:"filled_total"`
-		Status       string          `json:"status"`
-		Type         string          `json:"type"`
-		TimeInForce  string          `json:"time_in_force"` // GTC/FOK/IOC
-		Side         string          `json:"side"`
-		FeeCoin      string          `json:"fee_currency"`
-		FeeQty       decimal.Decimal `json:"fee"`
-		GtQty        decimal.Decimal `json:"gt_fee"`
-		Time         int64           `json:"create_time_ms"`
-		UTime        int64           `json:"update_time_ms"`
-	}{}
-	if err = json.Unmarshal(resp, &orders); err != nil {
-		return nil, errors.New(gt.Name() + " unmarshal fail! " + err.Error())
-	}
-	dl := make([]*SpotOrder, 0, len(orders))
-	for i := range orders {
-		clientId := ""
-		idx := strings.Index(orders[i].ClientId, "t-")
-		if idx != -1 && len(orders[i].ClientId) > 2 {
-			clientId = orders[i].ClientId[2:]
-		}
-		if !orders[i].GtQty.IsZero() {
-			orders[i].FeeCoin = "GT"
-			orders[i].FeeQty = orders[i].GtQty
-		}
-		dl = append(dl, &SpotOrder{
-			Symbol:      strings.ReplaceAll(orders[i].Symbol, "_", ""),
-			OrderId:     orders[i].OrderId,
-			ClientId:    clientId,
-			Price:       orders[i].Price,
-			Qty:         orders[i].Qty,
-			FilledQty:   orders[i].ExecutedQty,
-			FilledAmt:   orders[i].CummQuoteQty,
-			Status:      gt.toStdOrderStatus(orders[i].Status), // 已结束的单子状态是最终的, 不再按剩余量改成部分成交
-			Type:        gt.toStdOrderType(orders[i].Type),
-			TimeInForce: gt.toStdTimeInForce(orders[i].TimeInForce),
-			Side:        gt.toStdSide(orders[i].Side),
-			FeeQty:      orders[i].FeeQty.Neg(),
-			FeeAsset:    orders[i].FeeCoin,
-			CTime:       orders[i].Time,
-			UTime:       orders[i].UTime,
-		})
-	}
-	return dl, nil
+	return gt.spotGetOrderList("SpotGetFilledOrders", "finished", symbol)
 }
