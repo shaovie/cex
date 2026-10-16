@@ -238,7 +238,6 @@ func (sa *Safetrade) SpotWsPublicLoop(ch chan<- any) {
 			}
 			break
 		}
-
 		for k := range msg { // 清空后复用, 避免每条消息都make一次map
 			delete(msg, k)
 		}

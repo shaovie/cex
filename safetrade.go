@@ -23,6 +23,7 @@ type Safetrade struct {
 	apikey    string
 	secretkey string
 	localIP   string
+	debug     bool
 
 	// spot websocket
 	spotWsPublicConn       *websocket.Conn
@@ -90,6 +91,7 @@ func (sa *Safetrade) ApiKey() string {
 	return sa.apikey
 }
 func (sa *Safetrade) Debug(v bool) {
+	sa.debug = v
 }
 func (sa *Safetrade) Init() error {
 	sa.spotWsPublicClosed = true
