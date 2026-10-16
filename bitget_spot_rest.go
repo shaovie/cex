@@ -288,11 +288,13 @@ func (bg *Bitget) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 		Price       string `json:"price,omitempty"`
 		Qty         string `json:"qty"`
 		ClientOid   string `json:"clientOid,omitempty"`
+		StpMode string  `json:"stpMode,omitempty"`
 	}{
 		Category:  "SPOT",
 		Symbol:    symbol,
 		Side:      bg.fromStdSide(side),
 		OrderType: bg.fromStdOrderType(orderType),
+		StpMode: "cancel_both", // 做市需要
 	}
 	if orderType == "LIMIT" {
 		req.Price = price.String()
@@ -309,11 +311,11 @@ func (bg *Bitget) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 	}
 	if timeInForce != "" {
 		req.TimeInForce = bg.fromStdTimeInForce(timeInForce)
-		if postOnly && req.TimeInForce == "gtc" {
-			req.TimeInForce = "post_only"
-		}
 	} else if orderType == "MARKET" {
 		req.TimeInForce = "ioc"
+	}
+	if postOnly {
+		req.TimeInForce = "post_only"
 	}
 	if cltId != "" {
 		req.ClientOid = cltId
