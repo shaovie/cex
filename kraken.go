@@ -61,6 +61,10 @@ var (
 	kkXStocksSymbolMap    map[string]string
 	kkXStocksSymbolMapMtx sync.RWMutex
 
+	// 交易所pair(id如XXBTZUSD, altname如XBTUSD) -> 标准符号(BTCUSD)
+	kkSpotAltSymbolMap    map[string]string
+	kkSpotAltSymbolMapMtx sync.RWMutex
+
 	kkNonceSeq int64 // 单个apikey下的nonce必须是自增的
 )
 
@@ -71,6 +75,7 @@ func init() {
 	kkSpotSymbolMap = make(map[string]string)
 	kkSpotWssSymbolMap = make(map[string]string)
 	kkXStocksSymbolMap = make(map[string]string)
+	kkSpotAltSymbolMap = make(map[string]string)
 }
 func NewKraken(account, apikey, secretkey string) *Kraken {
 	cexObj := &Kraken{
@@ -170,6 +175,13 @@ func (kk *Kraken) getSpotWssSymbol(symbol string) string {
 	kkSpotWssSymbolMapMtx.RLock()
 	defer kkSpotWssSymbolMapMtx.RUnlock()
 	return kkSpotWssSymbolMap[symbol]
+}
+
+// getSpotStdSymbol 交易所pair名(id或altname, 如XXBTZUSD/XBTUSD)转标准符号(BTCUSD)
+func (kk *Kraken) getSpotStdSymbol(pair string) string {
+	kkSpotAltSymbolMapMtx.RLock()
+	defer kkSpotAltSymbolMapMtx.RUnlock()
+	return kkSpotAltSymbolMap[pair]
 }
 
 // convSymbol 交易所符号转标准符号(BTC/USDT -> BTCUSDT)

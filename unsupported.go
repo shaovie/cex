@@ -176,6 +176,9 @@ func (us *Unsupported) FuturesGetOrder(typ, symbol, orderId, cltId string) (*Fut
 func (us *Unsupported) FuturesGetOpenOrders(typ, symbol string) ([]*FuturesOrder, error) {
 	return nil, errors.New("not support")
 }
+func (us *Unsupported) FuturesGetFilledOrders(typ, symbol string) ([]*FuturesOrder, error) {
+	return nil, errors.New("not support")
+}
 func (us *Unsupported) FuturesSwitchPositionMode(typ string, mode int) error {
 	return errors.New("not support")
 }

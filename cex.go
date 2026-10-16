@@ -136,6 +136,8 @@ type Exchanger interface {
 	FuturesGetOrder(typ, symbol, orderId, cltId string) (*FuturesOrder, error)
 	// symbol 为空取所有的
 	FuturesGetOpenOrders(typ, symbol string) ([]*FuturesOrder, error)
+	// 已结束的订单(全成/已撤/过期): aster
+	FuturesGetFilledOrders(typ, symbol string) ([]*FuturesOrder, error)
 	FuturesCancelOrder(typ string, symbol /*BTCUSDT*/, orderId, cltId string) error
 	// 批量撤单: aster (支持部分成功, 一次最多10单)
 	FuturesCancelOrderMultipleSupported() bool
