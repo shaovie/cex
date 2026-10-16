@@ -191,6 +191,7 @@ func (as *Aster) FuturesPlaceOrder(typ, symbol, clientId string, /*BTCUSDT*/
 	}
 	params := "symbol=" + symbol + "&side=" + as.toStdSide(side) + "&type=" + orderType +
 		"&quantity=" + qty.String() + "&positionSide=" + positionMode + "&newOrderRespType=ACK"
+	params += "&stpMode=EXPIRE_BOTH" // 自成交保护: 自成交时买卖两单都撤(调用方不需要传)
 	if clientId != "" {
 		params += "&newClientOrderId=" + clientId
 	}
@@ -255,6 +256,7 @@ func (as *Aster) futuresPlaceOrderMultiple(orders []FuturesPostOrder) error {
 		Quantity         string `json:"quantity"`
 		ReduceOnly       string `json:"reduceOnly,omitempty"`
 		NewClientOrderId string `json:"newClientOrderId,omitempty"`
+		StpMode          string `json:"stpMode"` // 自成交保护: 自成交时买卖两单都撤
 	}
 	orderL := make([]BatchOrder, 0, len(orders))
 	for i := range orders {
@@ -268,6 +270,7 @@ func (as *Aster) futuresPlaceOrderMultiple(orders []FuturesPostOrder) error {
 			PositionSide:     orders[i].PositionMode,
 			Quantity:         orders[i].Qty.String(),
 			NewClientOrderId: orders[i].ClientId,
+			StpMode:          "EXPIRE_BOTH",
 		}
 		if orders[i].Type == "LIMIT" {
 			if len(orders[i].TimeInForce) == 0 {
@@ -447,6 +450,32 @@ func (as *Aster) FuturesGetOpenOrders(typ, symbol string) ([]*FuturesOrder, erro
 	}
 	if len(resp) == 0 || resp[0] != '[' {
 		return nil, as.handleExceptionResp("FuturesGetOpenOrders", resp)
+	}
+	ret := []AsterFuturesOrder{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return nil, errors.New(as.Name() + " unmarshal fail! " + err.Error())
+	}
+	dl := make([]*FuturesOrder, 0, len(ret))
+	for i := range ret {
+		dl = append(dl, as.toStdFuturesOrder(&ret[i]))
+	}
+	return dl, nil
+}
+
+// FuturesGetFilledOrders 查已结束的订单(全成/已撤/过期): 不带时间参数时是最近7天
+func (as *Aster) FuturesGetFilledOrders(typ, symbol string) ([]*FuturesOrder, error) {
+	params := "limit=100"
+	if symbol != "" {
+		params = "symbol=" + symbol + "&" + params
+	}
+	path := "/fapi/v3/allOrders"
+	link := asFuturesEndpoint + path + "?" + as.buildQuery(params)
+	_, resp, err := as.Get(link, asApiDeadline, nil)
+	if err != nil {
+		return nil, errors.New(as.Name() + " net error! " + err.Error())
+	}
+	if len(resp) == 0 || resp[0] != '[' {
+		return nil, as.handleExceptionResp("FuturesGetFilledOrders", resp)
 	}
 	ret := []AsterFuturesOrder{}
 	if err = json.Unmarshal(resp, &ret); err != nil {
