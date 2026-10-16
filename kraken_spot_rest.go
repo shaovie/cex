@@ -316,6 +316,140 @@ func (kk *Kraken) SpotCancelOrder(symbol string, orderId, cltId string) error {
 	}
 	return nil
 }
+
+func (kk *Kraken) SpotPlaceOrderMultipleSupported() bool { return true }
+
+// SpotPlaceOrderMultiple 批量下单: 文档要求2~15单且只能同一个交易对
+// 整批校验不过会被全部拒绝; 撮合阶段被拒的只拒单笔, 所以只要有成功的就算成功
+func (kk *Kraken) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
+	if len(orders) < 2 || len(orders) > 15 {
+		return errors.New(kk.Name() + " batch orders must be 2~15!")
+	}
+	symbol := orders[0].Symbol
+	symbolS := kk.getSpotSymbol(symbol)
+	if symbolS == "" {
+		return errors.New(kk.Name() + " unknown symbol! " + symbol)
+	}
+	type BatchOrder struct {
+		Type        string `json:"type"`
+		OrdType     string `json:"ordertype"`
+		Price       string `json:"price,omitempty"`
+		Volume      string `json:"volume"`
+		TimeInForce string `json:"timeinforce,omitempty"`
+		ClientId    string `json:"cl_ord_id,omitempty"`
+		OFlags      string `json:"oflags,omitempty"`
+	}
+	orderL := make([]BatchOrder, 0, len(orders))
+	for i := range orders {
+		if orders[i].Symbol != symbol { // 一批只能一个交易对
+			return errors.New(kk.Name() + " batch orders must be same symbol!")
+		}
+		if len(orders[i].ClientId) > 18 {
+			return errors.New(kk.Name() + " cltId too long! must le 18")
+		}
+		if orders[i].Type != "LIMIT" && orders[i].Type != "MARKET" {
+			return errors.New(kk.Name() + " not support order type! " + orders[i].Type)
+		}
+		po := BatchOrder{
+			Type:        kk.fromStdSide(orders[i].Side),
+			OrdType:     kk.fromStdOrderType(orders[i].Type),
+			Volume:      orders[i].Qty.String(),
+			TimeInForce: orders[i].TimeInForce,
+			ClientId:    orders[i].ClientId,
+		}
+		if orders[i].Type == "LIMIT" {
+			po.Price = orders[i].Price.String()
+			if orders[i].PostOnly {
+				po.OFlags = "post"
+			}
+		}
+		orderL = append(orderL, po)
+	}
+	nonce := kk.nextNonce()
+	req := struct {
+		Nonce      string       `json:"nonce"`
+		Orders     []BatchOrder `json:"orders"`
+		Pair       string       `json:"pair"`
+		AssetClass string       `json:"asset_class,omitempty"`
+	}{Nonce: nonce, Orders: orderL, Pair: symbolS}
+	if kk.isXStocksSymbol(symbol) {
+		req.AssetClass = "tokenized_asset"
+	}
+	payload, _ := json.Marshal(&req)
+	path := "/0/private/AddOrderBatch"
+	link := kkSpotEndpoint + path
+	headers := kk.buildJsonHeaders(path, nonce, payload)
+	_, resp, err := ihttp.Post(link, payload, kkApiDeadline, headers)
+	if err != nil {
+		return errors.New(kk.Name() + " net error! " + err.Error())
+	}
+	ret := struct {
+		Error  []string `json:"error,omitempty"`
+		Result struct {
+			Orders []struct {
+				Txid  string `json:"txid,omitempty"`
+				Error string `json:"error,omitempty"` // 撮合阶段被拒的单笔
+			} `json:"orders,omitempty"`
+		} `json:"result"`
+	}{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return errors.New(kk.Name() + " unmarshal fail! " + err.Error())
+	}
+	if len(ret.Error) > 0 {
+		return errors.New(kk.Name() + " batch order fail! " + ret.Error[0])
+	}
+	success, failMsg := 0, ""
+	for _, v := range ret.Result.Orders {
+		if len(v.Txid) > 0 {
+			success++
+		} else if len(failMsg) == 0 {
+			failMsg = v.Error
+		}
+	}
+	if success == 0 {
+		return errors.New(kk.Name() + " batch order all fail! " + failMsg)
+	}
+	return nil
+}
+
+func (kk *Kraken) SpotCancelOrderMultipleSupported() bool { return true }
+
+// SpotCancelOrderMultiple 批量撤单: txid和cl_ord_id都可以传, 只要有成功的就算成功
+func (kk *Kraken) SpotCancelOrderMultiple(symbol string, orderIds, cltIds []string) error {
+	if len(orderIds) == 0 && len(cltIds) == 0 {
+		return errors.New(kk.Name() + " orderIds or cltIds empty!")
+	}
+	nonce := kk.nextNonce()
+	req := struct {
+		Nonce  string   `json:"nonce"`
+		Orders []string `json:"orders,omitempty"`
+		CltIds []string `json:"cl_ord_ids,omitempty"`
+	}{Nonce: nonce, Orders: orderIds, CltIds: cltIds}
+	payload, _ := json.Marshal(&req)
+	path := "/0/private/CancelOrderBatch"
+	link := kkSpotEndpoint + path
+	headers := kk.buildJsonHeaders(path, nonce, payload)
+	_, resp, err := ihttp.Post(link, payload, kkApiDeadline, headers)
+	if err != nil {
+		return errors.New(kk.Name() + " net error! " + err.Error())
+	}
+	ret := struct {
+		Error  []string `json:"error,omitempty"`
+		Result struct {
+			Count int64 `json:"count,omitempty"`
+		} `json:"result"`
+	}{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return errors.New(kk.Name() + " unmarshal fail! " + err.Error())
+	}
+	if len(ret.Error) > 0 {
+		return errors.New(kk.Name() + " batch cancel fail! " + ret.Error[0])
+	}
+	if ret.Result.Count == 0 {
+		return errors.New(kk.Name() + " batch cancel all fail! " + string(resp))
+	}
+	return nil
+}
 func (kk *Kraken) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error) {
 	path := "/0/private/QueryOrders"
 	link := kkSpotEndpoint + path

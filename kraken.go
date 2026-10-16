@@ -121,8 +121,7 @@ func (kk *Kraken) Init() error {
 	return nil
 }
 func (kk *Kraken) buildHeaders(path string, values url.Values) (map[string]string, string) {
-	seq := atomic.AddInt64(&kkNonceSeq, 1)
-	ts := strconv.FormatInt(time.Now().UnixNano()+seq, 10)
+	ts := kk.nextNonce()
 	values.Set("nonce", ts)
 	params := values.Encode()
 	headers := map[string]string{
@@ -131,6 +130,27 @@ func (kk *Kraken) buildHeaders(path string, values url.Values) (map[string]strin
 		"API-Key":      kk.apikey,
 	}
 	return headers, params
+}
+
+// nextNonce nonce必须是自增的, 同一apikey下不能重复或回退
+func (kk *Kraken) nextNonce() string {
+	seq := atomic.AddInt64(&kkNonceSeq, 1)
+	return strconv.FormatInt(time.Now().UnixNano()+seq, 10)
+}
+
+// buildJsonHeaders JSON请求体(AddOrderBatch/CancelOrderBatch等)的请求头
+// 签名: HMAC-SHA512(URI path + SHA256(nonce + body)), body是实际发出的JSON串(里面也带nonce)
+func (kk *Kraken) buildJsonHeaders(path, nonce string, body []byte) map[string]string {
+	sha := sha256.New()
+	sha.Write([]byte(nonce))
+	sha.Write(body)
+	h := hmac.New(sha512.New, []byte(kk.secretkey))
+	h.Write(append([]byte(path), sha.Sum(nil)...))
+	return map[string]string{
+		"Content-Type": "application/json",
+		"API-Sign":     base64.StdEncoding.EncodeToString(h.Sum(nil)),
+		"API-Key":      kk.apikey,
+	}
 }
 func (kk *Kraken) sign(nonce, path, params string) string {
 	sha := sha256.New()
