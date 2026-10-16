@@ -7,6 +7,7 @@ import (
 	"errors"
 	"math/rand/v2"
 	"net/http"
+	"strconv"
 	"sync"
 
 	//"net/url"
@@ -21,13 +22,13 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (sa *Safetrade) SpotWsPublicOpen() error {
+func (sa *Safetrade) SpotWsPublicOpen_() error {
 	sa.spotWsPublicClosedMtx.Lock()
 	sa.spotWsPublicClosed = false
 	sa.spotWsPublicClosedMtx.Unlock()
 	return nil
 }
-func (sa *Safetrade) SpotWsPublicOpen_() error {
+func (sa *Safetrade) SpotWsPublicOpen() error {
 	dialer := websocket.Dialer{
 		EnableCompression: true, // 启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
@@ -61,7 +62,7 @@ func (sa *Safetrade) SpotWsPublicOpen_() error {
 	sa.spotWsPublicClosedMtx.Unlock()
 	return nil
 }
-func (sa *Safetrade) stWsPublicEvent_(event string, channels []string) {
+func (sa *Safetrade) stWsPublicEvent(event string, channels []string) {
 	if len(channels) == 0 {
 		return
 	}
@@ -93,7 +94,7 @@ func (sa *Safetrade) stWsPublicEvent_(event string, channels []string) {
 	sa.spotWsPublicConn.WriteMessage(websocket.TextMessage, req)
 	sa.spotWsPublicConnMtx.Unlock()
 }
-func (sa *Safetrade) stWsPublicEvent(event string, channels []string) {
+func (sa *Safetrade) stWsPublicEvent_(event string, channels []string) {
 	if len(channels) == 0 {
 		return
 	}
@@ -124,7 +125,7 @@ func (sa *Safetrade) SpotWsPublicUnsubscribe(channels []string) {
 func (sa *Safetrade) SpotWsPublicBBOPoolPut(v any) {
 	wsPublicBBOPool.Put(v)
 }
-func (sa *Safetrade) SpotWsPublicLoop(ch chan<- any) {
+func (sa *Safetrade) SpotWsPublicLoop_(ch chan<- any) {
 	defer close(ch)
 
 	exitChan := make(chan struct{})
@@ -197,12 +198,12 @@ func (sa *Safetrade) spotWsBBOLoop(symbol string, ch chan<- any, exitChan chan s
 		}
 	}
 }
-func (sa *Safetrade) SpotWsPublicLoop_(ch chan<- any) {
+func (sa *Safetrade) SpotWsPublicLoop(ch chan<- any) {
 	defer sa.SpotWsPublicClose()
 	defer close(ch)
 
-	pingInterval := 30 * time.Second
-	pongWait := pingInterval + 10*time.Second
+	pingInterval := 33 * time.Second
+	pongWait := pingInterval + 2*time.Second
 	sa.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
 	sa.spotWsPublicConn.SetPongHandler(func(string) error {
 		sa.spotWsPublicConn.SetReadDeadline(time.Now().Add(pongWait))
@@ -357,13 +358,65 @@ func (sa *Safetrade) spotWsHandleDepth(symbol string, data []byte, ch chan<- any
 func (st *Safetrade) SpotWsPrivateSupported() bool {
 	return true
 }
+
+// SpotWsPrivateOpen 私有wss: 鉴权走X-Auth-*请求头, 订阅order/balance频道后交易所主动推送
 func (st *Safetrade) SpotWsPrivateOpen() error {
+	dialer := websocket.Dialer{
+		EnableCompression: true, // 启用压缩扩展
+		HandshakeTimeout:  2 * time.Second,
+	}
+	if st.localIP != "" {
+		localAddr := &net.TCPAddr{
+			IP:   net.ParseIP(st.localIP),
+			Port: 0, // 0 表示随机可用端口
+		}
+		dialer.NetDialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			d := net.Dialer{
+				LocalAddr: localAddr,
+				Timeout:   2 * time.Second,
+			}
+			return d.DialContext(ctx, network, addr)
+		}
+	}
+	header := http.Header{}
+	for k, v := range st.buildHeaders() { // 含X-Auth-Apikey/X-Auth-Nonce/X-Auth-Signature
+		header.Set(k, v)
+	}
+	header.Set("Origin", stWsOrigin) // 服务端校验Origin
+	header.Set("User-Agent", stUserAgent)
+
+	conn, _, err := dialer.Dial("wss://safe.trade/api/v2/websocket/private", header)
+	if err != nil {
+		return errors.New(st.Name() + " spot.ws.priv con failed! " + err.Error())
+	}
+	st.spotWsPrivateConn = conn
+
 	st.spotWsPrivateClosedMtx.Lock()
 	st.spotWsPrivateClosed = false
 	st.spotWsPrivateClosedMtx.Unlock()
 	return nil
 }
 func (st *Safetrade) SpotWsPrivateSubscribe(channels []string) {
+	streams := make([]string, 0, len(channels))
+	for _, c := range channels {
+		if c == "orders" {
+			streams = append(streams, "order")
+		} else if c == "trades" {
+			streams = append(streams, "trade")
+		} else if c == "balance" {
+			streams = append(streams, "balance")
+		}
+	}
+	if len(streams) == 0 {
+		return
+	}
+	req, _ := json.Marshal(struct {
+		Event   string   `json:"event"`
+		Streams []string `json:"streams"`
+	}{Event: "subscribe", Streams: streams})
+	st.spotWsPrivateConnMtx.Lock()
+	st.spotWsPrivateConn.WriteMessage(websocket.TextMessage, req)
+	st.spotWsPrivateConnMtx.Unlock()
 }
 func (st *Safetrade) SpotWsPrivateIsClosed() bool {
 	st.spotWsPrivateClosedMtx.RLock()
@@ -385,10 +438,108 @@ func (st *Safetrade) SpotWsPrivateLoop(ch chan<- any) {
 	defer st.SpotWsPrivateClose()
 	defer close(ch)
 
+	pingInterval := 34 * time.Second
+	pongWait := pingInterval + 2*time.Second
+	st.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
+	st.spotWsPrivateConn.SetPongHandler(func(string) error {
+		st.spotWsPrivateConn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
+	pingExit := make(chan struct{})
+	defer close(pingExit)
+	go func(exitChan <-chan struct{}) {
+		ticker := time.NewTicker(pingInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-exitChan:
+				return
+			case <-ticker.C:
+				if st.SpotWsPrivateIsClosed() {
+					return
+				}
+				st.spotWsPrivateConnMtx.Lock()
+				st.spotWsPrivateConn.WriteMessage(websocket.PingMessage, nil)
+				st.spotWsPrivateConnMtx.Unlock()
+			}
+		}
+	}(pingExit)
+
+	msg := make(map[string]WsRawJSON, 3) // 循环外分配一次, 之后复用
 	for {
-		time.Sleep(2 * time.Second)
-		if st.SpotWsPrivateIsClosed() {
+		_, recv, err := st.spotWsPrivateConn.ReadMessage()
+		if err != nil {
+			if !st.SpotWsPrivateIsClosed() {
+				ilog.Warning(st.Name() + " spot.ws.priv channel read: " + err.Error())
+			}
 			break
 		}
+		for k := range msg { // 清空后复用, 避免每条消息都make一次map
+			delete(msg, k)
+		}
+		if st.debug {
+			ilog.Rinfo(st.Name() + " spot.ws.priv recv: " + string(recv))
+		}
+		if err = json.Unmarshal(recv, &msg); err != nil {
+			ilog.Error(st.Name() + " spot.ws.priv recv invalid msg:" + string(recv))
+			continue
+		}
+		for k, v := range msg {
+			if k == "order" {
+				st.spotWsHandleOrder(v, ch)
+			} else if k == "balance" {
+				st.spotWsHandleBalance(v, ch)
+			} else if k == "trade" { // 私有成交, 标准结构体里没有对应的类型
+				ilog.Debug(st.Name() + " spot.ws.priv trade: " + string(v))
+			} else if k == "success" { // 订阅/取消订阅的回执
+				if !bytes.Contains(v, []byte("subscribe")) {
+					ilog.Error(st.Name() + " spot.ws.priv recv: " + string(v))
+				}
+			} else {
+				ilog.Error(st.Name() + " spot.ws.priv recv unknown msg: " + string(recv))
+			}
+		}
+	}
+}
+func (st *Safetrade) spotWsHandleOrder(data []byte, ch chan<- any) {
+	recv := SafetradeWsOrder{}
+	if err := easyjson.Unmarshal(data, &recv); err != nil || recv.Id == 0 {
+		return
+	}
+	ordType := recv.OrdType
+	if ordType == "" {
+		ordType = recv.Type
+	}
+	ctime, _ := time.Parse(time.RFC3339, recv.CreatedAt)
+	utime, _ := time.Parse(time.RFC3339, recv.UpdatedAt)
+	status := st.toStdOrderState(recv.State)
+	if status == "NEW" && recv.FilledAmount.IsPositive() {
+		status = "PARTIALLY_FILLED"
+	}
+	ch <- &SpotOrder{
+		Symbol:    strings.ToUpper(recv.Market),
+		OrderId:   strconv.FormatInt(recv.Id, 10),
+		Price:     recv.Price,
+		Qty:       recv.OriginAmount,
+		FilledQty: recv.FilledAmount,
+		FilledAmt: recv.FilledAmount.Mul(recv.AvgPrice),
+		AvgPrice:  recv.AvgPrice,
+		Status:    status,
+		Type:      st.toStdOrderType(ordType),
+		Side:      st.toStdSide(recv.Side),
+		CTime:     ctime.UnixMilli(),
+		UTime:     utime.UnixMilli(),
+	}
+}
+func (st *Safetrade) spotWsHandleBalance(data []byte, ch chan<- any) {
+	recv := SafetradeWsBalance{}
+	if err := easyjson.Unmarshal(data, &recv); err != nil || recv.Currency == "" {
+		return
+	}
+	ch <- &SpotAsset{
+		Symbol: strings.ToUpper(recv.Currency),
+		Avail:  recv.Balance,
+		Locked: recv.Locked,
+		Total:  recv.Balance.Add(recv.Locked),
 	}
 }
