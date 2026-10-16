@@ -224,7 +224,7 @@ func (ba *BnAlpha) spotWsHandleFullDepth(data []byte, ch chan<- any) {
 	if err := easyjson.Unmarshal(data, depth); err != nil || len(depth.Symbol) == 0 {
 		return
 	}
-	symbol := ba.getStdSymbol(depth.Symbol) // 交易所symbol转标准symbol
+	symbol := ba.getStdSymbol(depth.Symbol) // 交易所symbol(ALPHA_1185USDT)转标准symbol(BTCUSDT)
 	bids := ba.spotWsOrderBookBids[symbol]
 	if bids == nil { // 首次(或序号断裂后): 取fullDepth快照重建本地盘口
 		if !ba.spotWsInitOrderBook(symbol, depth.Symbol) {
