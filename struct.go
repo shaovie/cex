@@ -224,6 +224,17 @@ type SpotPostOrder struct {
 	Qty         decimal.Decimal
 	Amt         decimal.Decimal
 }
+type FuturesPostOrder struct {
+	Symbol       string // BTCUSDT
+	ClientId     string
+	Side         string
+	Type         string // LIMIT/MARKET
+	TimeInForce  string
+	Price        decimal.Decimal
+	Qty          decimal.Decimal
+	PositionMode string // BOTH/LONG/SHORT
+	ReduceOnly   int    // 1: reduceOnly=true
+}
 type SpotOrder struct {
 	RequestId string // for ws 不要超过28, 在SpotWsPlaceOrder成功后返回
 	Err       string // for ws

@@ -128,10 +128,16 @@ type Exchanger interface {
 	FuturesPlaceOrder(typ, symbol, clientId string,
 		price, qty decimal.Decimal, side, orderType, timeInForce, positionMode string,
 		tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error)
+	// 批量下单: aster (支持部分成功, 一次最多5单)
+	FuturesPlaceOrderMultipleSupported() bool
+	FuturesPlaceOrderMultiple(typ string, orders []FuturesPostOrder) error
 	FuturesGetOrder(typ, symbol, orderId, cltId string) (*FuturesOrder, error)
 	// symbol 为空取所有的
 	FuturesGetOpenOrders(typ, symbol string) ([]*FuturesOrder, error)
 	FuturesCancelOrder(typ string, symbol /*BTCUSDT*/, orderId, cltId string) error
+	// 批量撤单: aster (支持部分成功, 一次最多10单)
+	FuturesCancelOrderMultipleSupported() bool
+	FuturesCancelOrderMultiple(typ, symbol string /*BTCUSDT*/, orderIds, cltIds []string) error
 	//  单仓:0/双仓:1 切换
 	FuturesSwitchPositionMode(typ string, mode int) error
 	//  全仓:0/逐仓:1 切换

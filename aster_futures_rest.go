@@ -3,6 +3,7 @@ package cex
 import (
 	"encoding/json"
 	"errors"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -221,6 +222,98 @@ func (as *Aster) FuturesPlaceOrder(typ, symbol, clientId string, /*BTCUSDT*/
 	}
 	return ret.OrderId.String(), nil
 }
+
+func (as *Aster) FuturesPlaceOrderMultipleSupported() bool {
+	return true
+}
+
+// FuturesPlaceOrderMultiple 批量下单: aster一次最多5单, 超过单次上限自动分批
+// 返回数组里每单可能成功或失败, 只要有成功的就算成功; 某一批失败立刻返回错误
+func (as *Aster) FuturesPlaceOrderMultiple(typ string, orders []FuturesPostOrder) error {
+	if len(orders) == 0 {
+		return errors.New(as.Name() + " orders empty!")
+	}
+	for i := 0; i < len(orders); i += 5 { // 单次最多5单
+		end := i + 5
+		if end > len(orders) {
+			end = len(orders)
+		}
+		if err := as.futuresPlaceOrderMultiple(orders[i:end]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (as *Aster) futuresPlaceOrderMultiple(orders []FuturesPostOrder) error {
+	type BatchOrder struct {
+		Symbol           string `json:"symbol"`
+		Side             string `json:"side"`
+		Type             string `json:"type"`
+		PositionSide     string `json:"positionSide,omitempty"`
+		TimeInForce      string `json:"timeInForce,omitempty"`
+		Price            string `json:"price,omitempty"`
+		Quantity         string `json:"quantity"`
+		ReduceOnly       string `json:"reduceOnly,omitempty"`
+		NewClientOrderId string `json:"newClientOrderId,omitempty"`
+	}
+	orderL := make([]BatchOrder, 0, len(orders))
+	for i := range orders {
+		if orders[i].Type != "LIMIT" && orders[i].Type != "MARKET" {
+			return errors.New(as.Name() + " not support order type! " + orders[i].Type)
+		}
+		po := BatchOrder{
+			Symbol:           orders[i].Symbol,
+			Side:             as.toStdSide(orders[i].Side),
+			Type:             orders[i].Type,
+			PositionSide:     orders[i].PositionMode,
+			Quantity:         orders[i].Qty.String(),
+			NewClientOrderId: orders[i].ClientId,
+		}
+		if orders[i].Type == "LIMIT" {
+			if len(orders[i].TimeInForce) == 0 {
+				po.TimeInForce = "GTC"
+			} else {
+				po.TimeInForce = as.toStdTimeInForce(orders[i].TimeInForce)
+			}
+			po.Price = orders[i].Price.String()
+		}
+		if orders[i].ReduceOnly == 1 && orders[i].PositionMode == "BOTH" { // 双向持仓模式下不接受此参数
+			po.ReduceOnly = "true"
+		}
+		orderL = append(orderL, po)
+	}
+	payload, _ := json.Marshal(orderL)
+	path := "/fapi/v3/batchOrders"
+	link := asFuturesEndpoint + path
+	_, resp, err := as.Post(link, as.buildBody("batchOrders="+url.QueryEscape(string(payload))),
+		asApiDeadline, as.buildHeaders())
+	if err != nil {
+		return errors.New(as.Name() + " net error! " + err.Error())
+	}
+	if len(resp) == 0 || resp[0] != '[' {
+		return as.handleExceptionResp("FuturesPlaceOrderMultiple", resp)
+	}
+	ret := []struct {
+		Code    int         `json:"code,omitempty"`
+		Msg     string      `json:"msg,omitempty"`
+		OrderId json.Number `json:"orderId,omitempty"`
+	}{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return errors.New(as.Name() + " unmarshal fail! " + err.Error())
+	}
+	success, failMsg := 0, ""
+	for _, v := range ret {
+		if len(v.OrderId) > 0 {
+			success++
+		} else if len(failMsg) == 0 {
+			failMsg = v.Msg
+		}
+	}
+	if success == 0 {
+		return errors.New(as.Name() + " batch order all fail! " + failMsg)
+	}
+	return nil
+}
 func (as *Aster) FuturesCancelOrder(typ, symbol, orderId, cltId string) error {
 	params := "symbol=" + symbol
 	if orderId != "" {
@@ -242,6 +335,78 @@ func (as *Aster) FuturesCancelOrder(typ, symbol, orderId, cltId string) error {
 	}
 	if len(ret.OrderId) == 0 || ret.Status != "CANCELED" {
 		return as.handleExceptionResp("FuturesCancelOrder", resp)
+	}
+	return nil
+}
+
+func (as *Aster) FuturesCancelOrderMultipleSupported() bool {
+	return true
+}
+
+// FuturesCancelOrderMultiple 批量撤单: 一次最多10单, 超过单次上限自动分批
+// orderIdList和origClientOrderIdList只能二选一, 所以先撤orderIds再撤cltIds
+func (as *Aster) FuturesCancelOrderMultiple(typ, symbol string, orderIds, cltIds []string) error {
+	if len(orderIds) == 0 && len(cltIds) == 0 {
+		return errors.New(as.Name() + " orderIds or cltIds empty!")
+	}
+	for i := 0; i < len(orderIds); i += 10 { // 单次最多10单
+		end := i + 10
+		if end > len(orderIds) {
+			end = len(orderIds)
+		}
+		if err := as.futuresCancelOrderMultiple(symbol, orderIds[i:end], nil); err != nil {
+			return err
+		}
+	}
+	for i := 0; i < len(cltIds); i += 10 {
+		end := i + 10
+		if end > len(cltIds) {
+			end = len(cltIds)
+		}
+		if err := as.futuresCancelOrderMultiple(symbol, nil, cltIds[i:end]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (as *Aster) futuresCancelOrderMultiple(symbol string, orderIds, cltIds []string) error {
+	params := "symbol=" + symbol
+	if len(orderIds) > 0 {
+		payload, _ := json.Marshal(orderIds)
+		params += "&orderIdList=" + url.QueryEscape(string(payload))
+	} else if len(cltIds) > 0 {
+		payload, _ := json.Marshal(cltIds)
+		params += "&origClientOrderIdList=" + url.QueryEscape(string(payload))
+	} else {
+		return errors.New(as.Name() + " orderIds or cltIds empty!")
+	}
+	path := "/fapi/v3/batchOrders"
+	link := asFuturesEndpoint + path + "?" + as.buildQuery(params)
+	_, resp, err := as.Delete(link, asApiDeadline, nil)
+	if err != nil {
+		return errors.New(as.Name() + " net error! " + err.Error())
+	}
+	if len(resp) == 0 || resp[0] != '[' {
+		return as.handleExceptionResp("FuturesCancelOrderMultiple", resp)
+	}
+	ret := []struct {
+		Code    int         `json:"code,omitempty"`
+		Msg     string      `json:"msg,omitempty"`
+		OrderId json.Number `json:"orderId,omitempty"`
+	}{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return errors.New(as.Name() + " unmarshal fail! " + err.Error())
+	}
+	success, failMsg := 0, ""
+	for _, v := range ret {
+		if len(v.OrderId) > 0 {
+			success++
+		} else if len(failMsg) == 0 {
+			failMsg = v.Msg
+		}
+	}
+	if success == 0 {
+		return errors.New(as.Name() + " batch cancel all fail! " + failMsg)
 	}
 	return nil
 }

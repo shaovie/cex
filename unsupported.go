@@ -159,9 +159,17 @@ func (us *Unsupported) FuturesPlaceOrder(typ, symbol, clientId string,
 	tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error) {
 	return "", errors.New("not support")
 }
+func (us *Unsupported) FuturesPlaceOrderMultiple(typ string, orders []FuturesPostOrder) error {
+	return errors.New("not support")
+}
+func (us *Unsupported) FuturesPlaceOrderMultipleSupported() bool { return false }
 func (us *Unsupported) FuturesCancelOrder(typ, symbol, orderId, cltId string) error {
 	return errors.New("not support")
 }
+func (us *Unsupported) FuturesCancelOrderMultiple(typ, symbol string, orderIds, cltIds []string) error {
+	return errors.New("not support")
+}
+func (us *Unsupported) FuturesCancelOrderMultipleSupported() bool { return false }
 func (us *Unsupported) FuturesGetOrder(typ, symbol, orderId, cltId string) (*FuturesOrder, error) {
 	return nil, errors.New("not support")
 }
