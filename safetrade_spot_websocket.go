@@ -352,6 +352,7 @@ func (sa *Safetrade) spotWsHandleDepth(symbol string, data []byte, ch chan<- any
 	obd.AskQty = askQty
 	ch <- obd
 }
+
 // = priv channel
 func (st *Safetrade) SpotWsPrivateSupported() bool {
 	return true

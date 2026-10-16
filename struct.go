@@ -445,6 +445,7 @@ type WithdrawResult struct {
 	Info     string          // 失败原因
 	Qty      decimal.Decimal // 到账数量
 	Fee      decimal.Decimal //
+	CTime    int64           // 发起时间
 	DoneTime int64           // second 完成时间
 }
 type FuturesLeverageBracket struct {

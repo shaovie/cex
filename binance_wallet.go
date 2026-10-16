@@ -249,6 +249,7 @@ func (bn *Binance) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error)
 	res := make([]WithdrawResult, 0, len(ret))
 	for i := range ret {
 		doneTime, _ := time.Parse(time.DateTime, ret[i].DoneTime)
+		ctime, _ := time.Parse(time.DateTime, ret[i].CTime)
 		a := WithdrawResult{
 			WId:      ret[i].Id,
 			Symbol:   ret[i].Symbol,
@@ -257,6 +258,7 @@ func (bn *Binance) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error)
 			Txid:     ret[i].Txid,
 			Fee:      ret[i].Fee,
 			DoneTime: doneTime.Unix(),
+			CTime:    ctime.Unix(),
 		}
 		res = append(res, a)
 	}
