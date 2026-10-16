@@ -663,7 +663,7 @@ func (kk *Kraken) spotWsHandleOrder(data []byte, ch chan<- any) {
 					}
 				}
 			}
-			if so.Status == "FILLED" && so.Symbol == "" {
+			if so.Status != "NEW" && so.Symbol == "" {
 				if ci := kk.spotWsOrderCachedInfo[so.OrderId]; ci != nil {
 					so.Symbol = ci.Symbol
 				}
