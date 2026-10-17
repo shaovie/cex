@@ -35,7 +35,7 @@ func spotPubWs(cexObj cex.Exchanger) {
 	//cexObj.SpotWsPublicSubscribe([]string{"ticker@" + allSymbols,
 	//"orderbook5@ETHUSDT,BTCUSDT", "orderbook5@SOLUSDT", "bbo@BTCUSDT", "trades@BTCUSDT"})
 	_ = allSymbols
-	cexObj.SpotWsPublicSubscribe([]string{"bbo@DGAIUSDT,BTCUSDT,PRLUSDT"})
+	cexObj.SpotWsPublicSubscribe([]string{"bbo@DNAUSDT,BTCUSDT,PRLUSDT"})
 	go cexObj.SpotWsPublicLoop(ch)
 	go func() {
 		time.Sleep(30 * time.Second)
@@ -242,7 +242,7 @@ func main() {
 	// ok,gate,bybit,binance
 	cexObj, _ := cex.NewPrivate(cexName, "", apiKey, secretKey, passphrase)
 	cexObj.Debug(true)
-	bba, _ := cexObj.SpotGetBBO("DGAIUSDT")
+	bba, _ := cexObj.SpotGetBBO("DNAUSDT")
 	ilog.Rinfo("bba=%v", bba)
 	//order, err := cexObj.SpotGetOrder("AMDxUSD", "OG7HA3-I656I-VH7MX7", "")
 	//ilog.Rinfo("%v", *order)
@@ -272,8 +272,8 @@ func main() {
 		}
 		return
 	*/
-	//testPubWs(cexObj)
-	testPrivWs(cexObj)
+	testPubWs(cexObj)
+	//testPrivWs(cexObj)
 	//go spotPrivWs(cexObj)
 	//time.Sleep(2 * time.Second)
 	//testRest(cexObj)

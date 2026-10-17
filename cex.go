@@ -265,7 +265,12 @@ func init() {
 	CexFeeCoinMap["gate"] = "GT"
 	CexFeeCoinMap["binance"] = "BNB"
 }
-
+func CexLabel(cexName string) string {
+    if v := CexList[cexName]; v != "" {
+        return v
+    }
+    return cexName
+}
 func NewPublic(cexName string) (Exchanger, error) {
 	return New(cexName, "", "", "", "", "")
 }
