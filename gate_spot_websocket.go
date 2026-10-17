@@ -284,8 +284,12 @@ func (gt *Gate) spotWsHandleBBO(data []byte, ch chan<- any) {
 	bbo := gtSpotWsPublicBBOInnerPool.Get().(*GateSpotBBO)
 	defer gtSpotWsPublicBBOInnerPool.Put(bbo)
 	if err := easyjson.Unmarshal(data, bbo); err == nil {
+		symbol := gt.convSymbol(gt.spotWsPublicSymbolMap, bbo.Symbol)
+		if !gt.spotWsBboAllow(symbol) { // n毫秒内的BBO丢弃
+			return
+		}
 		obd := wsPublicBBOPool.Get().(*BestBidAsk)
-		obd.Symbol = gt.convSymbol(gt.spotWsPublicSymbolMap, bbo.Symbol)
+		obd.Symbol = symbol
 		obd.Time = bbo.Time // msec
 		obd.BidPrice = bbo.BidPrice
 		obd.BidQty = bbo.BidQty

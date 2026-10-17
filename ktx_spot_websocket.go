@@ -176,8 +176,12 @@ func (ktx *Ktx) SpotWsPublicClose() {
 func (ktx *Ktx) spotWsHandleBBO(data []byte, ch chan<- any) {
 	bbo := KtxTicker{}
 	if err := easyjson.Unmarshal(data, &bbo); err == nil {
+		symbol := strings.ReplaceAll(bbo.Symbol, "_", "")
+		if !ktx.spotWsBboAllow(symbol) { // n毫秒内的BBO丢弃
+			return
+		}
 		obd := wsPublicBBOPool.Get().(*BestBidAsk)
-		obd.Symbol = strings.ReplaceAll(bbo.Symbol, "_", "")
+		obd.Symbol = symbol
 		obd.BidPrice = bbo.BidPrice
 		obd.BidQty = bbo.BidQty
 		obd.AskPrice = bbo.AskPrice

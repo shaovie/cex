@@ -161,9 +161,12 @@ func (ok *Okx) SpotPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 	payload += "" +
 		`,"px":"` + price.String() + `"` +
 		`,"side":"` + ok.fromStdSide(side) + `"` +
-		`,"ordType":"` + ordType + `"` + // LIMIT/MARKET/LIMIT_MAKER
-		`,"tdMode":"cash"` +
-		`}`
+		`,"ordType":"` + ordType + `"` + // LIMIT/MARKET/post_only/ioc/fok
+		`,"tdMode":"cash"`
+	if orderType == "MARKET" && side == "BUY" { // 市价买sz是计价币金额, 必须显式指定
+		payload += `,"tgtCcy":"quote_ccy"`
+	}
+	payload += `}`
 	path := "/api/v5/trade/order"
 	headers := ok.buildHeaders("POST", path, payload)
 	url := okUniEndpoint + path

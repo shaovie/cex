@@ -309,6 +309,9 @@ func (ok *Okx) spotWsHandleBBO(symbol string, data []byte, ch chan<- any) {
 				ilog.Error(ok.Name() + " spot.ws.public " + symbol + " bbo exception")
 				continue
 			}
+			if !ok.spotWsBboAllow(sym) { // n毫秒内的BBO丢弃
+				continue
+			}
 			ts, _ := strconv.ParseInt(depth.Time, 10, 64)
 			obd := wsPublicBBOPool.Get().(*BestBidAsk)
 			obd.Symbol = sym

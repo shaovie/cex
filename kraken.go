@@ -19,6 +19,7 @@ import (
 
 type Kraken struct {
 	Unsupported
+	CexOptions
 	name               string
 	account            string
 	apikey             string

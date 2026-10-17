@@ -413,6 +413,9 @@ func (bo *Bigone) spotWsHandleBBO(data []byte, ch chan<- any) {
 				cachedUpdated = true
 			}
 			if cachedUpdated {
+				if !bo.spotWsBboAllow(symbol) { // n毫秒内的BBO丢弃
+					return
+				}
 				obd := wsPublicBBOPool.Get().(*BestBidAsk)
 				obd.Symbol = symbol
 				obd.Time = 0 // Bigone不提供
@@ -432,6 +435,9 @@ func (bo *Bigone) spotWsHandleBBOSnap(data []byte, ch chan<- any) {
 	if err := easyjson.Unmarshal(data, bbos); err == nil {
 		for i := range bbos.Tickers {
 			symbol := bo.convSymbol(bo.spotWsPublicSymbolMap, bbos.Tickers[i].Symbol)
+			if !bo.spotWsBboAllow(symbol) { // n毫秒内的BBO丢弃
+				continue
+			}
 			obd := wsPublicBBOPool.Get().(*BestBidAsk)
 			obd.Symbol = symbol
 			obd.Time = 0 // Bigone不提供

@@ -18,6 +18,7 @@ import (
 
 type Aster struct {
 	Unsupported
+	CexOptions
 	Http
 	name      string
 	account   string

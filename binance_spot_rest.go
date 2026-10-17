@@ -230,13 +230,19 @@ func (bn *Binance) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 func (bn *Binance) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 	price, amt, qty decimal.Decimal,
 	side, timeInForce, orderType string, postOnly bool) (string, error) {
+	if orderType == "LIMIT" && postOnly { // 只做Maker
+		orderType = "LIMIT_MAKER" // 现货的post-only类型, 不能带timeInForce
+	}
 	params := fmt.Sprintf("&newOrderRespType=ACK&symbol=%s&side=%s&type=%s",
 		symbol, side, orderType)
 	if cltId != "" {
 		params += "&newClientOrderId=" + cltId
 	}
 	if orderType == "LIMIT" {
-		params += "&timeInForce=" + timeInForce + "&price=" + price.String()
+		params += "&timeInForce=" + timeInForce
+	}
+	if orderType == "LIMIT" || orderType == "LIMIT_MAKER" {
+		params += "&price=" + price.String()
 		params += "&quantity=" + qty.String()
 	} else if orderType == "MARKET" {
 		if amt.IsPositive() {

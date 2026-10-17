@@ -17,6 +17,7 @@ import (
 
 type Safetrade struct {
 	Unsupported
+	CexOptions
 	Http
 	name      string
 	account   string

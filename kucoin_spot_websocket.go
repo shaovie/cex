@@ -189,8 +189,12 @@ func (kc *Kucoin) SpotWsPublicClose() {
 func (kc *Kucoin) spotWsHandleBBO(data []byte, ch chan<- any) {
 	bbo := KucoinTicker{}
 	if err := easyjson.Unmarshal(data, &bbo); err == nil && len(bbo.Bids) > 0 && len(bbo.Asks) > 0 {
+		symbol := strings.ReplaceAll(bbo.Symbol, "-", "")
+		if !kc.spotWsBboAllow(symbol) { // n毫秒内的BBO丢弃
+			return
+		}
 		obd := wsPublicBBOPool.Get().(*BestBidAsk)
-		obd.Symbol = strings.ReplaceAll(bbo.Symbol, "-", "")
+		obd.Symbol = symbol
 		obd.Time = bbo.Time
 		obd.BidPrice = bbo.Bids[0][0]
 		obd.BidQty = bbo.Bids[0][1]

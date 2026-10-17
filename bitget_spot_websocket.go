@@ -211,6 +211,9 @@ func (bg *Bitget) spotWsHandleBBO(symbol string, data []byte, ch chan<- any) {
 		return
 	}
 	ts, _ := strconv.ParseInt(depth[0].Ts, 10, 64)
+	if !bg.spotWsBboAllow(strings.ToUpper(symbol)) { // n毫秒内的BBO丢弃
+		return
+	}
 	obd := wsPublicBBOPool.Get().(*BestBidAsk)
 	obd.Symbol = strings.ToUpper(symbol)
 	obd.Time = ts

@@ -14,6 +14,7 @@ import (
 
 type Bybit struct {
 	Unsupported
+	CexOptions
 	Http
 	name      string
 	account   string

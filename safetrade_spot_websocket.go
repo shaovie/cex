@@ -183,6 +183,9 @@ func (sa *Safetrade) spotWsBBOLoop(symbol string, ch chan<- any, exitChan chan s
 				time.Sleep(5000 * time.Millisecond)
 				break // jump out of select
 			}
+			if !sa.spotWsBboAllow(symbol) { // n毫秒内的BBO丢弃
+				break // jump out of select
+			}
 			obd := wsPublicBBOPool.Get().(*BestBidAsk)
 			obd.Symbol = symbol
 			obd.Time = 0 // SafeTrade不提供
@@ -341,6 +344,9 @@ func (sa *Safetrade) spotWsHandleDepth(symbol string, data []byte, ch chan<- any
 	}
 	sa.spotWsPublicConnMtx.Unlock()
 	if !bidPrice.IsPositive() || !askPrice.IsPositive() {
+		return
+	}
+	if !sa.spotWsBboAllow(symbol) { // n毫秒内的BBO丢弃
 		return
 	}
 	obd := wsPublicBBOPool.Get().(*BestBidAsk)

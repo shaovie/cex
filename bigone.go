@@ -16,6 +16,7 @@ import (
 
 type Bigone struct {
 	Unsupported
+	CexOptions
 	Http
 	name      string
 	account   string

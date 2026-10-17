@@ -253,6 +253,9 @@ func (bb *Bybit) spotWsHandleBBO(msg *BybitWsPubMsg, ch chan<- any) {
 	bbo.Asks = bbo.Asks[:0]
 	if err := easyjson.Unmarshal(msg.Data, bbo); err == nil &&
 		len(bbo.Bids) == 1 && len(bbo.Bids) == len(bbo.Asks) {
+		if !bb.spotWsBboAllow(bbo.Symbol) { // n毫秒内的BBO丢弃
+			return
+		}
 		obd := wsPublicBBOPool.Get().(*BestBidAsk)
 		obd.Symbol = bbo.Symbol
 		obd.Time = msg.Time

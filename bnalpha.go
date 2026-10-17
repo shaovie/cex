@@ -13,6 +13,7 @@ import (
 
 type BnAlpha struct {
 	Unsupported
+	CexOptions
 	Http
 	name      string
 	account   string

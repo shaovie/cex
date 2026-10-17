@@ -15,6 +15,7 @@ import (
 
 type Kucoin struct {
 	Unsupported
+	CexOptions
 	Http
 	name       string
 	account    string

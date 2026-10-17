@@ -264,6 +264,9 @@ func (bn *Binance) spotWsHandleBBO(data []byte, ch chan<- any) {
 	bbo := bnSpotWsPublicBBOInnerPool.Get().(*BinanceSpotBBO)
 	defer bnSpotWsPublicBBOInnerPool.Put(bbo)
 	if err := easyjson.Unmarshal(data, bbo); err == nil {
+		if !bn.spotWsBboAllow(bbo.Symbol) { // n毫秒内的BBO丢弃
+			return
+		}
 		obd := wsPublicBBOPool.Get().(*BestBidAsk)
 		obd.Symbol = bbo.Symbol
 		obd.Time = 0 // 币安不提供

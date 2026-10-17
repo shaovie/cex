@@ -18,6 +18,7 @@ import (
 
 type Gate struct {
 	Unsupported
+	CexOptions
 	Http
 	name      string
 	account   string

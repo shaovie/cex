@@ -12,6 +12,7 @@ import (
 
 type Okx struct {
 	Unsupported
+	CexOptions
 	name      string
 	account   string
 	apikey    string

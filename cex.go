@@ -55,6 +55,8 @@ type Exchanger interface {
 	// 每个交易所支持的参数数量不同
 	SpotWsPublicSubscribe(channels []string)
 	SpotWsPublicUnsubscribe(channels []string)
+	// 设置某交易对BBO推送的最小间隔(毫秒): 间隔内的推送丢弃, 0表示不过滤; 支持运行中修改
+	SpotWsPublicSetBBOInterval(symbol string, interval int64)
 	SpotWsPublicTickerPoolPut(v any)
 	SpotWsPublicOrderBook5PoolPut(v any)
 	SpotWsPublicBBOPoolPut(v any)

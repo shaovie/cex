@@ -201,6 +201,9 @@ func (mc *Mexc) spotWsHandleBBO(symbol string, sendTime int64, data []byte, ch c
 	if len(bidPrice) == 0 || len(askPrice) == 0 {
 		return
 	}
+	if !mc.spotWsBboAllow(symbol) { // n毫秒内的BBO丢弃
+		return
+	}
 	bbo := wsPublicBBOPool.Get().(*BestBidAsk)
 	bbo.Symbol = symbol
 	bbo.Time = sendTime

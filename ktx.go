@@ -9,6 +9,7 @@ import (
 
 type Ktx struct {
 	Unsupported
+	CexOptions
 	name string
 
 	// spot websocket

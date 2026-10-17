@@ -287,6 +287,9 @@ func (ba *BnAlpha) spotWsHandleFullDepth(data []byte, ch chan<- any) {
 	cached.Time = depth.Time
 	cached.BidPrice, cached.BidQty = bidPrice, bidQty
 	cached.AskPrice, cached.AskQty = askPrice, askQty
+	if !ba.spotWsBboAllow(symbol) { // n毫秒内的BBO丢弃
+		return
+	}
 	bbo := wsPublicBBOPool.Get().(*BestBidAsk)
 	*bbo = *cached
 	ch <- bbo

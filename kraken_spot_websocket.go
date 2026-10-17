@@ -405,6 +405,9 @@ func (kk *Kraken) spotWsHandleBBO(data []byte, ch chan<- any) {
 			if symbol == "" { // 格式不符
 				continue
 			}
+			if !kk.spotWsBboAllow(symbol) { // n毫秒内的BBO丢弃
+				continue
+			}
 			obd := wsPublicBBOPool.Get().(*BestBidAsk)
 			obd.Symbol = symbol
 			obd.BidPrice = bbo[i].BidPrice
