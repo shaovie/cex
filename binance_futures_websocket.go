@@ -301,12 +301,15 @@ func (bn *Binance) futuresWsHandleBBO(data []byte, ch chan<- any) {
 	bbo := bnFuturesWsPublicBBOInnerPool.Get().(*BinanceFuturesBBO)
 	defer bnFuturesWsPublicBBOInnerPool.Put(bbo)
 	if err := easyjson.Unmarshal(data, bbo); err == nil {
-		obd := wsPublicBBOPool.Get().(*BestBidAsk)
+		symbol := bbo.Symbol
 		if bn.futuresWsPublicTyp == "CM" {
-			obd.Symbol = strings.ReplaceAll(bbo.Symbol, "_PERP", "")
-		} else {
-			obd.Symbol = bbo.Symbol
+			symbol = strings.ReplaceAll(bbo.Symbol, "_PERP", "")
 		}
+		if !bn.futuresWsBboAllow(symbol) { // n毫秒内的BBO丢弃
+			return
+		}
+		obd := wsPublicBBOPool.Get().(*BestBidAsk)
+		obd.Symbol = symbol
 		obd.Time = bbo.Time
 		obd.BidPrice = bbo.BidPrice
 		obd.BidQty = bbo.BidQty

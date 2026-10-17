@@ -205,6 +205,9 @@ func (as *Aster) futuresWsHandleBBO(data []byte, ch chan<- any) {
 	if err := easyjson.Unmarshal(data, &bboRecv); err != nil || len(bboRecv.Symbol) == 0 {
 		return
 	}
+	if !as.futuresWsBboAllow(bboRecv.Symbol) { // n毫秒内的BBO丢弃
+		return
+	}
 	bbo := wsPublicBBOPool.Get().(*BestBidAsk)
 	bbo.Symbol = bboRecv.Symbol
 	bbo.Time = bboRecv.Time

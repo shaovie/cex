@@ -161,6 +161,8 @@ type Exchanger interface {
 	FuturesWsPublicOpen(typ string) error
 	FuturesWsPublicSubscribe(channels []string)
 	FuturesWsPublicUnsubscribe(channels []string)
+	// 设置某交易对BBO推送的最小间隔(毫秒): 间隔内的推送丢弃, 0表示不过滤; 支持运行中修改
+	FuturesWsPublicSetBBOInterval(symbol string, interval int64)
 	FuturesWsPublicTickerPoolPut(v any)
 	FuturesWsPublicOrderBook5PoolPut(v any)
 	FuturesWsPublicBBOPoolPut(v any)

@@ -8,7 +8,8 @@ import (
 
 // CexOptions cex对象的可选配置, 每个交易所结构体里内嵌一份
 type CexOptions struct {
-	spotBboThrottle WsBboThrottle // 现货公共ws的BBO节流
+	spotBboThrottle    WsBboThrottle // 现货公共ws的BBO节流
+	futuresBboThrottle WsBboThrottle // 合约公共ws的BBO节流
 }
 
 // SpotWsPublicSetBBOInterval 设置某交易对BBO推送的最小间隔(毫秒), 间隔内的推送丢弃(0=不过滤)
@@ -21,6 +22,18 @@ func (o *CexOptions) SpotWsPublicSetBBOInterval(symbol string, interval int64) {
 // 只在ws public loop里调用(单goroutine)
 func (o *CexOptions) spotWsBboAllow(symbol string) bool {
 	return o.spotBboThrottle.Allow(symbol)
+}
+
+// FuturesWsPublicSetBBOInterval 设置某合约交易对BBO推送的最小间隔(毫秒), 间隔内的推送丢弃(0=不过滤)
+// 按标准符号(BestBidAsk.Symbol那种)设置; 支持运行中修改
+func (o *CexOptions) FuturesWsPublicSetBBOInterval(symbol string, interval int64) {
+	o.futuresBboThrottle.SetInterval(symbol, interval)
+}
+
+// futuresWsBboAllow 该symbol的这条BBO是否放行; 没配置节流时连时间都不取
+// 只在ws public loop里调用(单goroutine)
+func (o *CexOptions) futuresWsBboAllow(symbol string) bool {
+	return o.futuresBboThrottle.Allow(symbol)
 }
 
 // WsBboThrottle 按交易对节流BBO推送: n毫秒内同一symbol只保留第一条
