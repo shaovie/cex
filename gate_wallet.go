@@ -94,6 +94,46 @@ func (gt *Gate) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error) {
 	}
 	return res, nil
 }
+func (gt *Gate) GetDepositHistory(symbol string) ([]DepositResult, error) {
+	path := "/api/v4/wallet/deposits"
+	params := "currency=" + symbol
+	headers := gt.buildHeaders("GET", path, params, "")
+	url := gtUniEndpoint + path + "?" + params
+	_, resp, err := ihttp.Get(url, gtApiDeadline, headers)
+	if err != nil {
+		return nil, errors.New(gt.Name() + " net error! " + err.Error())
+	}
+	if len(resp) == 0 || resp[0] != '[' {
+		return nil, gt.handleExceptionResp("GetDepositHistory", resp)
+	}
+	ret := []struct {
+		Id     string          `json:"id"`
+		Symbol string          `json:"currency"`
+		Qty    decimal.Decimal `json:"amount"`
+		Status string          `json:"status"`
+		Txid   string          `json:"txid"`
+		CTime  string          `json:"timestamp"`
+	}{}
+	err = json.Unmarshal(resp, &ret)
+	if err != nil {
+		return nil, errors.New(gt.Name() + " unmarshal fail! " + err.Error())
+	}
+
+	res := make([]DepositResult, 0, len(ret))
+	for _, v2 := range ret {
+		ctime, _ := strconv.ParseInt(v2.CTime, 10, 64)
+		a := DepositResult{
+			DId:    v2.Id,
+			Symbol: v2.Symbol,
+			Status: gt.toStdDepositStatus(v2.Status),
+			Qty:    v2.Qty,
+			Txid:   v2.Txid,
+			CTime:  ctime,
+		}
+		res = append(res, a)
+	}
+	return res, nil
+}
 func (gt *Gate) GetDepositAddress(symbol, network string) ([]DepositAddress, error) {
 	path := "/api/v4/wallet/deposit_address"
 	params := "currency=" + symbol

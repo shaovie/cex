@@ -95,6 +95,61 @@ func (kk *Kraken) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error) 
 	}
 	return res, nil
 }
+func (kk *Kraken) GetDepositHistory(symbol string) ([]DepositResult, error) {
+	path := "/0/private/DepositStatus"
+	link := kkSpotEndpoint + path
+	values := url.Values{}
+	values.Set("asset", symbol)
+	if kk.isXStocksSymbol(symbol + "USD") {
+		values.Set("aclass", "tokenized_asset")
+	}
+	headers, params := kk.buildHeaders(path, values)
+	_, resp, err := ihttp.Post(link, []byte(params), kkApiDeadline, headers)
+	if err != nil {
+		return nil, errors.New(kk.Name() + " net error! " + err.Error())
+	}
+
+	ret := struct {
+		Error  []string `json:"error"`
+		Result []struct {
+			Id         string          `json:"refid"`
+			Symbol     string          `json:"asset"`
+			Txid       string          `json:"txid"`
+			Status     string          `json:"status"`
+			StatusProp string          `json:"status-prop"`
+			Qty        decimal.Decimal `json:"amount"`
+			Fee        decimal.Decimal `json:"fee"`
+			UTime      int64           `json:"time"`
+		}
+	}{}
+	err = json.Unmarshal(resp, &ret)
+	if err != nil {
+		return nil, errors.New(kk.Name() + " unmarshal fail! " + err.Error())
+	}
+	if len(ret.Error) > 0 {
+		return nil, errors.New(kk.Name() + " resp error! " + ret.Error[0])
+	}
+	res := make([]DepositResult, 0, len(ret.Result))
+	for i := range ret.Result {
+		a := DepositResult{
+			DId:    ret.Result[i].Id,
+			Symbol: ret.Result[i].Symbol,
+			Txid:   ret.Result[i].Txid,
+			Status: kk.toStdDepositStatus(ret.Result[i].Status),
+			Qty:    ret.Result[i].Qty,
+			Fee:    ret.Result[i].Fee,
+			CTime:  ret.Result[i].UTime,
+		}
+		if ret.Result[i].StatusProp == "on-hold" { // 交易所人工审核中
+			a.Status = "PENDING"
+		}
+		if a.Status == "COMPLETED" {
+			a.DoneTime = ret.Result[i].UTime
+		}
+		res = append(res, a)
+	}
+	return res, nil
+}
 func (kk *Kraken) getDepositMethods(symbol string) ([]string, error) {
 	path := "/0/private/DepositMethods"
 	link := kkSpotEndpoint + path

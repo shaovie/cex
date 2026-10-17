@@ -99,6 +99,57 @@ func (sa *Safetrade) GetWithdrawalHistory(symbol string) ([]WithdrawResult, erro
 	}
 	return res, nil
 }
+func (sa *Safetrade) GetDepositHistory(symbol string) ([]DepositResult, error) {
+	link := stEndpoint + "/trade/account/deposits?limit=100&page=1"
+	if symbol != "" {
+		link += "&currency=" + strings.ToLower(symbol)
+	}
+	_, resp, err := sa.Get(link, stApiDeadline, sa.buildHeaders())
+	if err != nil {
+		return nil, errors.New(sa.Name() + " net error! " + err.Error())
+	}
+	if len(resp) == 0 || resp[0] != '[' {
+		return nil, sa.handleExceptionResp("GetDepositHistory", resp)
+	}
+	ret := []struct {
+		Id       int64           `json:"id"`
+		Symbol   string          `json:"currency_id"`
+		Qty      decimal.Decimal `json:"amount"`
+		Fee      decimal.Decimal `json:"fee"`
+		Status   string          `json:"status"`
+		Txid     string          `json:"txid"`
+		CTime    string          `json:"created_at,omitempty"`
+		DoneTime string          `json:"completed_at,omitempty"`
+	}{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return nil, errors.New(sa.Name() + " unmarshal fail! " + err.Error())
+	}
+
+	res := make([]DepositResult, 0, len(ret))
+	for _, v := range ret {
+		var doneTime, ctime int64 // 未完成时completed_at为空
+		if v.DoneTime != "" {
+			dtime, _ := time.Parse(time.RFC3339, v.DoneTime)
+			doneTime = dtime.Unix()
+		}
+		if v.CTime != "" {
+			dt, _ := time.Parse(time.RFC3339, v.CTime)
+			ctime = dt.Unix()
+		}
+		a := DepositResult{
+			DId:      strconv.FormatInt(v.Id, 10),
+			Symbol:   strings.ToUpper(v.Symbol),
+			Status:   sa.toStdDepositStatus(v.Status),
+			Txid:     v.Txid,
+			Qty:      v.Qty,
+			Fee:      v.Fee,
+			CTime:    ctime,
+			DoneTime: doneTime,
+		}
+		res = append(res, a)
+	}
+	return res, nil
+}
 func (sa *Safetrade) GetDepositAddress(symbol, network string) ([]DepositAddress, error) {
 	link := stEndpoint + "/trade/account/deposit_address/" + strings.ToLower(symbol)
 	if network != "" {

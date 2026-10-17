@@ -177,6 +177,58 @@ func (bo *Bigone) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error) 
 	}
 	return res, nil
 }
+func (bo *Bigone) GetDepositHistory(symbol string) ([]DepositResult, error) {
+	url := boSpotEndpoint + "/viewer/deposits"
+	if symbol != "" {
+		url += "?asset_symbol=" + symbol
+	}
+	jwt := "Bearer " + bo.jwt()
+	_, resp, err := bo.Get(url, boApiDeadline, map[string]string{"Authorization": jwt})
+	if err != nil {
+		return nil, errors.New(bo.Name() + " net error! " + err.Error())
+	}
+	ret := struct {
+		Code int    `json:"code,omitempty"`
+		Msg  string `json:"message,omitempty"`
+		Data []struct {
+			Id       int64           `json:"id"`
+			Symbol   string          `json:"asset_symbol"`
+			Qty      decimal.Decimal `json:"amount"`
+			Fee      decimal.Decimal `json:"fee"`
+			Txid     string          `json:"txid"`
+			Status   string          `json:"state"`
+			CTime    string          `json:"inserted_at"`
+			DoneTime string          `json:"completed_at"`
+		} `json:"data"`
+	}{}
+	err = json.Unmarshal(resp, &ret)
+	if err != nil {
+		return nil, errors.New(bo.Name() + " unmarshal fail! " + err.Error())
+	}
+	if ret.Code != 0 {
+		return nil, errors.New(bo.Name() + " resp fail! msg=" + ret.Msg)
+	}
+	res := make([]DepositResult, 0, len(ret.Data))
+	for i := range ret.Data {
+		doneTime, _ := time.Parse(time.RFC3339, ret.Data[i].DoneTime)
+		cTime, _ := time.Parse(time.RFC3339, ret.Data[i].CTime)
+		a := DepositResult{
+			DId:      strconv.FormatInt(ret.Data[i].Id, 10),
+			Symbol:   ret.Data[i].Symbol,
+			Txid:     ret.Data[i].Txid,
+			Status:   bo.toStdDepositStatus(ret.Data[i].Status),
+			Qty:      ret.Data[i].Qty,
+			Fee:      ret.Data[i].Fee,
+			CTime:    cTime.Unix(),
+			DoneTime: doneTime.Unix(),
+		}
+		if ret.Data[i].DoneTime == "" {
+			a.DoneTime = 0
+		}
+		res = append(res, a)
+	}
+	return res, nil
+}
 func (bo *Bigone) FundingGetAllAssets() (map[string]*FundingAsset, error) {
 	url := boSpotEndpoint + "/viewer/fund/accounts"
 	jwt := "Bearer " + bo.jwt()

@@ -296,3 +296,18 @@ func (gt *Gate) toStdWithdrawStatus(v string) string {
 	}
 	return ""
 }
+func (gt *Gate) toStdDepositStatus(v string) string {
+	if v == "PEND" || v == "REQUEST" || v == "DMOVE" || v == "MANUAL" ||
+		v == "VERIFY" || v == "PROCES" || v == "EXTPEND" || v == "SPLITPEND" {
+		return "PENDING"
+	} else if v == "REJECT" {
+		return "REJECTED"
+	} else if v == "DONE" {
+		return "COMPLETED"
+	} else if v == "CANCEL" || v == "CANCELLED" {
+		return "CANCELED"
+	} else if v == "FAIL" || v == "FAILED" || v == "INVALID" {
+		return "FAILED"
+	}
+	return ""
+}

@@ -264,6 +264,41 @@ func (bn *Binance) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error)
 	}
 	return res, nil
 }
+func (bn *Binance) GetDepositHistory(symbol string) ([]DepositResult, error) {
+	query := fmt.Sprintf("&coin=%s", symbol)
+	url := bnWalletEndpoint + "/sapi/v1/capital/deposit/hisrec?" + bn.httpQuerySign(query)
+	_, resp, err := bn.Get(url, bnApiDeadline, map[string]string{"X-MBX-APIKEY": bn.apikey})
+	if err != nil {
+		return nil, errors.New(bn.Name() + " net error! " + err.Error())
+	}
+	if len(resp) == 0 || resp[0] != '[' {
+		return nil, bn.handleExceptionResp("GetDepositHistory", resp)
+	}
+	ret := []struct {
+		Id     string          `json:"id"`
+		Symbol string          `json:"coin"`
+		Qty    decimal.Decimal `json:"amount"`
+		Status int             `json:"status"`
+		Txid   string          `json:"txId"`
+		CTime  int64           `json:"insertTime"`
+	}{}
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return nil, errors.New(bn.Name() + " unmarshal error! " + err.Error())
+	}
+	res := make([]DepositResult, 0, len(ret))
+	for i := range ret {
+		a := DepositResult{
+			DId:    ret[i].Id,
+			Symbol: ret[i].Symbol,
+			Status: bn.toStdDepositStatus(ret[i].Status),
+			Qty:    ret[i].Qty,
+			Txid:   ret[i].Txid,
+			CTime:  ret[i].CTime / 1000,
+		}
+		res = append(res, a)
+	}
+	return res, nil
+}
 func (bn *Binance) GetDepositAddress(symbol, network string) ([]DepositAddress, error) {
 	query := fmt.Sprintf("&coin=%s", symbol)
 	if network != "" {

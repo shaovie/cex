@@ -260,6 +260,13 @@ func main() {
 		for _, v := range wh {
 			ilog.Rinfo("%v ", v)
 		}
+		dh, err := cexObj.GetDepositHistory("USDT")
+		if err != nil {
+			ilog.Rinfo("GetDepositHistory %s", err.Error())
+		}
+		for _, v := range dh {
+			ilog.Rinfo("%v ", v)
+		}
 		// quantus: quan-key
 		// prl: pearl-tokens
 		// usdt: bsc-tokens

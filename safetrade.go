@@ -205,3 +205,20 @@ func (sa *Safetrade) toStdWithdrawStatus(status string) string {
 	}
 	return ""
 }
+func (sa *Safetrade) toStdDepositStatus(status string) string {
+	if status == "accepted" || status == "processing" || status == "fee_collecting" ||
+		status == "fee_collected" || status == "collecting" || status == "collected" ||
+		status == "succeed" {
+		return "COMPLETED"
+	} else if status == "submitted" || status == "prepared" || status == "pending" ||
+		status == "under_review" || status == "confirming" {
+		return "PENDING"
+	} else if status == "canceled" {
+		return "CANCELED"
+	} else if status == "rejected" || status == "to_reject" {
+		return "REJECTED"
+	} else if status == "failed" || status == "errored" || status == "skipped" {
+		return "FAILED"
+	}
+	return ""
+}

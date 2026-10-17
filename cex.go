@@ -206,6 +206,8 @@ type Exchanger interface {
 	// memo is key at Kraken
 	Withdrawal(symbol, addr, memo, chain string, qty decimal.Decimal) (*WithdrawReturn, error)
 	GetWithdrawalHistory(symbol string) ([]WithdrawResult, error)
+	// 充值历史(不翻页, 取交易所默认最近一页)
+	GetDepositHistory(symbol string) ([]DepositResult, error)
 	// from,to:FUNDING,SPOT,UM_FUTURE,CM_FUTURE,UNIFIED,MARGIN
 	// typ: NORMAL, MASTER_TO_SUB, SUB_TO_MASTER, SUB_INTERNAL
 	Transfer(symbol, from, to, typ, subAccount string, qty decimal.Decimal) error
@@ -266,10 +268,10 @@ func init() {
 	CexFeeCoinMap["binance"] = "BNB"
 }
 func CexLabel(cexName string) string {
-    if v := CexList[cexName]; v != "" {
-        return v
-    }
-    return cexName
+	if v := CexList[cexName]; v != "" {
+		return v
+	}
+	return cexName
 }
 func NewPublic(cexName string) (Exchanger, error) {
 	return New(cexName, "", "", "", "", "")

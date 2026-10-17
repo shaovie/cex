@@ -289,3 +289,13 @@ func (kk *Kraken) toStdWithdrawStatus(c string) string {
 	}
 	return ""
 }
+func (kk *Kraken) toStdDepositStatus(c string) string {
+	if c == "Success" {
+		return "COMPLETED"
+	} else if c == "Failure" {
+		return "FAILED"
+	} else if c == "Initial" || c == "Pending" || c == "Settled" {
+		return "PENDING"
+	}
+	return ""
+}

@@ -459,6 +459,16 @@ type WithdrawResult struct {
 	CTime    int64           // 发起时间
 	DoneTime int64           // second 完成时间
 }
+type DepositResult struct {
+	DId      string // deposit ID
+	Symbol   string // USDT
+	Status   string // PENDING/COMPLETED/FAILED/REJECTED/CANCELED
+	Txid     string
+	Qty      decimal.Decimal // 到账数量
+	Fee      decimal.Decimal //
+	CTime    int64           // 发起时间
+	DoneTime int64           // second 完成时间
+}
 type FuturesLeverageBracket struct {
 	Bracket          int64           // 层级
 	InitialLeverage  int64           // 该层允许的最高初始杠杆倍数

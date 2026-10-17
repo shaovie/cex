@@ -211,3 +211,11 @@ func (bo *Bigone) toStdWithdrawStatus(c string) string {
 	}
 	return ""
 }
+func (bo *Bigone) toStdDepositStatus(c string) string {
+	if c == "WITHHOLD" || c == "CONFIRMED" || c == "COMPLETED" {
+		return "COMPLETED"
+	} else if c == "UNCONFIRMED" || c == "PENDING" {
+		return "PENDING"
+	}
+	return ""
+}

@@ -231,3 +231,13 @@ func (bn *Binance) toStdWithdrawStatus(v int) string {
 	}
 	return ""
 }
+func (bn *Binance) toStdDepositStatus(v int) string {
+	if v == 0 || v == 8 {
+		return "PENDING"
+	} else if v == 1 || v == 6 || v == 9 {
+		return "COMPLETED"
+	} else if v == 7 {
+		return "FAILED"
+	}
+	return ""
+}

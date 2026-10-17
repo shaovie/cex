@@ -234,6 +234,9 @@ func (us *Unsupported) Withdrawal(symbol, addr, memo, chain string, qty decimal.
 func (us *Unsupported) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error) {
 	return nil, errors.New("not support")
 }
+func (us *Unsupported) GetDepositHistory(symbol string) ([]DepositResult, error) {
+	return nil, errors.New("not support")
+}
 func (us *Unsupported) Transfer(symbol, from, to, typ, subAccount string, qty decimal.Decimal) error {
 	return errors.New("not support")
 }
