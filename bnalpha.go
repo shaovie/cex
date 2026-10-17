@@ -102,6 +102,7 @@ func (ba *BnAlpha) Debug(v bool) {
 	ba.debug = v
 }
 func (ba *BnAlpha) Init() error {
+	ba.resetBboThrottle()
 	ba.spotWsPublicClosed = true
 	ba.spotWsSnapCache = make(map[string]*BnAlphaDepthSnapshot, 16)
 	ba.spotWsOrderBookBids = make(map[string]*treemap.Map[decimal.Decimal, decimal.Decimal], 512)

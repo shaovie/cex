@@ -71,6 +71,7 @@ func (bg *Bitget) Debug(v bool) {
 	bg.debug = v
 }
 func (bg *Bitget) Init() error {
+	bg.resetBboThrottle()
 	bg.spotWsPublicClosed = true
 	bg.spotWsPrivateClosed = true
 	return nil

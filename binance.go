@@ -123,6 +123,7 @@ func (bn *Binance) Debug(v bool) {
 	bn.debug = v
 }
 func (bn *Binance) Init() error {
+	bn.resetBboThrottle()
 	bn.spotWsPublicClosed = true
 	bn.spotWsPrivateClosed = true
 

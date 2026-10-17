@@ -36,9 +36,15 @@ func (o *CexOptions) futuresWsBboAllow(symbol string) bool {
 	return o.futuresBboThrottle.Allow(symbol)
 }
 
+// resetBboThrottle 清空现货/合约BBO的放行时间记录, 配置的interval保留; 交易所Init里调用
+func (o *CexOptions) resetBboThrottle() {
+	o.spotBboThrottle.Reset()
+	o.futuresBboThrottle.Reset()
+}
+
 // WsBboThrottle 按交易对节流BBO推送: n毫秒内同一symbol只保留第一条
 // 配置(interval)用写时复制+原子发布, 支持运行中修改, 读侧无锁无分配;
-// lastPush只在ws loop这一个goroutine里读写, 所以不需要锁(现货/合约各用一个实例)
+// lastPush只在ws loop这一个goroutine里读写, Reset时loop必须已退出, 所以都不需要锁(现货/合约各用一个实例)
 type WsBboThrottle struct {
 	mtx      sync.RWMutex
 	interval atomic.Pointer[map[string]int64] // symbol(标准符号) -> 最小间隔ms, 发布后只读
@@ -62,6 +68,11 @@ func (t *WsBboThrottle) SetInterval(symbol string, interval int64) {
 		m[symbol] = interval
 	}
 	t.interval.Store(&m)
+}
+
+// Reset 清空放行时间记录, 配置的interval保留; 调用时ws loop必须已退出(Init里保证)
+func (t *WsBboThrottle) Reset() {
+	clear(t.lastPush)
 }
 
 // Allow 该symbol的这条BBO是否放行: 间隔内丢弃, 首次(没有记录)一定放行

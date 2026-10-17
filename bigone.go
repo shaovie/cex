@@ -97,6 +97,7 @@ func (bo *Bigone) Debug(v bool) {
 	bo.debug = v
 }
 func (bo *Bigone) Init() error {
+	bo.resetBboThrottle()
 	bo.spotWsPublicClosed = true
 	bo.spotWsPrivateClosed = true
 	bo.spotWsOrderBookBids = make(map[string]*treemap.Map[decimal.Decimal, string], 512)

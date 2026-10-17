@@ -98,6 +98,7 @@ func (bb *Bybit) Debug(v bool) {
 	bb.debug = v
 }
 func (bb *Bybit) Init() error {
+	bb.resetBboThrottle()
 	bb.spotWsPublicClosed = true
 	bb.spotWsPrivateClosed = true
 	bb.futuresWsPrivateClosed = true

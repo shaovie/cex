@@ -80,6 +80,7 @@ func (kc *Kucoin) Debug(v bool) {
 	kc.debug = v
 }
 func (kc *Kucoin) Init() error {
+	kc.resetBboThrottle()
 	kc.spotWsPublicClosed = true
 	kc.spotWsPrivateClosed = true
 	return nil

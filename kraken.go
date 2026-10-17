@@ -103,6 +103,7 @@ func (kk *Kraken) IsXStock(v string) bool {
 	return kk.isXStocksSymbol(v)
 }
 func (kk *Kraken) Init() error {
+	kk.resetBboThrottle()
 	kk.spotWsPublicClosed = true
 	kk.spotWsPrivateClosed = true
 	kk.spotWsPrivateToken = ""

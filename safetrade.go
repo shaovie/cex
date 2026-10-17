@@ -95,6 +95,7 @@ func (sa *Safetrade) Debug(v bool) {
 	sa.debug = v
 }
 func (sa *Safetrade) Init() error {
+	sa.resetBboThrottle()
 	sa.spotWsPublicClosed = true
 	sa.spotWsOrderBookBids = make(map[string]*treemap.Map[decimal.Decimal, decimal.Decimal], 16)
 	sa.spotWsOrderBookAsks = make(map[string]*treemap.Map[decimal.Decimal, decimal.Decimal], 16)

@@ -92,6 +92,7 @@ func (ok *Okx) Debug(v bool) {
 	ok.debug = v
 }
 func (ok *Okx) Init() error {
+	ok.resetBboThrottle()
 	ok.spotWsPublicClosed = true
 	ok.spotWsPrivateClosed = true
 

@@ -107,6 +107,7 @@ func (as *Aster) Debug(v bool) {
 	as.debug = v
 }
 func (as *Aster) Init() error {
+	as.resetBboThrottle()
 	as.spotWsPublicClosed = true
 	as.spotWsPrivateClosed = true
 	as.futuresWsPublicClosed = true

@@ -118,6 +118,7 @@ func (gt *Gate) Debug(v bool) {
 	gt.debug = v
 }
 func (gt *Gate) Init() error {
+	gt.resetBboThrottle()
 	gt.spotWsPublicClosed = true
 	gt.spotWsPrivateClosed = true
 

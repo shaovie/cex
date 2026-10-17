@@ -77,6 +77,7 @@ func (mc *Mexc) Debug(v bool) {
 	mc.debug = v
 }
 func (mc *Mexc) Init() error {
+	mc.resetBboThrottle()
 	mc.spotWsPublicClosed = true
 	mc.spotWsPrivateClosed = true
 	return nil

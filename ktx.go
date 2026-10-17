@@ -49,6 +49,7 @@ func (ktx *Ktx) ApiKey() string {
 func (ktx *Ktx) Debug(v bool) {
 }
 func (ktx *Ktx) Init() error {
+	ktx.resetBboThrottle()
 	ktx.spotWsPublicClosed = true
 	return nil
 }
