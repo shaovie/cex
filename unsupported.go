@@ -31,8 +31,8 @@ func (us *Unsupported) SpotPlaceOrder(symbol, cltId string, price, amt, qty deci
 	side, timeInForce, orderType string, postOnly bool) (string, error) {
 	return "", errors.New("not support")
 }
-func (us *Unsupported) SpotPlaceOrderMultiple([]SpotPostOrder) error {
-	return errors.New("not support")
+func (us *Unsupported) SpotPlaceOrderMultiple([]SpotPostOrder) ([]PostOrderResult, error) {
+	return nil, errors.New("not support")
 }
 func (us *Unsupported) SpotPlaceOrderMultipleSupported() bool { return false }
 func (us *Unsupported) SpotCancelOrder(symbol, orderId, cltId string) error {
@@ -159,8 +159,8 @@ func (us *Unsupported) FuturesPlaceOrder(typ, symbol, clientId string,
 	tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error) {
 	return "", errors.New("not support")
 }
-func (us *Unsupported) FuturesPlaceOrderMultiple(typ string, orders []FuturesPostOrder) error {
-	return errors.New("not support")
+func (us *Unsupported) FuturesPlaceOrderMultiple(typ string, orders []FuturesPostOrder) ([]PostOrderResult, error) {
+	return nil, errors.New("not support")
 }
 func (us *Unsupported) FuturesPlaceOrderMultipleSupported() bool { return false }
 func (us *Unsupported) FuturesCancelOrder(typ, symbol, orderId, cltId string) error {

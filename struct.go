@@ -235,6 +235,12 @@ type FuturesPostOrder struct {
 	PositionMode string // BOTH/LONG/SHORT
 	ReduceOnly   int    // 1: reduceOnly=true
 }
+
+// PostOrderResult 批量下单结果(顺序不保证)
+type PostOrderResult struct {
+	ClientId string // 自定义订单ID
+	OrderId  string // 交易所订单ID
+}
 type SpotOrder struct {
 	RequestId string // for ws 不要超过28, 在SpotWsPlaceOrder成功后返回
 	Err       string // for ws

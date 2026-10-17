@@ -337,49 +337,51 @@ func (kk *Kraken) SpotPlaceOrderMultipleSupported() bool { return true }
 // SpotPlaceOrderMultiple 批量下单: 文档要求一次2~15单且只能同一个交易对
 // 只有1单时用单笔接口, 超过15单自动分批(不足2单的那批也用单笔接口)
 // 整批校验不过会被全部拒绝; 撮合阶段被拒的只拒单笔, 所以只要有成功的就算成功
-func (kk *Kraken) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
+func (kk *Kraken) SpotPlaceOrderMultiple(orders []SpotPostOrder) ([]PostOrderResult, error) {
 	if len(orders) == 0 {
-		return errors.New(kk.Name() + " orders empty!")
+		return nil, errors.New(kk.Name() + " orders empty!")
 	}
 	symbol := orders[0].Symbol
 	for i := range orders { // 一批只能一个交易对
 		if orders[i].Symbol != symbol {
-			return errors.New(kk.Name() + " batch orders must be same symbol!")
+			return nil, errors.New(kk.Name() + " batch orders must be same symbol!")
 		}
 		if len(orders[i].ClientId) > 18 {
-			return errors.New(kk.Name() + " cltId too long! must le 18")
+			return nil, errors.New(kk.Name() + " cltId too long! must le 18")
 		}
 		if orders[i].Type != "LIMIT" && orders[i].Type != "MARKET" {
-			return errors.New(kk.Name() + " not support order type! " + orders[i].Type)
+			return nil, errors.New(kk.Name() + " not support order type! " + orders[i].Type)
 		}
 	}
+	var res []PostOrderResult
 	for i := 0; i < len(orders); i += 15 {
 		end := i + 15
 		if end > len(orders) {
 			end = len(orders)
 		}
 		if end-i == 1 { // 交易所不接受单笔批量, 换成单笔下单
-			if err := kk.spotPlaceOrderSingle(orders[i]); err != nil {
-				return err
+			orderId, err := kk.SpotPlaceOrder(orders[i].Symbol, orders[i].ClientId, orders[i].Price,
+				orders[i].Amt, orders[i].Qty, orders[i].Side, orders[i].TimeInForce,
+				orders[i].Type, orders[i].PostOnly)
+			if err != nil {
+				return res, err
 			}
+			res = append(res, PostOrderResult{ClientId: orders[i].ClientId, OrderId: orderId})
 			continue
 		}
-		if err := kk.spotPlaceOrderBatch(orders[i:end]); err != nil {
-			return err
+		batchRes, err := kk.spotPlaceOrderBatch(orders[i:end])
+		res = append(res, batchRes...)
+		if err != nil {
+			return res, err
 		}
 	}
-	return nil
+	return res, nil
 }
-func (kk *Kraken) spotPlaceOrderSingle(order SpotPostOrder) error {
-	_, err := kk.SpotPlaceOrder(order.Symbol, order.ClientId, order.Price, order.Amt,
-		order.Qty, order.Side, order.TimeInForce, order.Type, order.PostOnly)
-	return err
-}
-func (kk *Kraken) spotPlaceOrderBatch(orders []SpotPostOrder) error {
+func (kk *Kraken) spotPlaceOrderBatch(orders []SpotPostOrder) ([]PostOrderResult, error) {
 	symbol := orders[0].Symbol
 	symbolS := kk.getSpotSymbol(symbol)
 	if symbolS == "" {
-		return errors.New(kk.Name() + " unknown symbol! " + symbol)
+		return nil, errors.New(kk.Name() + " unknown symbol! " + symbol)
 	}
 	type BatchOrder struct {
 		Type        string `json:"type"`
@@ -425,7 +427,7 @@ func (kk *Kraken) spotPlaceOrderBatch(orders []SpotPostOrder) error {
 	headers := kk.buildJsonHeaders(path, nonce, payload)
 	_, resp, err := ihttp.Post(link, payload, kkApiDeadline, headers)
 	if err != nil {
-		return errors.New(kk.Name() + " net error! " + err.Error())
+		return nil, errors.New(kk.Name() + " net error! " + err.Error())
 	}
 	ret := struct {
 		Error  []string `json:"error,omitempty"`
@@ -437,23 +439,24 @@ func (kk *Kraken) spotPlaceOrderBatch(orders []SpotPostOrder) error {
 		} `json:"result"`
 	}{}
 	if err = json.Unmarshal(resp, &ret); err != nil {
-		return errors.New(kk.Name() + " unmarshal fail! " + err.Error())
+		return nil, errors.New(kk.Name() + " unmarshal fail! " + err.Error())
 	}
 	if len(ret.Error) > 0 {
-		return errors.New(kk.Name() + " batch order fail! " + ret.Error[0])
+		return nil, errors.New(kk.Name() + " batch order fail! " + ret.Error[0])
 	}
-	success, failMsg := 0, ""
+	var res []PostOrderResult
+	failMsg := ""
 	for _, v := range ret.Result.Orders {
 		if len(v.Txid) > 0 {
-			success++
+			res = append(res, PostOrderResult{OrderId: v.Txid})
 		} else if len(failMsg) == 0 {
 			failMsg = v.Error
 		}
 	}
-	if success == 0 {
-		return errors.New(kk.Name() + " batch order all fail! " + failMsg)
+	if len(res) == 0 {
+		return nil, errors.New(kk.Name() + " batch order all fail! " + failMsg)
 	}
-	return nil
+	return res, nil
 }
 
 func (kk *Kraken) SpotCancelOrderMultipleSupported() bool { return true }

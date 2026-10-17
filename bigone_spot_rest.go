@@ -182,7 +182,10 @@ func (bo *Bigone) SpotGetBBO(symbol string) (BestBidAsk, error) {
 	}, nil
 }
 func (bo *Bigone) SpotPlaceOrderMultipleSupported() bool { return true }
-func (bo *Bigone) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
+func (bo *Bigone) SpotPlaceOrderMultiple(orders []SpotPostOrder) ([]PostOrderResult, error) {
+	if len(orders) == 0 {
+		return nil, errors.New(bo.Name() + " orders empty!")
+	}
 	type PostOrder struct {
 		Symbol            string          `json:"asset_pair_name"`
 		Side              string          `json:"side"`
@@ -221,28 +224,38 @@ func (bo *Bigone) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
 	}
 	_, resp, err := bo.Post(url, payload, boApiDeadline, header)
 	if err != nil {
-		return errors.New(bo.Name() + " net error! " + err.Error())
+		return nil, errors.New(bo.Name() + " net error! " + err.Error())
+	}
+	if len(resp) == 0 {
+		return nil, errors.New(bo.Name() + " resp empty!")
 	}
 	ret := struct {
 		Code int    `json:"code,omitempty"`
 		Msg  string `json:"message,omitempty"`
-		/*
-			Data []struct {
-				OrderId int64  `json:"id,omitempty"`
-				ClientId string `json:"client_order_id"`
-				Status  string `json:"state,omitempty"`
-			} `json:"data"`
-		*/
+		Data []struct {
+			OrderId  int64  `json:"id"`
+			ClientId string `json:"client_order_id"`
+		} `json:"data"`
 	}{}
-	err = json.Unmarshal(resp, &ret)
-	if err != nil {
-		return errors.New(bo.Name() + " unmarshal fail! " + err.Error() + ", " + string(resp))
+	if err = json.Unmarshal(resp, &ret); err != nil {
+		return nil, errors.New(bo.Name() + " unmarshal fail! " + err.Error() + ", " + string(resp))
 	}
 	if ret.Code != 0 {
-		return errors.New(bo.Name() + " fail! msg=" + ret.Msg)
+		return nil, errors.New(bo.Name() + " fail! msg=" + ret.Msg)
 	}
-
-	return nil
+	var res []PostOrderResult
+	for _, v := range ret.Data {
+		if v.OrderId != 0 {
+			res = append(res, PostOrderResult{
+				ClientId: v.ClientId,
+				OrderId:  strconv.FormatInt(v.OrderId, 10),
+			})
+		}
+	}
+	if len(res) == 0 {
+		return nil, errors.New(bo.Name() + " batch order all fail!")
+	}
+	return res, nil
 }
 func (bo *Bigone) SpotPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 	price, amt, qty decimal.Decimal,

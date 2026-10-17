@@ -352,9 +352,9 @@ func (bg *Bitget) SpotPlaceOrderMultipleSupported() bool { return true }
 
 // SpotPlaceOrderMultiple 批量下单: 一次最多20单, 超过自动分批; 支持部分成功
 // 市价买qty用计价币金额, 市价卖用交易币数量; postOnly优先
-func (bg *Bitget) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
+func (bg *Bitget) SpotPlaceOrderMultiple(orders []SpotPostOrder) ([]PostOrderResult, error) {
 	if len(orders) == 0 {
-		return errors.New(bg.Name() + " orders empty!")
+		return nil, errors.New(bg.Name() + " orders empty!")
 	}
 	type BatchOrder struct {
 		Category    string `json:"category"`
@@ -370,7 +370,7 @@ func (bg *Bitget) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
 	orderL := make([]BatchOrder, 0, len(orders))
 	for i := range orders {
 		if orders[i].Type != "LIMIT" && orders[i].Type != "MARKET" {
-			return errors.New(bg.Name() + " not support order type! " + orders[i].Type)
+			return nil, errors.New(bg.Name() + " not support order type! " + orders[i].Type)
 		}
 		po := BatchOrder{
 			Category:  "SPOT",
@@ -397,6 +397,7 @@ func (bg *Bitget) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
 		}
 		orderL = append(orderL, po)
 	}
+	var res []PostOrderResult
 	for i := 0; i < len(orderL); i += 20 { // 一次最多20单
 		end := i + 20
 		if end > len(orderL) {
@@ -408,7 +409,7 @@ func (bg *Bitget) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
 		_, resp, err := bg.Post(link, payload, bgApiDeadline,
 			bg.buildHeaders("POST", path, "", string(payload)))
 		if err != nil {
-			return errors.New(bg.Name() + " net error! " + err.Error())
+			return res, errors.New(bg.Name() + " net error! " + err.Error())
 		}
 		ret := struct {
 			Code string `json:"code,omitempty"`
@@ -421,24 +422,24 @@ func (bg *Bitget) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
 			} `json:"data"`
 		}{}
 		if err = json.Unmarshal(resp, &ret); err != nil {
-			return errors.New(bg.Name() + " unmarshal fail! " + err.Error())
+			return res, errors.New(bg.Name() + " unmarshal fail! " + err.Error())
 		}
 		if ret.Code != "00000" {
-			return errors.New(bg.Name() + " " + ret.Code + " " + ret.Msg)
+			return res, errors.New(bg.Name() + " " + ret.Code + " " + ret.Msg)
 		}
-		success, failMsg := 0, ""
+		before, failMsg := len(res), ""
 		for _, v := range ret.Data {
 			if len(v.OrderId) > 0 {
-				success++
+				res = append(res, PostOrderResult{ClientId: v.ClientOid, OrderId: v.OrderId})
 			} else if len(failMsg) == 0 {
 				failMsg = v.Code + " " + v.Msg
 			}
 		}
-		if success == 0 {
-			return errors.New(bg.Name() + " batch order all fail! " + failMsg)
+		if len(res) == before {
+			return res, errors.New(bg.Name() + " batch order all fail! " + failMsg)
 		}
 	}
-	return nil
+	return res, nil
 }
 func (bg *Bitget) SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId string) error {
 	req := struct {

@@ -242,9 +242,9 @@ func (gt *Gate) SpotPlaceOrderMultipleSupported() bool { return true }
 
 // SpotPlaceOrderMultiple 批量下单: 文档要求每单必须带text(自定义order id), 一次最多4个交易对且每对最多10单
 // 这里按交易对分组, 每组10单一批, 超出自动分批; 某一批失败立刻返回错误
-func (gt *Gate) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
+func (gt *Gate) SpotPlaceOrderMultiple(orders []SpotPostOrder) ([]PostOrderResult, error) {
 	if len(orders) == 0 {
-		return errors.New(gt.Name() + " orders empty!")
+		return nil, errors.New(gt.Name() + " orders empty!")
 	}
 	type BatchOrder struct {
 		CurrencyPair string `json:"currency_pair"`
@@ -259,20 +259,21 @@ func (gt *Gate) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
 	orderMap := make(map[string][]SpotPostOrder, 4)
 	for i := range orders {
 		if len(orders[i].ClientId) == 0 { // 批量下单必须带自定义order id
-			return errors.New(gt.Name() + " batch order needs clientId!")
+			return nil, errors.New(gt.Name() + " batch order needs clientId!")
 		}
 		if orders[i].Type != "LIMIT" && orders[i].Type != "MARKET" {
-			return errors.New(gt.Name() + " not support order type! " + orders[i].Type)
+			return nil, errors.New(gt.Name() + " not support order type! " + orders[i].Type)
 		}
 		if _, ok := orderMap[orders[i].Symbol]; !ok {
 			symbolL = append(symbolL, orders[i].Symbol)
 		}
 		orderMap[orders[i].Symbol] = append(orderMap[orders[i].Symbol], orders[i])
 	}
+	var res []PostOrderResult
 	for _, symbol := range symbolL {
 		symbolS := gt.getSpotSymbol(symbol)
 		if len(symbolS) == 0 {
-			return errors.New(gt.Name() + " unknown symbol! " + symbol)
+			return res, errors.New(gt.Name() + " unknown symbol! " + symbol)
 		}
 		orderL := orderMap[symbol]
 		for i := 0; i < len(orderL); i += 10 { // 一个交易对一次最多10单
@@ -282,25 +283,26 @@ func (gt *Gate) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
 			}
 			batchL := make([]BatchOrder, 0, end-i)
 			for k := i; k < end; k++ {
-				qty := orderL[k].Qty
-				if orderL[k].Type == "MARKET" && orderL[k].Side == "BUY" { // 市价买 amount为计价币金额
-					qty = orderL[k].Amt
+				order := orderL[k]
+				qty := order.Qty
+				if order.Type == "MARKET" && order.Side == "BUY" { // 市价买 amount为计价币金额
+					qty = order.Amt
 				}
 				po := BatchOrder{
 					CurrencyPair: symbolS,
-					Text:         "t-" + orderL[k].ClientId,
+					Text:         "t-" + order.ClientId,
 					Amount:       qty.String(),
-					Side:         gt.fromStdSide(orderL[k].Side),
-					Type:         gt.fromStdOrderType(orderL[k].Type),
+					Side:         gt.fromStdSide(order.Side),
+					Type:         gt.fromStdOrderType(order.Type),
 				}
-				if orderL[k].Type == "LIMIT" {
-					po.Price = orderL[k].Price.String()
+				if order.Type == "LIMIT" {
+					po.Price = order.Price.String()
 				}
-				if orderL[k].Type == "LIMIT" && orderL[k].PostOnly { // 只做Maker
+				if order.Type == "LIMIT" && order.PostOnly { // 只做Maker
 					po.TimeInForce = "poc"
-				} else if orderL[k].TimeInForce != "" {
-					po.TimeInForce = gt.fromStdTimeInForce(orderL[k].TimeInForce)
-				} else if orderL[k].Type == "MARKET" {
+				} else if order.TimeInForce != "" {
+					po.TimeInForce = gt.fromStdTimeInForce(order.TimeInForce)
+				} else if order.Type == "MARKET" {
 					po.TimeInForce = "ioc"
 				}
 				batchL = append(batchL, po)
@@ -310,38 +312,46 @@ func (gt *Gate) SpotPlaceOrderMultiple(orders []SpotPostOrder) error {
 			headers := gt.buildHeaders("POST", path, "", string(payload))
 			_, resp, err := gt.Post(gtUniEndpoint+path, payload, gtApiDeadline, headers)
 			if err != nil {
-				return errors.New(gt.Name() + " net error! " + err.Error())
+				return res, errors.New(gt.Name() + " net error! " + err.Error())
 			}
 			if len(resp) == 0 || resp[0] != '[' {
-				return gt.handleExceptionResp("SpotPlaceOrderMultiple", resp)
+				return res, gt.handleExceptionResp("SpotPlaceOrderMultiple", resp)
 			}
 			ret := []struct {
 				OrderId   string `json:"order_id,omitempty"`
 				Id        string `json:"id,omitempty"`
+				Text      string `json:"text,omitempty"`
 				Succeeded bool   `json:"succeeded,omitempty"`
 				Label     string `json:"label,omitempty"`
 				Message   string `json:"message,omitempty"`
 			}{}
 			if err = json.Unmarshal(resp, &ret); err != nil {
-				return errors.New(gt.Name() + " unmarshal fail! " + err.Error() + string(resp))
+				return res, errors.New(gt.Name() + " unmarshal fail! " + err.Error() + string(resp))
 			}
 			if len(ret) == 0 {
-				return errors.New(gt.Name() + " resp empty! " + string(resp))
+				return res, errors.New(gt.Name() + " resp empty! " + string(resp))
 			}
-			success, failMsg := 0, ""
+			before, failMsg := len(res), ""
 			for _, v := range ret {
-				if v.Succeeded || len(v.OrderId) > 0 || len(v.Id) > 0 {
-					success++
+				orderId := v.OrderId
+				if len(orderId) == 0 {
+					orderId = v.Id
+				}
+				if len(orderId) > 0 {
+					res = append(res, PostOrderResult{
+						ClientId: strings.TrimPrefix(v.Text, "t-"),
+						OrderId:  orderId,
+					})
 				} else if len(failMsg) == 0 {
 					failMsg = v.Label + " " + v.Message
 				}
 			}
-			if success == 0 {
-				return errors.New(gt.Name() + " batch order all fail! " + failMsg)
+			if len(res) == before {
+				return res, errors.New(gt.Name() + " batch order all fail! " + failMsg)
 			}
 		}
 	}
-	return nil
+	return res, nil
 }
 func (gt *Gate) SpotCancelOrder(symbol string, orderId, cltId string) error {
 	symbolS := gt.getSpotSymbol(symbol)

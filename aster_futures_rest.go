@@ -230,22 +230,25 @@ func (as *Aster) FuturesPlaceOrderMultipleSupported() bool {
 
 // FuturesPlaceOrderMultiple 批量下单: aster一次最多5单, 超过单次上限自动分批
 // 返回数组里每单可能成功或失败, 只要有成功的就算成功; 某一批失败立刻返回错误
-func (as *Aster) FuturesPlaceOrderMultiple(typ string, orders []FuturesPostOrder) error {
+func (as *Aster) FuturesPlaceOrderMultiple(typ string, orders []FuturesPostOrder) ([]PostOrderResult, error) {
 	if len(orders) == 0 {
-		return errors.New(as.Name() + " orders empty!")
+		return nil, errors.New(as.Name() + " orders empty!")
 	}
+	var res []PostOrderResult
 	for i := 0; i < len(orders); i += 5 { // 单次最多5单
 		end := i + 5
 		if end > len(orders) {
 			end = len(orders)
 		}
-		if err := as.futuresPlaceOrderMultiple(orders[i:end]); err != nil {
-			return err
+		batchRes, err := as.futuresPlaceOrderMultiple(orders[i:end])
+		res = append(res, batchRes...)
+		if err != nil {
+			return res, err
 		}
 	}
-	return nil
+	return res, nil
 }
-func (as *Aster) futuresPlaceOrderMultiple(orders []FuturesPostOrder) error {
+func (as *Aster) futuresPlaceOrderMultiple(orders []FuturesPostOrder) ([]PostOrderResult, error) {
 	type BatchOrder struct {
 		Symbol           string `json:"symbol"`
 		Side             string `json:"side"`
@@ -261,7 +264,7 @@ func (as *Aster) futuresPlaceOrderMultiple(orders []FuturesPostOrder) error {
 	orderL := make([]BatchOrder, 0, len(orders))
 	for i := range orders {
 		if orders[i].Type != "LIMIT" && orders[i].Type != "MARKET" {
-			return errors.New(as.Name() + " not support order type! " + orders[i].Type)
+			return nil, errors.New(as.Name() + " not support order type! " + orders[i].Type)
 		}
 		po := BatchOrder{
 			Symbol:           orders[i].Symbol,
@@ -291,31 +294,33 @@ func (as *Aster) futuresPlaceOrderMultiple(orders []FuturesPostOrder) error {
 	_, resp, err := as.Post(link, as.buildBody("batchOrders="+url.QueryEscape(string(payload))),
 		asApiDeadline, as.buildHeaders())
 	if err != nil {
-		return errors.New(as.Name() + " net error! " + err.Error())
+		return nil, errors.New(as.Name() + " net error! " + err.Error())
 	}
 	if len(resp) == 0 || resp[0] != '[' {
-		return as.handleExceptionResp("FuturesPlaceOrderMultiple", resp)
+		return nil, as.handleExceptionResp("FuturesPlaceOrderMultiple", resp)
 	}
 	ret := []struct {
-		Code    int         `json:"code,omitempty"`
-		Msg     string      `json:"msg,omitempty"`
-		OrderId json.Number `json:"orderId,omitempty"`
+		Code          int         `json:"code,omitempty"`
+		Msg           string      `json:"msg,omitempty"`
+		OrderId       json.Number `json:"orderId,omitempty"`
+		ClientOrderId string      `json:"clientOrderId,omitempty"`
 	}{}
 	if err = json.Unmarshal(resp, &ret); err != nil {
-		return errors.New(as.Name() + " unmarshal fail! " + err.Error())
+		return nil, errors.New(as.Name() + " unmarshal fail! " + err.Error())
 	}
-	success, failMsg := 0, ""
+	var res []PostOrderResult
+	failMsg := ""
 	for _, v := range ret {
 		if len(v.OrderId) > 0 {
-			success++
+			res = append(res, PostOrderResult{ClientId: v.ClientOrderId, OrderId: v.OrderId.String()})
 		} else if len(failMsg) == 0 {
 			failMsg = v.Msg
 		}
 	}
-	if success == 0 {
-		return errors.New(as.Name() + " batch order all fail! " + failMsg)
+	if len(res) == 0 {
+		return nil, errors.New(as.Name() + " batch order all fail! " + failMsg)
 	}
-	return nil
+	return res, nil
 }
 func (as *Aster) FuturesCancelOrder(typ, symbol, orderId, cltId string) error {
 	params := "symbol=" + symbol

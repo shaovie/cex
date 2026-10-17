@@ -33,7 +33,8 @@ type Exchanger interface {
 		side, timeInForce, orderType string, postOnly bool) (string, error)
 	// 批量下单: bigone (支持部分成功)
 	SpotPlaceOrderMultipleSupported() bool
-	SpotPlaceOrderMultiple([]SpotPostOrder) error
+	// 返回下单成功的结果(顺序不保证), error并不代表全部失败，结果为空才是全部失败
+	SpotPlaceOrderMultiple([]SpotPostOrder) ([]PostOrderResult, error)
 	// orderId, cltId 二选一
 	SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId string) error
 	// 批量撤单: 暂无交易所实现 (支持部分成功)
@@ -134,7 +135,8 @@ type Exchanger interface {
 		tradeMode /*全仓:0/逐仓:1*/, reduceOnly int) (string, error)
 	// 批量下单: aster (支持部分成功, 一次最多5单)
 	FuturesPlaceOrderMultipleSupported() bool
-	FuturesPlaceOrderMultiple(typ string, orders []FuturesPostOrder) error
+	// 返回下单成功的结果(顺序不保证), error并不代表全部失败，结果为空才是全部失败
+	FuturesPlaceOrderMultiple(typ string, orders []FuturesPostOrder) ([]PostOrderResult, error)
 	FuturesGetOrder(typ, symbol, orderId, cltId string) (*FuturesOrder, error)
 	// symbol 为空取所有的
 	FuturesGetOpenOrders(typ, symbol string) ([]*FuturesOrder, error)
