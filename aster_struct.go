@@ -25,12 +25,12 @@ func (v *AsterSpotWsPubMsg) reset() {
 
 // AsterSpotBookTicker 最优买卖价 <symbol>@bookTicker
 type AsterSpotBookTicker struct {
-	Symbol   string          `json:"s,omitempty"`
-	BidPrice decimal.Decimal `json:"b"`
-	BidQty   decimal.Decimal `json:"B"`
-	AskPrice decimal.Decimal `json:"a"`
-	AskQty   decimal.Decimal `json:"A"`
-	Time     int64           `json:"E,omitempty"` // msec
+	Symbol   string `json:"s,omitempty"`
+	BidPrice string `json:"b"`
+	BidQty   string `json:"B"`
+	AskPrice string `json:"a"`
+	AskQty   string `json:"A"`
+	Time     int64  `json:"E,omitempty"` // msec
 }
 
 // AsterSpotOrderBook 有限档位 <symbol>@depth5
@@ -131,12 +131,12 @@ func (v *AsterFuturesWsPubMsg) reset() {
 
 // AsterFuturesBBO 合约最优买卖价 <symbol>@bookTicker
 type AsterFuturesBBO struct {
-	Symbol   string          `json:"s,omitempty"`
-	BidPrice decimal.Decimal `json:"b"`
-	BidQty   decimal.Decimal `json:"B"`
-	AskPrice decimal.Decimal `json:"a"`
-	AskQty   decimal.Decimal `json:"A"`
-	Time     int64           `json:"E,omitempty"` // msec
+	Symbol   string `json:"s,omitempty"`
+	BidPrice string `json:"b"`
+	BidQty   string `json:"B"`
+	AskPrice string `json:"a"`
+	AskQty   string `json:"A"`
+	Time     int64  `json:"E,omitempty"` // msec
 }
 
 // AsterFuturesOrderBook 合约有限档位 <symbol>@depth5@100ms

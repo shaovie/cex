@@ -396,35 +396,53 @@ func (bo *Bigone) spotWsHandleBBO(data []byte, ch chan<- any) {
 	bbo.reset()
 	if err := easyjson.Unmarshal(data, bbo); err == nil {
 		symbol := bo.convSymbol(bo.spotWsPublicSymbolMap, bbo.Ticker.Symbol)
-		if cached, ok := bo.spotWsBBOCache[symbol]; ok {
-			cachedUpdated := false
-			if bbo.Ticker.Bid.Price.IsPositive() &&
-				(!bbo.Ticker.Bid.Price.Equal(cached.BidPrice) ||
-					!bbo.Ticker.Bid.Qty.Equal(cached.BidQty)) {
-				cached.BidPrice = bbo.Ticker.Bid.Price
-				cached.BidQty = bbo.Ticker.Bid.Qty
-				cachedUpdated = true
+		cached, ok := bo.spotWsBBOCache[symbol]
+		if !ok {
+			return
+		}
+		bidPrice, err := decimal.NewFromString(bbo.Ticker.Bid.Price)
+		if err != nil {
+			return
+		}
+		bidQty, err := decimal.NewFromString(bbo.Ticker.Bid.Qty)
+		if err != nil {
+			return
+		}
+		askPrice, err := decimal.NewFromString(bbo.Ticker.Ask.Price)
+		if err != nil {
+			return
+		}
+		askQty, err := decimal.NewFromString(bbo.Ticker.Ask.Qty)
+		if err != nil {
+			return
+		}
+		cachedUpdated := false
+		if bidPrice.IsPositive() &&
+			(!bidPrice.Equal(cached.BidPrice) ||
+				!bidQty.Equal(cached.BidQty)) {
+			cached.BidPrice = bidPrice
+			cached.BidQty = bidQty
+			cachedUpdated = true
+		}
+		if askPrice.IsPositive() &&
+			(!askPrice.Equal(cached.AskPrice) ||
+				!askQty.Equal(cached.AskQty)) {
+			cached.AskPrice = askPrice
+			cached.AskQty = askQty
+			cachedUpdated = true
+		}
+		if cachedUpdated {
+			if !bo.spotWsBboAllow(symbol) { // n毫秒内的BBO丢弃
+				return
 			}
-			if bbo.Ticker.Ask.Price.IsPositive() &&
-				(!bbo.Ticker.Ask.Price.Equal(cached.AskPrice) ||
-					!bbo.Ticker.Ask.Qty.Equal(cached.AskQty)) {
-				cached.AskPrice = bbo.Ticker.Ask.Price
-				cached.AskQty = bbo.Ticker.Ask.Qty
-				cachedUpdated = true
-			}
-			if cachedUpdated {
-				if !bo.spotWsBboAllow(symbol) { // n毫秒内的BBO丢弃
-					return
-				}
-				obd := wsPublicBBOPool.Get().(*BestBidAsk)
-				obd.Symbol = symbol
-				obd.Time = 0 // Bigone不提供
-				obd.BidPrice = cached.BidPrice
-				obd.BidQty = cached.BidQty
-				obd.AskPrice = cached.AskPrice
-				obd.AskQty = cached.AskQty
-				ch <- obd
-			}
+			obd := wsPublicBBOPool.Get().(*BestBidAsk)
+			obd.Symbol = symbol
+			obd.Time = 0 // Bigone不提供
+			obd.BidPrice = cached.BidPrice
+			obd.BidQty = cached.BidQty
+			obd.AskPrice = cached.AskPrice
+			obd.AskQty = cached.AskQty
+			ch <- obd
 		}
 	}
 }
@@ -435,16 +453,29 @@ func (bo *Bigone) spotWsHandleBBOSnap(data []byte, ch chan<- any) {
 	if err := easyjson.Unmarshal(data, bbos); err == nil {
 		for i := range bbos.Tickers {
 			symbol := bo.convSymbol(bo.spotWsPublicSymbolMap, bbos.Tickers[i].Symbol)
-			if !bo.spotWsBboAllow(symbol) { // n毫秒内的BBO丢弃
+			bidPrice, err := decimal.NewFromString(bbos.Tickers[i].Bid.Price)
+			if err != nil {
+				continue
+			}
+			bidQty, err := decimal.NewFromString(bbos.Tickers[i].Bid.Qty)
+			if err != nil {
+				continue
+			}
+			askPrice, err := decimal.NewFromString(bbos.Tickers[i].Ask.Price)
+			if err != nil {
+				continue
+			}
+			askQty, err := decimal.NewFromString(bbos.Tickers[i].Ask.Qty)
+			if err != nil {
 				continue
 			}
 			obd := wsPublicBBOPool.Get().(*BestBidAsk)
 			obd.Symbol = symbol
 			obd.Time = 0 // Bigone不提供
-			obd.BidPrice = bbos.Tickers[i].Bid.Price
-			obd.BidQty = bbos.Tickers[i].Bid.Qty
-			obd.AskPrice = bbos.Tickers[i].Ask.Price
-			obd.AskQty = bbos.Tickers[i].Ask.Qty
+			obd.BidPrice = bidPrice
+			obd.BidQty = bidQty
+			obd.AskPrice = askPrice
+			obd.AskQty = askQty
 			obd2 := BestBidAsk{}
 			obd2 = *obd
 			bo.spotWsBBOCache[obd.Symbol] = &obd2

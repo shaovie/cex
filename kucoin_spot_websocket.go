@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/mailru/easyjson"
 	"github.com/shaovie/gutils/ilog"
+	"github.com/shopspring/decimal"
 )
 
 var (
@@ -193,13 +194,29 @@ func (kc *Kucoin) spotWsHandleBBO(data []byte, ch chan<- any) {
 		if !kc.spotWsBboAllow(symbol) { // n毫秒内的BBO丢弃
 			return
 		}
+		bidPrice, err := decimal.NewFromString(bbo.Bids[0][0])
+		if err != nil {
+			return
+		}
+		bidQty, err := decimal.NewFromString(bbo.Bids[0][1])
+		if err != nil {
+			return
+		}
+		askPrice, err := decimal.NewFromString(bbo.Asks[0][0])
+		if err != nil {
+			return
+		}
+		askQty, err := decimal.NewFromString(bbo.Asks[0][1])
+		if err != nil {
+			return
+		}
 		obd := wsPublicBBOPool.Get().(*BestBidAsk)
 		obd.Symbol = symbol
 		obd.Time = bbo.Time
-		obd.BidPrice = bbo.Bids[0][0]
-		obd.BidQty = bbo.Bids[0][1]
-		obd.AskPrice = bbo.Asks[0][0]
-		obd.AskQty = bbo.Asks[0][1]
+		obd.BidPrice = bidPrice
+		obd.BidQty = bidQty
+		obd.AskPrice = askPrice
+		obd.AskQty = askQty
 		ch <- obd
 	}
 }

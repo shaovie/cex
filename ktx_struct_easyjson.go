@@ -139,33 +139,25 @@ func easyjsonF72c1e69DecodeGithubComShaovieCex1(in *jlexer.Lexer, out *KtxTicker
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.BidPrice).UnmarshalJSON(data))
-				}
+				out.BidPrice = string(in.String())
 			}
 		case "bidQty":
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.BidQty).UnmarshalJSON(data))
-				}
+				out.BidQty = string(in.String())
 			}
 		case "askPrice":
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.AskPrice).UnmarshalJSON(data))
-				}
+				out.AskPrice = string(in.String())
 			}
 		case "askQty":
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.AskQty).UnmarshalJSON(data))
-				}
+				out.AskQty = string(in.String())
 			}
 		default:
 			in.SkipRecursive()
@@ -189,22 +181,22 @@ func easyjsonF72c1e69EncodeGithubComShaovieCex1(out *jwriter.Writer, in KtxTicke
 	{
 		const prefix string = ",\"bidPrice\":"
 		out.RawString(prefix)
-		out.Raw((in.BidPrice).MarshalJSON())
+		out.String(string(in.BidPrice))
 	}
 	{
 		const prefix string = ",\"bidQty\":"
 		out.RawString(prefix)
-		out.Raw((in.BidQty).MarshalJSON())
+		out.String(string(in.BidQty))
 	}
 	{
 		const prefix string = ",\"askPrice\":"
 		out.RawString(prefix)
-		out.Raw((in.AskPrice).MarshalJSON())
+		out.String(string(in.AskPrice))
 	}
 	{
 		const prefix string = ",\"askQty\":"
 		out.RawString(prefix)
-		out.Raw((in.AskQty).MarshalJSON())
+		out.String(string(in.AskQty))
 	}
 	out.RawByte('}')
 }

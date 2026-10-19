@@ -308,13 +308,29 @@ func (bn *Binance) futuresWsHandleBBO(data []byte, ch chan<- any) {
 		if !bn.futuresWsBboAllow(symbol) { // n毫秒内的BBO丢弃
 			return
 		}
+		bidPrice, err := decimal.NewFromString(bbo.BidPrice)
+		if err != nil {
+			return
+		}
+		bidQty, err := decimal.NewFromString(bbo.BidQty)
+		if err != nil {
+			return
+		}
+		askPrice, err := decimal.NewFromString(bbo.AskPrice)
+		if err != nil {
+			return
+		}
+		askQty, err := decimal.NewFromString(bbo.AskQty)
+		if err != nil {
+			return
+		}
 		obd := wsPublicBBOPool.Get().(*BestBidAsk)
 		obd.Symbol = symbol
 		obd.Time = bbo.Time
-		obd.BidPrice = bbo.BidPrice
-		obd.BidQty = bbo.BidQty
-		obd.AskPrice = bbo.AskPrice
-		obd.AskQty = bbo.AskQty
+		obd.BidPrice = bidPrice
+		obd.BidQty = bidQty
+		obd.AskPrice = askPrice
+		obd.AskQty = askQty
 		ch <- obd
 	}
 }

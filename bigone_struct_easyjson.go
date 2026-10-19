@@ -7,7 +7,6 @@ import (
 	easyjson "github.com/mailru/easyjson"
 	jlexer "github.com/mailru/easyjson/jlexer"
 	jwriter "github.com/mailru/easyjson/jwriter"
-	decimal "github.com/shopspring/decimal"
 )
 
 // suppress unused package warning
@@ -638,24 +637,24 @@ func easyjson12993614DecodeGithubComShaovieCex5(in *jlexer.Lexer, out *BigoneSpo
 						out.Tickers = make([]struct {
 							Symbol string `json:"market"`
 							Bid    struct {
-								Price decimal.Decimal `json:"price"`
-								Qty   decimal.Decimal `json:"amount"`
+								Price string `json:"price"`
+								Qty   string `json:"amount"`
 							} `json:"bid"`
 							Ask struct {
-								Price decimal.Decimal `json:"price"`
-								Qty   decimal.Decimal `json:"amount"`
+								Price string `json:"price"`
+								Qty   string `json:"amount"`
 							} `json:"ask"`
 						}, 0, 0)
 					} else {
 						out.Tickers = []struct {
 							Symbol string `json:"market"`
 							Bid    struct {
-								Price decimal.Decimal `json:"price"`
-								Qty   decimal.Decimal `json:"amount"`
+								Price string `json:"price"`
+								Qty   string `json:"amount"`
 							} `json:"bid"`
 							Ask struct {
-								Price decimal.Decimal `json:"price"`
-								Qty   decimal.Decimal `json:"amount"`
+								Price string `json:"price"`
+								Qty   string `json:"amount"`
 							} `json:"ask"`
 						}{}
 					}
@@ -666,12 +665,12 @@ func easyjson12993614DecodeGithubComShaovieCex5(in *jlexer.Lexer, out *BigoneSpo
 					var v7 struct {
 						Symbol string `json:"market"`
 						Bid    struct {
-							Price decimal.Decimal `json:"price"`
-							Qty   decimal.Decimal `json:"amount"`
+							Price string `json:"price"`
+							Qty   string `json:"amount"`
 						} `json:"bid"`
 						Ask struct {
-							Price decimal.Decimal `json:"price"`
-							Qty   decimal.Decimal `json:"amount"`
+							Price string `json:"price"`
+							Qty   string `json:"amount"`
 						} `json:"ask"`
 					}
 					easyjson12993614Decode1(in, &v7)
@@ -739,12 +738,12 @@ func (v *BigoneSpotBBOs) UnmarshalEasyJSON(l *jlexer.Lexer) {
 func easyjson12993614Decode1(in *jlexer.Lexer, out *struct {
 	Symbol string `json:"market"`
 	Bid    struct {
-		Price decimal.Decimal `json:"price"`
-		Qty   decimal.Decimal `json:"amount"`
+		Price string `json:"price"`
+		Qty   string `json:"amount"`
 	} `json:"bid"`
 	Ask struct {
-		Price decimal.Decimal `json:"price"`
-		Qty   decimal.Decimal `json:"amount"`
+		Price string `json:"price"`
+		Qty   string `json:"amount"`
 	} `json:"ask"`
 }) {
 	isTopLevel := in.IsStart()
@@ -783,12 +782,12 @@ func easyjson12993614Decode1(in *jlexer.Lexer, out *struct {
 func easyjson12993614Encode1(out *jwriter.Writer, in struct {
 	Symbol string `json:"market"`
 	Bid    struct {
-		Price decimal.Decimal `json:"price"`
-		Qty   decimal.Decimal `json:"amount"`
+		Price string `json:"price"`
+		Qty   string `json:"amount"`
 	} `json:"bid"`
 	Ask struct {
-		Price decimal.Decimal `json:"price"`
-		Qty   decimal.Decimal `json:"amount"`
+		Price string `json:"price"`
+		Qty   string `json:"amount"`
 	} `json:"ask"`
 }) {
 	out.RawByte('{')
@@ -812,8 +811,8 @@ func easyjson12993614Encode1(out *jwriter.Writer, in struct {
 	out.RawByte('}')
 }
 func easyjson12993614Decode2(in *jlexer.Lexer, out *struct {
-	Price decimal.Decimal `json:"price"`
-	Qty   decimal.Decimal `json:"amount"`
+	Price string `json:"price"`
+	Qty   string `json:"amount"`
 }) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
@@ -832,17 +831,13 @@ func easyjson12993614Decode2(in *jlexer.Lexer, out *struct {
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.Price).UnmarshalJSON(data))
-				}
+				out.Price = string(in.String())
 			}
 		case "amount":
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.Qty).UnmarshalJSON(data))
-				}
+				out.Qty = string(in.String())
 			}
 		default:
 			in.SkipRecursive()
@@ -855,8 +850,8 @@ func easyjson12993614Decode2(in *jlexer.Lexer, out *struct {
 	}
 }
 func easyjson12993614Encode2(out *jwriter.Writer, in struct {
-	Price decimal.Decimal `json:"price"`
-	Qty   decimal.Decimal `json:"amount"`
+	Price string `json:"price"`
+	Qty   string `json:"amount"`
 }) {
 	out.RawByte('{')
 	first := true
@@ -864,12 +859,12 @@ func easyjson12993614Encode2(out *jwriter.Writer, in struct {
 	{
 		const prefix string = ",\"price\":"
 		out.RawString(prefix[1:])
-		out.Raw((in.Price).MarshalJSON())
+		out.String(string(in.Price))
 	}
 	{
 		const prefix string = ",\"amount\":"
 		out.RawString(prefix)
-		out.Raw((in.Qty).MarshalJSON())
+		out.String(string(in.Qty))
 	}
 	out.RawByte('}')
 }

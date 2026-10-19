@@ -7,7 +7,6 @@ import (
 	easyjson "github.com/mailru/easyjson"
 	jlexer "github.com/mailru/easyjson/jlexer"
 	jwriter "github.com/mailru/easyjson/jwriter"
-	decimal "github.com/shopspring/decimal"
 )
 
 // suppress unused package warning
@@ -895,15 +894,15 @@ func easyjsonCfff304bDecodeGithubComShaovieCex4(in *jlexer.Lexer, out *KucoinTic
 				in.Delim('[')
 				if out.Bids == nil {
 					if !in.IsDelim(']') {
-						out.Bids = make([][2]decimal.Decimal, 0, 2)
+						out.Bids = make([][2]string, 0, 2)
 					} else {
-						out.Bids = [][2]decimal.Decimal{}
+						out.Bids = [][2]string{}
 					}
 				} else {
 					out.Bids = (out.Bids)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v1 [2]decimal.Decimal
+					var v1 [2]string
 					if in.IsNull() {
 						in.Skip()
 					} else {
@@ -914,9 +913,7 @@ func easyjsonCfff304bDecodeGithubComShaovieCex4(in *jlexer.Lexer, out *KucoinTic
 								if in.IsNull() {
 									in.Skip()
 								} else {
-									if data := in.Raw(); in.Ok() {
-										in.AddError(((v1)[v2]).UnmarshalJSON(data))
-									}
+									(v1)[v2] = string(in.String())
 								}
 								v2++
 							} else {
@@ -939,15 +936,15 @@ func easyjsonCfff304bDecodeGithubComShaovieCex4(in *jlexer.Lexer, out *KucoinTic
 				in.Delim('[')
 				if out.Asks == nil {
 					if !in.IsDelim(']') {
-						out.Asks = make([][2]decimal.Decimal, 0, 2)
+						out.Asks = make([][2]string, 0, 2)
 					} else {
-						out.Asks = [][2]decimal.Decimal{}
+						out.Asks = [][2]string{}
 					}
 				} else {
 					out.Asks = (out.Asks)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v3 [2]decimal.Decimal
+					var v3 [2]string
 					if in.IsNull() {
 						in.Skip()
 					} else {
@@ -958,9 +955,7 @@ func easyjsonCfff304bDecodeGithubComShaovieCex4(in *jlexer.Lexer, out *KucoinTic
 								if in.IsNull() {
 									in.Skip()
 								} else {
-									if data := in.Raw(); in.Ok() {
-										in.AddError(((v3)[v4]).UnmarshalJSON(data))
-									}
+									(v3)[v4] = string(in.String())
 								}
 								v4++
 							} else {
@@ -1016,7 +1011,7 @@ func easyjsonCfff304bEncodeGithubComShaovieCex4(out *jwriter.Writer, in KucoinTi
 					if v7 > 0 {
 						out.RawByte(',')
 					}
-					out.Raw(((v6)[v7]).MarshalJSON())
+					out.String(string((v6)[v7]))
 				}
 				out.RawByte(']')
 			}
@@ -1039,7 +1034,7 @@ func easyjsonCfff304bEncodeGithubComShaovieCex4(out *jwriter.Writer, in KucoinTi
 					if v10 > 0 {
 						out.RawByte(',')
 					}
-					out.Raw(((v9)[v10]).MarshalJSON())
+					out.String(string((v9)[v10]))
 				}
 				out.RawByte(']')
 			}

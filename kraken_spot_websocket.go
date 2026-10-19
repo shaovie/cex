@@ -386,11 +386,11 @@ func (kk *Kraken) spotWsHandleOrderBook1(symbol string, ch chan<- any) {
 }
 
 type KrakenSpotTicker struct {
-	Symbol   string          `json:"symbol"`
-	BidPrice decimal.Decimal `json:"bid"`
-	BidQty   decimal.Decimal `json:"bid_qty"`
-	AskPrice decimal.Decimal `json:"ask"`
-	AskQty   decimal.Decimal `json:"ask_qty"`
+	Symbol   string `json:"symbol"`
+	BidPrice string `json:"bid"`
+	BidQty   string `json:"bid_qty"`
+	AskPrice string `json:"ask"`
+	AskQty   string `json:"ask_qty"`
 }
 
 func (kk *Kraken) spotWsHandleBBO(data []byte, ch chan<- any) {
@@ -408,12 +408,28 @@ func (kk *Kraken) spotWsHandleBBO(data []byte, ch chan<- any) {
 			if !kk.spotWsBboAllow(symbol) { // n毫秒内的BBO丢弃
 				continue
 			}
+			bidPrice, err := decimal.NewFromString(bbo[i].BidPrice)
+			if err != nil {
+				continue
+			}
+			bidQty, err := decimal.NewFromString(bbo[i].BidQty)
+			if err != nil {
+				continue
+			}
+			askPrice, err := decimal.NewFromString(bbo[i].AskPrice)
+			if err != nil {
+				continue
+			}
+			askQty, err := decimal.NewFromString(bbo[i].AskQty)
+			if err != nil {
+				continue
+			}
 			obd := wsPublicBBOPool.Get().(*BestBidAsk)
 			obd.Symbol = symbol
-			obd.BidPrice = bbo[i].BidPrice
-			obd.BidQty = bbo[i].BidQty
-			obd.AskPrice = bbo[i].AskPrice
-			obd.AskQty = bbo[i].AskQty
+			obd.BidPrice = bidPrice
+			obd.BidQty = bidQty
+			obd.AskPrice = askPrice
+			obd.AskQty = askQty
 			ch <- obd
 		}
 	}

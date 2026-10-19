@@ -26,9 +26,9 @@ type BybitOrderBook struct {
 	Asks   [][2]decimal.Decimal `json:"a,omitempty"`
 }
 type BybitSpotBBO struct {
-	Symbol string               `json:"s,omitempty"`
-	Bids   [][2]decimal.Decimal `json:"b,omitempty"`
-	Asks   [][2]decimal.Decimal `json:"a,omitempty"`
+	Symbol string      `json:"s,omitempty"`
+	Bids   [][2]string `json:"b,omitempty"`
+	Asks   [][2]string `json:"a,omitempty"`
 }
 type BybitSpot24hTicker struct {
 	Symbol      string          `json:"symbol"`

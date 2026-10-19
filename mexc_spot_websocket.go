@@ -204,13 +204,29 @@ func (mc *Mexc) spotWsHandleBBO(symbol string, sendTime int64, data []byte, ch c
 	if !mc.spotWsBboAllow(symbol) { // n毫秒内的BBO丢弃
 		return
 	}
+	bidPriceD, err := decimal.NewFromString(bidPrice)
+	if err != nil {
+		return
+	}
+	bidQtyD, err := decimal.NewFromString(bidQty)
+	if err != nil {
+		return
+	}
+	askPriceD, err := decimal.NewFromString(askPrice)
+	if err != nil {
+		return
+	}
+	askQtyD, err := decimal.NewFromString(askQty)
+	if err != nil {
+		return
+	}
 	bbo := wsPublicBBOPool.Get().(*BestBidAsk)
 	bbo.Symbol = symbol
 	bbo.Time = sendTime
-	bbo.BidPrice = mcToDecimal(bidPrice)
-	bbo.BidQty = mcToDecimal(bidQty)
-	bbo.AskPrice = mcToDecimal(askPrice)
-	bbo.AskQty = mcToDecimal(askQty)
+	bbo.BidPrice = bidPriceD
+	bbo.BidQty = bidQtyD
+	bbo.AskPrice = askPriceD
+	bbo.AskQty = askQtyD
 	ch <- bbo
 }
 func (mc *Mexc) spotWsHandleOrderBook5(symbol string, sendTime int64, data []byte, ch chan<- any) {

@@ -14,6 +14,7 @@ import (
 	"github.com/mailru/easyjson"
 
 	"github.com/shaovie/gutils/ilog"
+	"github.com/shopspring/decimal"
 )
 
 var (
@@ -202,8 +203,16 @@ func (bg *Bitget) SpotWsPublicClose() {
 		bg.spotWsPublicConn.Close()
 	}
 }
+
+// BitgetWsBBO 只用于bbo频道: 价格/数量先按string解析, 过截流后再转decimal
+type BitgetWsBBO struct {
+	Asks [][2]string `json:"a,omitempty"`
+	Bids [][2]string `json:"b,omitempty"`
+	Ts   string      `json:"ts,omitempty"`
+}
+
 func (bg *Bitget) spotWsHandleBBO(symbol string, data []byte, ch chan<- any) {
-	depth := []BitgetWsOrderBook{}
+	depth := []BitgetWsBBO{}
 	if err := json.Unmarshal(data, &depth); err != nil || len(depth) == 0 {
 		return
 	}
@@ -214,13 +223,29 @@ func (bg *Bitget) spotWsHandleBBO(symbol string, data []byte, ch chan<- any) {
 	if !bg.spotWsBboAllow(strings.ToUpper(symbol)) { // n毫秒内的BBO丢弃
 		return
 	}
+	bidPrice, err := decimal.NewFromString(depth[0].Bids[0][0])
+	if err != nil {
+		return
+	}
+	bidQty, err := decimal.NewFromString(depth[0].Bids[0][1])
+	if err != nil {
+		return
+	}
+	askPrice, err := decimal.NewFromString(depth[0].Asks[0][0])
+	if err != nil {
+		return
+	}
+	askQty, err := decimal.NewFromString(depth[0].Asks[0][1])
+	if err != nil {
+		return
+	}
 	obd := wsPublicBBOPool.Get().(*BestBidAsk)
 	obd.Symbol = strings.ToUpper(symbol)
 	obd.Time = ts
-	obd.BidPrice = depth[0].Bids[0][0]
-	obd.BidQty = depth[0].Bids[0][1]
-	obd.AskPrice = depth[0].Asks[0][0]
-	obd.AskQty = depth[0].Asks[0][1]
+	obd.BidPrice = bidPrice
+	obd.BidQty = bidQty
+	obd.AskPrice = askPrice
+	obd.AskQty = askQty
 	ch <- obd
 }
 func (bg *Bitget) spotWsHandleOrderBook(symbol string, data []byte, ch chan<- any) {

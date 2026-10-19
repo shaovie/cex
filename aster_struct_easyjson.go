@@ -1127,33 +1127,25 @@ func easyjson1caa0d1bDecodeGithubComShaovieCex7(in *jlexer.Lexer, out *AsterSpot
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.BidPrice).UnmarshalJSON(data))
-				}
+				out.BidPrice = string(in.String())
 			}
 		case "B":
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.BidQty).UnmarshalJSON(data))
-				}
+				out.BidQty = string(in.String())
 			}
 		case "a":
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.AskPrice).UnmarshalJSON(data))
-				}
+				out.AskPrice = string(in.String())
 			}
 		case "A":
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.AskQty).UnmarshalJSON(data))
-				}
+				out.AskQty = string(in.String())
 			}
 		case "E":
 			if in.IsNull() {
@@ -1189,22 +1181,22 @@ func easyjson1caa0d1bEncodeGithubComShaovieCex7(out *jwriter.Writer, in AsterSpo
 		} else {
 			out.RawString(prefix)
 		}
-		out.Raw((in.BidPrice).MarshalJSON())
+		out.String(string(in.BidPrice))
 	}
 	{
 		const prefix string = ",\"B\":"
 		out.RawString(prefix)
-		out.Raw((in.BidQty).MarshalJSON())
+		out.String(string(in.BidQty))
 	}
 	{
 		const prefix string = ",\"a\":"
 		out.RawString(prefix)
-		out.Raw((in.AskPrice).MarshalJSON())
+		out.String(string(in.AskPrice))
 	}
 	{
 		const prefix string = ",\"A\":"
 		out.RawString(prefix)
-		out.Raw((in.AskQty).MarshalJSON())
+		out.String(string(in.AskQty))
 	}
 	if in.Time != 0 {
 		const prefix string = ",\"E\":"
@@ -2160,33 +2152,25 @@ func easyjson1caa0d1bDecodeGithubComShaovieCex13(in *jlexer.Lexer, out *AsterFut
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.BidPrice).UnmarshalJSON(data))
-				}
+				out.BidPrice = string(in.String())
 			}
 		case "B":
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.BidQty).UnmarshalJSON(data))
-				}
+				out.BidQty = string(in.String())
 			}
 		case "a":
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.AskPrice).UnmarshalJSON(data))
-				}
+				out.AskPrice = string(in.String())
 			}
 		case "A":
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.AskQty).UnmarshalJSON(data))
-				}
+				out.AskQty = string(in.String())
 			}
 		case "E":
 			if in.IsNull() {
@@ -2222,22 +2206,22 @@ func easyjson1caa0d1bEncodeGithubComShaovieCex13(out *jwriter.Writer, in AsterFu
 		} else {
 			out.RawString(prefix)
 		}
-		out.Raw((in.BidPrice).MarshalJSON())
+		out.String(string(in.BidPrice))
 	}
 	{
 		const prefix string = ",\"B\":"
 		out.RawString(prefix)
-		out.Raw((in.BidQty).MarshalJSON())
+		out.String(string(in.BidQty))
 	}
 	{
 		const prefix string = ",\"a\":"
 		out.RawString(prefix)
-		out.Raw((in.AskPrice).MarshalJSON())
+		out.String(string(in.AskPrice))
 	}
 	{
 		const prefix string = ",\"A\":"
 		out.RawString(prefix)
-		out.Raw((in.AskQty).MarshalJSON())
+		out.String(string(in.AskQty))
 	}
 	if in.Time != 0 {
 		const prefix string = ",\"E\":"

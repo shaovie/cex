@@ -8,32 +8,32 @@ type BigoneSpotBBO struct {
 	Ticker struct {
 		Symbol string `json:"market"`
 		Bid    struct {
-			Price decimal.Decimal `json:"price"`
-			Qty   decimal.Decimal `json:"amount"`
+			Price string `json:"price"`
+			Qty   string `json:"amount"`
 		} `json:"bid"`
 		Ask struct {
-			Price decimal.Decimal `json:"price"`
-			Qty   decimal.Decimal `json:"amount"`
+			Price string `json:"price"`
+			Qty   string `json:"amount"`
 		} `json:"ask"`
 	} `json:"ticker"`
 }
 
 func (v *BigoneSpotBBO) reset() {
 	v.Ticker.Symbol = ""
-	v.Ticker.Bid.Price = decimal.Zero
-	v.Ticker.Ask.Price = decimal.Zero
+	v.Ticker.Bid.Price = ""
+	v.Ticker.Ask.Price = ""
 }
 
 type BigoneSpotBBOs struct {
 	Tickers []struct {
 		Symbol string `json:"market"`
 		Bid    struct {
-			Price decimal.Decimal `json:"price"`
-			Qty   decimal.Decimal `json:"amount"`
+			Price string `json:"price"`
+			Qty   string `json:"amount"`
 		} `json:"bid"`
 		Ask struct {
-			Price decimal.Decimal `json:"price"`
-			Qty   decimal.Decimal `json:"amount"`
+			Price string `json:"price"`
+			Qty   string `json:"amount"`
 		} `json:"ask"`
 	} `json:"tickers"`
 }

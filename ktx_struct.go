@@ -1,9 +1,5 @@
 package cex
 
-import (
-	"github.com/shopspring/decimal"
-)
-
 type KtxWsPubMsg struct {
 	Pong   float64   `json:"pong"`
 	Op     string    `json:"op"`
@@ -19,9 +15,9 @@ func (v *KtxWsPubMsg) reset() {
 }
 
 type KtxTicker struct {
-	Symbol   string          `json:"product"`
-	BidPrice decimal.Decimal `json:"bidPrice"`
-	BidQty   decimal.Decimal `json:"bidQty"`
-	AskPrice decimal.Decimal `json:"askPrice"`
-	AskQty   decimal.Decimal `json:"askQty"`
+	Symbol   string `json:"product"`
+	BidPrice string `json:"bidPrice"`
+	BidQty   string `json:"bidQty"`
+	AskPrice string `json:"askPrice"`
+	AskQty   string `json:"askQty"`
 }

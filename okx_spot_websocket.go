@@ -295,6 +295,14 @@ func (ok *Okx) spotWsHandleOrderBook5(symbol string, data []byte, ch chan<- any)
 		}
 	}
 }
+
+// OkxBBO 只用于bbo频道: 价格/数量先按string解析, 过截流后再转decimal
+type OkxBBO struct {
+	Time string      `json:"ts,omitempty"`
+	Bids [][2]string `json:"bids,omitempty"`
+	Asks [][2]string `json:"asks,omitempty"`
+}
+
 func (ok *Okx) spotWsHandleBBO(symbol string, data []byte, ch chan<- any) {
 	before, after, ok0 := strings.Cut(symbol, "-")
 	if !ok0 {
@@ -302,7 +310,7 @@ func (ok *Okx) spotWsHandleBBO(symbol string, data []byte, ch chan<- any) {
 	}
 	sym := before + after
 
-	var orderBookList []OkxOrderBook
+	var orderBookList []OkxBBO
 	if err := json.Unmarshal(data, &orderBookList); err == nil && len(orderBookList) == 1 {
 		for _, depth := range orderBookList {
 			if len(depth.Bids) != len(depth.Asks) && len(depth.Bids) != 1 {
@@ -312,14 +320,30 @@ func (ok *Okx) spotWsHandleBBO(symbol string, data []byte, ch chan<- any) {
 			if !ok.spotWsBboAllow(sym) { // n毫秒内的BBO丢弃
 				continue
 			}
+			bidPrice, err := decimal.NewFromString(depth.Bids[0][0])
+			if err != nil {
+				continue
+			}
+			bidQty, err := decimal.NewFromString(depth.Bids[0][1])
+			if err != nil {
+				continue
+			}
+			askPrice, err := decimal.NewFromString(depth.Asks[0][0])
+			if err != nil {
+				continue
+			}
+			askQty, err := decimal.NewFromString(depth.Asks[0][1])
+			if err != nil {
+				continue
+			}
 			ts, _ := strconv.ParseInt(depth.Time, 10, 64)
 			obd := wsPublicBBOPool.Get().(*BestBidAsk)
 			obd.Symbol = sym
 			obd.Time = ts
-			obd.BidPrice = depth.Bids[0][0]
-			obd.BidQty = depth.Bids[0][1]
-			obd.AskPrice = depth.Asks[0][0]
-			obd.AskQty = depth.Asks[0][1]
+			obd.BidPrice = bidPrice
+			obd.BidQty = bidQty
+			obd.AskPrice = askPrice
+			obd.AskQty = askQty
 			ch <- obd
 			break
 		}

@@ -256,13 +256,29 @@ func (bb *Bybit) spotWsHandleBBO(msg *BybitWsPubMsg, ch chan<- any) {
 		if !bb.spotWsBboAllow(bbo.Symbol) { // n毫秒内的BBO丢弃
 			return
 		}
+		bidPrice, err := decimal.NewFromString(bbo.Bids[0][0])
+		if err != nil {
+			return
+		}
+		bidQty, err := decimal.NewFromString(bbo.Bids[0][1])
+		if err != nil {
+			return
+		}
+		askPrice, err := decimal.NewFromString(bbo.Asks[0][0])
+		if err != nil {
+			return
+		}
+		askQty, err := decimal.NewFromString(bbo.Asks[0][1])
+		if err != nil {
+			return
+		}
 		obd := wsPublicBBOPool.Get().(*BestBidAsk)
 		obd.Symbol = bbo.Symbol
 		obd.Time = msg.Time
-		obd.BidPrice = bbo.Bids[0][0]
-		obd.BidQty = bbo.Bids[0][1]
-		obd.AskPrice = bbo.Asks[0][0]
-		obd.AskQty = bbo.Asks[0][1]
+		obd.BidPrice = bidPrice
+		obd.BidQty = bidQty
+		obd.AskPrice = askPrice
+		obd.AskQty = askQty
 		ch <- obd
 	}
 }

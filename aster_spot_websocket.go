@@ -237,13 +237,29 @@ func (as *Aster) spotWsHandleBBO(data []byte, ch chan<- any) {
 	if !as.spotWsBboAllow(bboRecv.Symbol) { // n毫秒内的BBO丢弃
 		return
 	}
+	bidPrice, err := decimal.NewFromString(bboRecv.BidPrice)
+	if err != nil {
+		return
+	}
+	bidQty, err := decimal.NewFromString(bboRecv.BidQty)
+	if err != nil {
+		return
+	}
+	askPrice, err := decimal.NewFromString(bboRecv.AskPrice)
+	if err != nil {
+		return
+	}
+	askQty, err := decimal.NewFromString(bboRecv.AskQty)
+	if err != nil {
+		return
+	}
 	bbo := wsPublicBBOPool.Get().(*BestBidAsk)
 	bbo.Symbol = bboRecv.Symbol
 	bbo.Time = bboRecv.Time
-	bbo.BidPrice = bboRecv.BidPrice
-	bbo.BidQty = bboRecv.BidQty
-	bbo.AskPrice = bboRecv.AskPrice
-	bbo.AskQty = bboRecv.AskQty
+	bbo.BidPrice = bidPrice
+	bbo.BidQty = bidQty
+	bbo.AskPrice = askPrice
+	bbo.AskQty = askQty
 	ch <- bbo
 }
 func (as *Aster) spotWsHandleOrderBook5(data []byte, ch chan<- any) {

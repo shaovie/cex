@@ -67,10 +67,10 @@ func (v *KucoinWsMsg) reset() {
 
 // KucoinTicker 盘口推送(obu)
 type KucoinTicker struct {
-	Symbol string               `json:"s"`
-	Bids   [][2]decimal.Decimal `json:"b"`
-	Asks   [][2]decimal.Decimal `json:"a"`
-	Time   int64                `json:"M,omitempty"`
+	Symbol string      `json:"s"`
+	Bids   [][2]string `json:"b"`
+	Asks   [][2]string `json:"a"`
+	Time   int64       `json:"M,omitempty"`
 }
 
 // KucoinWsTicker 行情推送(ticker)
