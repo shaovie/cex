@@ -37,6 +37,8 @@ type Exchanger interface {
 	SpotPlaceOrderMultiple([]SpotPostOrder) ([]PostOrderResult, error)
 	// orderId, cltId 二选一
 	SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId string) error
+	// 修改订单: orderId, cltId 二选一; price/qty为零表示不修改该项; postOnly仅对限价单有效
+	SpotAmendOrder(symbol, orderId, cltId string, price, qty decimal.Decimal, postOnly bool) (string, error)
 	// 批量撤单: 暂无交易所实现 (支持部分成功)
 	SpotCancelOrderMultipleSupported() bool
 	SpotCancelOrderMultiple(symbol string /*BTCUSDT*/, orderIds, cltIds []string) error

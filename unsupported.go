@@ -38,6 +38,10 @@ func (us *Unsupported) SpotPlaceOrderMultipleSupported() bool { return false }
 func (us *Unsupported) SpotCancelOrder(symbol, orderId, cltId string) error {
 	return errors.New("not support")
 }
+func (us *Unsupported) SpotAmendOrder(symbol, orderId, cltId string, price, qty decimal.Decimal,
+	postOnly bool) (string, error) {
+	return "", errors.New("not support")
+}
 func (us *Unsupported) SpotCancelOrderMultiple(symbol string, orderIds, cltIds []string) error {
 	return errors.New("not support")
 }

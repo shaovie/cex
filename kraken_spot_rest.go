@@ -332,6 +332,61 @@ func (kk *Kraken) SpotCancelOrder(symbol string, orderId, cltId string) error {
 	return nil
 }
 
+// SpotAmendOrder 修改订单: price/qty为零表示不修改; post_only不传时默认false, 需要保持只做Maker时必须显式传true
+func (kk *Kraken) SpotAmendOrder(symbol, orderId, cltId string, price, qty decimal.Decimal,
+	postOnly bool) (string, error) {
+	if orderId == "" && cltId == "" {
+		return "", errors.New(kk.Name() + " orderId or cltId empty!")
+	}
+	if price.IsZero() && qty.IsZero() {
+		return "", errors.New(kk.Name() + " price and qty both empty!")
+	}
+	nonce := kk.nextNonce()
+	req := struct {
+		Nonce      string `json:"nonce"`
+		TxId       string `json:"txid,omitempty"`
+		CltId      string `json:"cl_ord_id,omitempty"`
+		OrderQty   string `json:"order_qty,omitempty"`
+		LimitPrice string `json:"limit_price,omitempty"`
+		PostOnly   bool   `json:"post_only,omitempty"`
+	}{Nonce: nonce, PostOnly: postOnly}
+	if orderId != "" {
+		req.TxId = orderId
+	} else {
+		req.CltId = cltId
+	}
+	if !qty.IsZero() {
+		req.OrderQty = qty.String()
+	}
+	if !price.IsZero() {
+		req.LimitPrice = price.String()
+	}
+	payload, _ := json.Marshal(&req)
+	path := "/0/private/AmendOrder"
+	link := kkSpotEndpoint + path
+	headers := kk.buildJsonHeaders(path, nonce, payload)
+	_, resp, err := ihttp.Post(link, payload, kkApiDeadline, headers)
+	if err != nil {
+		return "", errors.New(kk.Name() + " net error! " + err.Error())
+	}
+	recv := struct {
+		Error  []string `json:"error,omitempty"`
+		Result struct {
+			AmendId string `json:"amend_id,omitempty"`
+		} `json:"result"`
+	}{}
+	if err = json.Unmarshal(resp, &recv); err != nil {
+		return "", errors.New(kk.Name() + " unmarshal fail! " + err.Error())
+	}
+	if len(recv.Error) > 0 {
+		return "", errors.New(kk.Name() + " amend order fail! " + recv.Error[0])
+	}
+	if recv.Result.AmendId == "" {
+		return "", errors.New(kk.Name() + " amend order fail!")
+	}
+	return recv.Result.AmendId, nil
+}
+
 func (kk *Kraken) SpotPlaceOrderMultipleSupported() bool { return true }
 
 // SpotPlaceOrderMultiple 批量下单: 文档要求一次2~15单且只能同一个交易对
