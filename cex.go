@@ -229,7 +229,20 @@ var (
 	CexFeeCoinMap map[string]string
 )
 
-func Init() error {
+// Init 加载交易规则; cexNames为空时使用当前CexList, 传了则只加载这些交易所
+// 传入的名称会重建CexList(标签沿用默认值), 外部不需要再手动修改CexList
+func Init(cexNames ...string) error {
+	if len(cexNames) > 0 {
+		m := make(map[string]string, len(cexNames))
+		for _, cexName := range cexNames {
+			if label := CexList[cexName]; label != "" {
+				m[cexName] = label
+			} else {
+				m[cexName] = cexName
+			}
+		}
+		CexList = m
+	}
 	ruleInit()
 	return nil
 }

@@ -1,14 +1,11 @@
 package cex
 
 import (
+	"errors"
 	"maps"
-	"math/rand"
 	"sync"
-	"time"
 
 	"github.com/shopspring/decimal"
-
-	"github.com/shaovie/gutils/ilog"
 )
 
 var (
@@ -24,29 +21,21 @@ func init() {
 }
 func ruleInit() {
 	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		spotUpdateExPairRule()
-	}()
-	go func() {
-		defer wg.Done()
-		futuresUpdateExPairRule()
-	}()
+	for cexName := range CexList {
+		wg.Add(1)
+		go func(name string) {
+			defer wg.Done()
+			SpotUpdateExPairRule(name)
+		}(cexName)
+		for _, typ := range []string{"UM", "CM"} {
+			wg.Add(1)
+			go func(name, typ string) {
+				defer wg.Done()
+				FuturesUpdateExPairRule(name, typ)
+			}(cexName, typ)
+		}
+	}
 	wg.Wait()
-
-	go func() {
-		rSleep := 620 + rand.Int63()%10
-		for range time.Tick(time.Duration(rSleep) * time.Second) { // go 1.23+
-			spotUpdateExPairRule()
-		}
-	}()
-	go func() {
-		rSleep := 622 + rand.Int63()%10
-		for range time.Tick(time.Duration(rSleep) * time.Second) { // go 1.23+
-			futuresUpdateExPairRule()
-		}
-	}()
 }
 func SpotGetAllExPairRule(cex string) map[string]*SpotExchangePairRule {
 	spotExchangePairRuleMtx.RLock()
@@ -79,24 +68,22 @@ func SpotSymbolQuote(cex, symbol /*btcusdt*/ string) string {
 	}
 	return ""
 }
-func spotUpdateExPairRule() {
-	var wg sync.WaitGroup
-	for k, _ := range CexList {
-		wg.Add(1)
-		go func(cexName string) {
-			defer wg.Done()
-			if co, _ := New(cexName, "", "", "", "", ""); co != nil {
-				if ret, err := co.SpotLoadAllPairRule(); ret != nil {
-					spotExchangePairRuleMtx.Lock()
-					spotExchangePairRule[cexName] = ret
-					spotExchangePairRuleMtx.Unlock()
-				} else if err != nil {
-					ilog.Warning("cex.rule.spotUpdateExPairRule: " + err.Error())
-				}
-			}
-		}(k)
+
+// SpotUpdateExPairRule 更新指定交易所的现货交易规则, 由外部按需调用
+func SpotUpdateExPairRule(cexName string) error {
+	if co, _ := NewPublic(cexName); co != nil {
+		if ret, err := co.SpotLoadAllPairRule(); ret != nil {
+			spotExchangePairRuleMtx.Lock()
+			spotExchangePairRule[cexName] = ret
+			spotExchangePairRuleMtx.Unlock()
+			return nil
+		} else if err != nil {
+			return err
+		} else {
+			return errors.New("unknown error")
+		}
 	}
-	wg.Wait()
+	return errors.New("unknown exchange: " + cexName)
 }
 func FuturesGetAllExPairRule(cex string) map[string]*FuturesExchangePairRule {
 	futuresExchangePairRuleMtx.RLock()
@@ -129,47 +116,31 @@ func FuturesSymbolValid(cex, symbol /*btcusdt*/ string) bool {
 	}
 	return false
 }
-func futuresUpdateExPairRule() {
-	var wg sync.WaitGroup
-	for k, _ := range CexList {
-		wg.Add(1)
-		go func(cexName string) {
-			defer wg.Done()
-			if co, _ := New(cexName, "", "", "", "", ""); co != nil {
-				if co.FuturesSupported("UM") {
-					if ret, err := co.FuturesLoadAllPairRule("UM"); ret != nil {
-						futuresExchangePairRuleMtx.Lock()
-						ol := futuresExchangePairRule[cexName]
-						if ol == nil {
-							ol = ret
-						} else {
-							maps.Copy(ol, ret)
-						}
-						futuresExchangePairRule[cexName] = ol
-						futuresExchangePairRuleMtx.Unlock()
-					} else if err != nil {
-						ilog.Warning("cex.rule.FuturesUpdateExPairRule:UM " + err.Error())
-					}
-				}
-				if co.FuturesSupported("CM") {
-					if ret, err := co.FuturesLoadAllPairRule("CM"); ret != nil {
-						futuresExchangePairRuleMtx.Lock()
-						ol := futuresExchangePairRule[cexName]
-						if ol == nil {
-							ol = ret
-						} else {
-							maps.Copy(ol, ret)
-						}
-						futuresExchangePairRule[cexName] = ol
-						futuresExchangePairRuleMtx.Unlock()
-					} else if err != nil {
-						ilog.Warning("cex.rule.FuturesUpdateExPairRule:CM " + err.Error())
-					}
-				}
-			}
-		}(k)
+
+// FuturesUpdateExPairRule 更新指定交易所指定类型的合约交易规则, typ: UM/CM, 由外部按需调用
+func FuturesUpdateExPairRule(cexName, typ string) error {
+	co, err := NewPublic(cexName)
+	if co == nil {
+		return err
 	}
-	wg.Wait()
+	if !co.FuturesSupported(typ) {
+		return errors.New(co.Name() + " not support futures type! " + typ)
+	}
+	ret, err := co.FuturesLoadAllPairRule(typ)
+	if err != nil {
+		return err
+	}
+	if ret == nil {
+		return errors.New("unknown error")
+	}
+	futuresExchangePairRuleMtx.Lock()
+	old := futuresExchangePairRule[cexName]
+	ol := make(map[string]*FuturesExchangePairRule, len(old)+len(ret))
+	maps.Copy(ol, old)
+	maps.Copy(ol, ret)
+	futuresExchangePairRule[cexName] = ol
+	futuresExchangePairRuleMtx.Unlock()
+	return nil
 }
 
 // 计算 0.1 的 n 次方
