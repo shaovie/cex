@@ -307,13 +307,13 @@ func New(cexName, account, apikey, secretkey, passwd, localIp string) (Exchanger
 	} else if cexName == "gate" {
 		cexObj, err = NewGate(account, apikey, secretkey, localIp)
 	} else if cexName == "okx" {
-		cexObj = NewOkx(account, apikey, secretkey, passwd)
+		cexObj, err = NewOkx(account, apikey, secretkey, passwd, localIp)
 	} else if cexName == "bigone" {
 		cexObj, err = NewBigone(account, apikey, secretkey, localIp)
 	} else if cexName == "bybit" {
 		cexObj, err = NewBybit(account, apikey, secretkey, localIp)
 	} else if cexName == "ktx" {
-		cexObj = NewKtx()
+		cexObj, err = NewKtx(localIp)
 	} else if cexName == "safetrade" {
 		cexObj, err = NewSafetrade(account, apikey, secretkey, localIp)
 	} else if cexName == "kucoin" {
@@ -327,7 +327,7 @@ func New(cexName, account, apikey, secretkey, passwd, localIp string) (Exchanger
 	} else if cexName == "bnalpha" {
 		cexObj, err = NewBnAlpha(account, apikey, secretkey, localIp)
 	} else if cexName == "kraken" {
-		cexObj = NewKraken(account, apikey, secretkey)
+		cexObj, err = NewKraken(account, apikey, secretkey, localIp)
 	} else {
 		return nil, errors.New("unknown cex platform : " + cexName)
 	}
