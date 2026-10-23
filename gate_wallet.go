@@ -5,7 +5,6 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/shaovie/gutils/ihttp"
 	"github.com/shopspring/decimal"
 )
 
@@ -22,7 +21,7 @@ func (gt *Gate) Withdrawal(symbol, addr, memo, chain string, qty decimal.Decimal
 		`,"chain":"` + chain + `"` +
 		`}`
 	headers := gt.buildHeaders("POST", path, "", payload)
-	_, resp, err := ihttp.Post(url, []byte(payload), gtApiDeadline, headers)
+	_, resp, err := gt.Post(url, []byte(payload), gtApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(gt.Name() + " net error! " + err.Error())
 	}
@@ -51,7 +50,7 @@ func (gt *Gate) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error) {
 	params := "currency=" + symbol
 	headers := gt.buildHeaders("GET", path, params, "")
 	url := gtUniEndpoint + path + "?" + params
-	_, resp, err := ihttp.Get(url, gtApiDeadline, headers)
+	_, resp, err := gt.Get(url, gtApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(gt.Name() + " net error! " + err.Error())
 	}
@@ -99,7 +98,7 @@ func (gt *Gate) GetDepositHistory(symbol string) ([]DepositResult, error) {
 	params := "currency=" + symbol
 	headers := gt.buildHeaders("GET", path, params, "")
 	url := gtUniEndpoint + path + "?" + params
-	_, resp, err := ihttp.Get(url, gtApiDeadline, headers)
+	_, resp, err := gt.Get(url, gtApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(gt.Name() + " net error! " + err.Error())
 	}
@@ -139,7 +138,7 @@ func (gt *Gate) GetDepositAddress(symbol, network string) ([]DepositAddress, err
 	params := "currency=" + symbol
 	headers := gt.buildHeaders("GET", path, params, "")
 	url := gtUniEndpoint + path + "?" + params
-	_, resp, err := ihttp.Get(url, gtApiDeadline, headers)
+	_, resp, err := gt.Get(url, gtApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(gt.Name() + " net error! " + err.Error())
 	}

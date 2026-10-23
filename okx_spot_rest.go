@@ -10,8 +10,6 @@ import (
 
 	"github.com/mailru/easyjson"
 	"github.com/shopspring/decimal"
-
-	"github.com/shaovie/gutils/ihttp"
 )
 
 func (ok *Okx) SpotSupported() bool {
@@ -19,7 +17,7 @@ func (ok *Okx) SpotSupported() bool {
 }
 func (ok *Okx) SpotServerTime() (int64, error) {
 	url := okUniEndpoint + "/api/v5/public/time"
-	_, resp, err := ihttp.Get(url, okApiDeadline, nil)
+	_, resp, err := ok.Get(url, okApiDeadline, nil)
 	if err != nil {
 		return 0, errors.New(ok.Name() + " net error! " + err.Error())
 	}
@@ -45,7 +43,7 @@ func (ok *Okx) SpotServerTime() (int64, error) {
 }
 func (ok *Okx) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	url := okUniEndpoint + "/api/v5/public/instruments?instType=SPOT"
-	retCode, resp, err := ihttp.Get(url, okApiDeadline, nil)
+	retCode, resp, err := ok.Get(url, okApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(ok.Name() + " net error! " + err.Error())
 	}
@@ -106,7 +104,7 @@ func (ok *Okx) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 func (ok *Okx) SpotGetAll24hTicker() (map[string]Pub24hTicker, error) {
 	path := "/api/v5/market/tickers"
 	url := okUniEndpoint + path + "?instType=SPOT"
-	retCode, resp, err := ihttp.Get(url, okApiDeadline, nil)
+	retCode, resp, err := ok.Get(url, okApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(ok.Name() + " net error! " + err.Error())
 	}
@@ -170,7 +168,7 @@ func (ok *Okx) SpotPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 	path := "/api/v5/trade/order"
 	headers := ok.buildHeaders("POST", path, payload)
 	url := okUniEndpoint + path
-	retCode, resp, err := ihttp.Post(url, []byte(payload), okApiDeadline, headers)
+	retCode, resp, err := ok.Post(url, []byte(payload), okApiDeadline, headers)
 	if err != nil {
 		return "", errors.New(ok.Name() + " net error! " + err.Error())
 	}
@@ -208,7 +206,7 @@ func (ok *Okx) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 	path := "/api/v5/account/balance"
 	url := okUniEndpoint + path
 	headers := ok.buildHeaders("GET", path, "")
-	retCode, resp, err := ihttp.Get(url, okApiDeadline, headers)
+	retCode, resp, err := ok.Get(url, okApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(ok.Name() + " spot get assets net error! " + err.Error())
 	}
@@ -264,7 +262,7 @@ func (ok *Okx) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error) {
 	}
 	headers := ok.buildHeaders("GET", path, "")
 	url := okUniEndpoint + path
-	retCode, resp, err := ihttp.Get(url, okApiDeadline, headers)
+	retCode, resp, err := ok.Get(url, okApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(ok.Name() + " net error! " + err.Error())
 	}
@@ -336,7 +334,7 @@ func (ok *Okx) SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId string)
 	}
 	headers := ok.buildHeaders("POST", path, payload)
 	url := okUniEndpoint + path
-	retCode, resp, err := ihttp.Post(url, []byte(payload), okApiDeadline, headers)
+	retCode, resp, err := ok.Post(url, []byte(payload), okApiDeadline, headers)
 	if err != nil {
 		return errors.New(ok.Name() + " net error! " + err.Error())
 	}
@@ -376,7 +374,7 @@ func (ok *Okx) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 	path := "/api/v5/trade/orders-pending?instType=SPOT&instId=" + symbolS
 	headers := ok.buildHeaders("GET", path, "")
 	url := okUniEndpoint + path
-	retCode, resp, err := ihttp.Get(url, okApiDeadline, headers)
+	retCode, resp, err := ok.Get(url, okApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(ok.Name() + " net error! " + err.Error())
 	}

@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
-
-	"github.com/shaovie/gutils/ihttp"
 )
 
 // = assets
@@ -18,7 +16,7 @@ func (kk *Kraken) SpotSupported() bool {
 }
 func (kk *Kraken) SpotServerTime() (int64, error) {
 	url := kkSpotEndpoint + "/0/public/Time"
-	_, resp, err := ihttp.Get(url, kkApiDeadline, nil)
+	_, resp, err := kk.Get(url, kkApiDeadline, nil)
 	if err != nil {
 		return 0, errors.New(kk.Name() + " net error! " + err.Error())
 	}
@@ -41,7 +39,7 @@ func (kk *Kraken) SpotServerTime() (int64, error) {
 }
 func (kk *Kraken) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	link := kkSpotEndpoint + "/0/public/AssetPairs"
-	_, resp, err := ihttp.Get(link, kkApiDeadline, nil)
+	_, resp, err := kk.Get(link, kkApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(kk.Name() + " net error! " + err.Error())
 	}
@@ -104,7 +102,7 @@ func (kk *Kraken) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error
 
 	// get xstocks
 	link = kkSpotEndpoint + "/0/public/AssetPairs?aclass_base=tokenized_asset"
-	_, resp, err = ihttp.Get(link, kkApiDeadline, nil)
+	_, resp, err = kk.Get(link, kkApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(kk.Name() + " net error! " + err.Error())
 	}
@@ -173,7 +171,7 @@ func (kk *Kraken) SpotGetAllAssets() (map[string]*SpotAsset, error) {
 	link := kkSpotEndpoint + path
 	values := url.Values{}
 	headers, params := kk.buildHeaders(path, values)
-	_, resp, err := ihttp.Post(link, []byte(params), kkApiDeadline, headers)
+	_, resp, err := kk.Post(link, []byte(params), kkApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(kk.Name() + " net error! " + err.Error())
 	}
@@ -211,7 +209,7 @@ func (kk *Kraken) SpotGetBBO(symbol string) (BestBidAsk, error) {
 	if kk.isXStocksSymbol(symbol) {
 		url += "&asset_class=tokenized_asset"
 	}
-	_, resp, err := ihttp.Get(url, kkApiDeadline, nil)
+	_, resp, err := kk.Get(url, kkApiDeadline, nil)
 	if err != nil {
 		return BestBidAsk{}, errors.New(kk.Name() + " net error! " + err.Error())
 	}
@@ -278,7 +276,7 @@ func (kk *Kraken) SpotPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 		values.Set("asset_class", "tokenized_asset")
 	}
 	headers, params := kk.buildHeaders(path, values)
-	_, resp, err := ihttp.Post(link, []byte(params), kkApiDeadline, headers)
+	_, resp, err := kk.Post(link, []byte(params), kkApiDeadline, headers)
 	if err != nil {
 		return "", errors.New(kk.Name() + " net error! " + err.Error())
 	}
@@ -312,7 +310,7 @@ func (kk *Kraken) SpotCancelOrder(symbol string, orderId, cltId string) error {
 		values.Set("txid", orderId)
 	}
 	headers, params := kk.buildHeaders(path, values)
-	_, resp, err := ihttp.Post(link, []byte(params), kkApiDeadline, headers)
+	_, resp, err := kk.Post(link, []byte(params), kkApiDeadline, headers)
 	if err != nil {
 		return errors.New(kk.Name() + " net error! " + err.Error())
 	}
@@ -365,7 +363,7 @@ func (kk *Kraken) SpotAmendOrder(symbol, orderId, cltId string, price, qty decim
 	path := "/0/private/AmendOrder"
 	link := kkSpotEndpoint + path
 	headers := kk.buildJsonHeaders(path, nonce, payload)
-	_, resp, err := ihttp.Post(link, payload, kkApiDeadline, headers)
+	_, resp, err := kk.Post(link, payload, kkApiDeadline, headers)
 	if err != nil {
 		return "", errors.New(kk.Name() + " net error! " + err.Error())
 	}
@@ -480,7 +478,7 @@ func (kk *Kraken) spotPlaceOrderBatch(orders []SpotPostOrder) ([]PostOrderResult
 	path := "/0/private/AddOrderBatch"
 	link := kkSpotEndpoint + path
 	headers := kk.buildJsonHeaders(path, nonce, payload)
-	_, resp, err := ihttp.Post(link, payload, kkApiDeadline, headers)
+	_, resp, err := kk.Post(link, payload, kkApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(kk.Name() + " net error! " + err.Error())
 	}
@@ -537,7 +535,7 @@ func (kk *Kraken) SpotCancelOrderMultiple(symbol string, orderIds, cltIds []stri
 	path := "/0/private/CancelOrderBatch"
 	link := kkSpotEndpoint + path
 	headers := kk.buildJsonHeaders(path, nonce, payload)
-	_, resp, err := ihttp.Post(link, payload, kkApiDeadline, headers)
+	_, resp, err := kk.Post(link, payload, kkApiDeadline, headers)
 	if err != nil {
 		return errors.New(kk.Name() + " net error! " + err.Error())
 	}
@@ -565,7 +563,7 @@ func (kk *Kraken) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, error
 	values.Set("consolidate_taker", "true")
 	values.Set("txid", orderId)
 	headers, params := kk.buildHeaders(path, values)
-	_, resp, err := ihttp.Post(link, []byte(params), kkApiDeadline, headers)
+	_, resp, err := kk.Post(link, []byte(params), kkApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(kk.Name() + " net error! " + err.Error())
 	}
@@ -629,7 +627,7 @@ func (kk *Kraken) spotGetOrderList(path, api string, values url.Values,
 	symbol string) ([]*SpotOrder, error) {
 	link := kkSpotEndpoint + path
 	headers, params := kk.buildHeaders(path, values)
-	_, resp, err := ihttp.Post(link, []byte(params), kkApiDeadline, headers)
+	_, resp, err := kk.Post(link, []byte(params), kkApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(kk.Name() + " net error! " + err.Error())
 	}

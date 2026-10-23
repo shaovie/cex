@@ -13,7 +13,6 @@ import (
 	"github.com/emirpasic/gods/v2/maps/treemap"
 	"github.com/gorilla/websocket"
 	"github.com/mailru/easyjson"
-	"github.com/shaovie/gutils/ihttp"
 	"github.com/shaovie/gutils/ilog"
 	"github.com/shopspring/decimal"
 )
@@ -444,7 +443,7 @@ func (kk *Kraken) getWsToken() (string, error) {
 	link := kkSpotEndpoint + path
 	values := url.Values{}
 	headers, params := kk.buildHeaders(path, values)
-	_, resp, err := ihttp.Post(link, []byte(params), kkApiDeadline, headers)
+	_, resp, err := kk.Post(link, []byte(params), kkApiDeadline, headers)
 	if err != nil {
 		return "", errors.New(kk.Name() + " net error! " + err.Error())
 	}

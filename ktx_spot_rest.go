@@ -6,13 +6,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shaovie/gutils/ihttp"
 	"github.com/shopspring/decimal"
 )
 
 func (ktx *Ktx) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	link := ktxSpotEndpoint + "/v1/products?market=spot"
-	_, resp, err := ihttp.Get(link, ktxApiDeadline, nil)
+	_, resp, err := ktx.Get(link, ktxApiDeadline, nil)
 	if err != nil {
 		return nil, errors.New(ktx.Name() + " net error! " + err.Error())
 	}
@@ -68,7 +67,7 @@ func (ktx *Ktx) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) 
 func (ktx *Ktx) SpotGetBBO(symbol string) (BestBidAsk, error) {
 	symbolS := ktx.getSpotSymbol(symbol)
 	url := ktxSpotEndpoint + "/v1/order_book?market=spot&level=1&symbol=" + symbolS
-	_, resp, err := ihttp.Get(url, ktxApiDeadline, nil)
+	_, resp, err := ktx.Get(url, ktxApiDeadline, nil)
 	if err != nil {
 		return BestBidAsk{}, errors.New(ktx.Name() + " net error! " + err.Error())
 	}

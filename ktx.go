@@ -10,6 +10,7 @@ import (
 type Ktx struct {
 	Unsupported
 	CexOptions
+	Http
 	name string
 
 	// spot websocket
@@ -31,11 +32,16 @@ func init() {
 	ktxSpotSymbolMap = make(map[string]string)
 }
 
-func NewKtx() *Ktx {
+func NewKtx(localIP string) (*Ktx, error) {
+	client, err := NewClient("ktx", localIP)
+	if err != nil {
+		return nil, err
+	}
 	cexObj := &Ktx{
+		Http: Http{client: client},
 		name: "ktx",
 	}
-	return cexObj
+	return cexObj, nil
 }
 func (ktx *Ktx) Name() string {
 	return ktx.name

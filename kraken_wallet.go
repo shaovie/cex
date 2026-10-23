@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/shaovie/gutils/ihttp"
 	"github.com/shopspring/decimal"
 )
 
@@ -26,7 +25,7 @@ func (kk *Kraken) Withdrawal(symbol, addr, memo, chain string, qty decimal.Decim
 	values.Set("amount", qty.String())
 
 	headers, params := kk.buildHeaders(path, values)
-	_, resp, err := ihttp.Post(link, []byte(params), kkApiDeadline, headers)
+	_, resp, err := kk.Post(link, []byte(params), kkApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(kk.Name() + " net error! " + err.Error())
 	}
@@ -59,7 +58,7 @@ func (kk *Kraken) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error) 
 		values.Set("aclass", "tokenized_asset")
 	}
 	headers, params := kk.buildHeaders(path, values)
-	_, resp, err := ihttp.Post(link, []byte(params), kkApiDeadline, headers)
+	_, resp, err := kk.Post(link, []byte(params), kkApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(kk.Name() + " net error! " + err.Error())
 	}
@@ -104,7 +103,7 @@ func (kk *Kraken) GetDepositHistory(symbol string) ([]DepositResult, error) {
 		values.Set("aclass", "tokenized_asset")
 	}
 	headers, params := kk.buildHeaders(path, values)
-	_, resp, err := ihttp.Post(link, []byte(params), kkApiDeadline, headers)
+	_, resp, err := kk.Post(link, []byte(params), kkApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(kk.Name() + " net error! " + err.Error())
 	}
@@ -159,7 +158,7 @@ func (kk *Kraken) getDepositMethods(symbol string) ([]string, error) {
 		values.Set("aclass", "tokenized_asset")
 	}
 	headers, params := kk.buildHeaders(path, values)
-	_, resp, err := ihttp.Post(link, []byte(params), kkApiDeadline, headers)
+	_, resp, err := kk.Post(link, []byte(params), kkApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(kk.Name() + " net error! " + err.Error())
 	}
@@ -209,7 +208,7 @@ func (kk *Kraken) GetDepositAddress(symbol, network string) ([]DepositAddress, e
 		values.Set("aclass", "tokenized_asset")
 	}
 	headers, params := kk.buildHeaders(path, values)
-	_, resp, err := ihttp.Post(link, []byte(params), kkApiDeadline, headers)
+	_, resp, err := kk.Post(link, []byte(params), kkApiDeadline, headers)
 	if err != nil {
 		return nil, errors.New(kk.Name() + " net error! " + err.Error())
 	}

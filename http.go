@@ -3,6 +3,7 @@ package cex
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"errors"
 	"io"
 	"net"
@@ -151,6 +152,12 @@ func newClient(cexName, localIP string) (*http.Client, error) {
 		TLSHandshakeTimeout: conf.TLSHandshakeTimeout,
 		DisableCompression:  false, // 启用gzip压缩（节省带宽）
 		DialContext:         dialer.DialContext,
+		// 设置了自定义DialContext后默认不会自动启用HTTP/2, 显式开启以复用单条连接
+		ForceAttemptHTTP2: true,
+		TLSClientConfig: &tls.Config{
+			// 新建连接时走TLS会话复用, 避免重复证书验签
+			ClientSessionCache: tls.NewLRUClientSessionCache(64),
+		},
 	}
 	return &http.Client{
 		Transport: tr,

@@ -13,6 +13,7 @@ import (
 type Okx struct {
 	Unsupported
 	CexOptions
+	Http
 	name      string
 	account   string
 	apikey    string
@@ -69,15 +70,20 @@ func init() {
 	okxSpotSymbolMap = make(map[string]string)
 	okxContractSymbolMap = make(map[string]string)
 }
-func NewOkx(account, apikey, secretkey, passwd string) *Okx {
+func NewOkx(account, apikey, secretkey, passwd, localIP string) (*Okx, error) {
+	client, err := NewClient("okx", localIP)
+	if err != nil {
+		return nil, err
+	}
 	cexObj := &Okx{
+		Http:      Http{client: client},
 		name:      "okx",
 		account:   account,
 		apikey:    apikey,
 		secretkey: secretkey,
 		passwd:    passwd,
 	}
-	return cexObj
+	return cexObj, nil
 }
 func (ok *Okx) Name() string {
 	return ok.name

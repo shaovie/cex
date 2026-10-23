@@ -20,6 +20,7 @@ import (
 type Kraken struct {
 	Unsupported
 	CexOptions
+	Http
 	name               string
 	account            string
 	apikey             string
@@ -78,14 +79,19 @@ func init() {
 	kkXStocksSymbolMap = make(map[string]string)
 	kkSpotAltSymbolMap = make(map[string]string)
 }
-func NewKraken(account, apikey, secretkey string) *Kraken {
+func NewKraken(account, apikey, secretkey, localIP string) (*Kraken, error) {
+	client, err := NewClient("kraken", localIP)
+	if err != nil {
+		return nil, err
+	}
 	cexObj := &Kraken{
+		Http:      Http{client: client},
 		name:      "kraken",
 		account:   account,
 		apikey:    apikey,
 		secretkey: secretkey,
 	}
-	return cexObj
+	return cexObj, nil
 }
 func (kk *Kraken) Name() string {
 	return kk.name
