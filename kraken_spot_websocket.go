@@ -45,7 +45,7 @@ func (kk *Kraken) SpotWsPublicOpen() error {
 	url := "wss://ws.kraken.com/v2"
 	var err error
 	dialer := websocket.Dialer{
-		EnableCompression: true, // 启用压缩扩展
+		EnableCompression: false, // 不启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
 	}
 	kk.spotWsPublicConn, _, err = dialer.Dial(url, http.Header{

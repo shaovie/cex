@@ -244,6 +244,14 @@ func main() {
 	cexObj.Debug(true)
 	bba, _ := cexObj.SpotGetBBO("DNAUSDT")
 	ilog.Rinfo("bba=%v", bba)
+		dh, err := cexObj.GetDepositHistory("USDT")
+		if err != nil {
+			ilog.Rinfo("GetDepositHistory %s", err.Error())
+		}
+		for _, v := range dh {
+			ilog.Rinfo("%v ", v)
+		}
+	return
 	//order, err := cexObj.SpotGetOrder("AMDxUSD", "OG7HA3-I656I-VH7MX7", "")
 	//ilog.Rinfo("%v", *order)
 	//testRest(cexObj)

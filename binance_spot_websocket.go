@@ -61,7 +61,7 @@ func (bn *Binance) SpotWsPublicOpen() error {
 	url := "wss://stream.binance.com:443/stream"
 	var err error
 	dialer := websocket.Dialer{
-		EnableCompression: true, // 启用压缩扩展
+		EnableCompression: false, // 不启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
 	}
 	if bn.localIP != "" {

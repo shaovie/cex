@@ -30,7 +30,7 @@ func (sa *Safetrade) SpotWsPublicOpen_() error {
 }
 func (sa *Safetrade) SpotWsPublicOpen() error {
 	dialer := websocket.Dialer{
-		EnableCompression: true, // 启用压缩扩展
+		EnableCompression: false, // 不启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
 	}
 	if sa.localIP != "" {

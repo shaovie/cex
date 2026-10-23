@@ -54,7 +54,7 @@ func (bo *Bigone) SpotWsPublicOpen() error {
 	url := "wss://big.one/ws/v2"
 	var err error
 	dialer := websocket.Dialer{
-		EnableCompression: true, // 启用压缩扩展
+		EnableCompression: false, // 不启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
 	}
 	if bo.localIP != "" {
@@ -532,7 +532,7 @@ func (bo *Bigone) SpotWsPrivateOpen() error {
 	url := "wss://big.one/ws/v2"
 	var err error
 	dialer := websocket.Dialer{
-		EnableCompression: true, // 启用压缩扩展
+		EnableCompression: false, // 不启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
 	}
 	if bo.localIP != "" {

@@ -44,7 +44,7 @@ func (gt *Gate) SpotWsPublicOpen() error {
 	url := "wss://api.gateio.ws/ws/v4/"
 	var err error
 	dialer := websocket.Dialer{
-		EnableCompression: true, // 启用压缩扩展
+		EnableCompression: false, // 不启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
 	}
 	gt.spotWsPublicConn, _, err = dialer.Dial(url, nil)
