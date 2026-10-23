@@ -56,6 +56,34 @@ type BigoneSpotWsPubMsg struct {
 	TradeUpdate  WsRawJSON `json:"tradeUpdate"`
 }
 
+type BigoneSpotWsOrder struct {
+	Symbol    string          `json:"market,omitempty"`
+	OrderId   string          `json:"id,omitempty"`
+	ClientId  string          `json:"clientOrderId,omitempty"`
+	Price     decimal.Decimal `json:"price"`
+	Qty       decimal.Decimal `json:"amount"`
+	FilledQty decimal.Decimal `json:"filledAmount"`
+	AvgPrice  decimal.Decimal `json:"avgDealPrice"`
+	Status    string          `json:"state,omitempty"`
+	Type      string          `json:"type,omitempty"`
+	Side      string          `json:"side,omitempty"`
+	FeeQty    decimal.Decimal `json:"filledFees"`
+	Time      string          `json:"createdAt,omitempty"`
+	UTime     string          `json:"updatedAt,omitempty"`
+}
+
+type BigoneSpotWsOrderMsg struct {
+	Order BigoneSpotWsOrder `json:"order"`
+}
+
+type BigoneSpotWsAccountUpdate struct {
+	Account struct {
+		Symbol  string          `json:"asset"`
+		Balance decimal.Decimal `json:"balance"`
+		Locked  decimal.Decimal `json:"lockedBalance"`
+	} `json:"account"`
+}
+
 func (v *BigoneSpotWsPubMsg) reset() {
 	v.Err.Code = 0
 	v.Err.Msg = ""

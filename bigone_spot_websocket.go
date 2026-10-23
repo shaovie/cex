@@ -679,24 +679,8 @@ func (bo *Bigone) SpotWsPrivateLoop(ch chan<- any) {
 	}
 }
 func (bo *Bigone) spotWsHandleOrder(data []byte, ch chan<- any) {
-	order := struct {
-		Order struct {
-			Symbol    string          `json:"market,omitempty"`
-			OrderId   string          `json:"id,omitempty"`
-			ClientId  string          `json:"clientOrderId,omitempty"`
-			Price     decimal.Decimal `json:"price"`
-			Qty       decimal.Decimal `json:"amount"`
-			FilledQty decimal.Decimal `json:"filledAmount"`
-			AvgPrice  decimal.Decimal `json:"avgDealPrice"`
-			Status    string          `json:"state,omitempty"`
-			Type      string          `json:"type,omitempty"`
-			Side      string          `json:"side,omitempty"`
-			FeeQty    decimal.Decimal `json:"filledFees"`
-			Time      string          `json:"createdAt,omitempty"`
-			UTime     string          `json:"updatedAt,omitempty"`
-		} `json:"order"`
-	}{}
-	if err := json.Unmarshal(data, &order); err == nil && order.Order.OrderId != "" {
+	order := BigoneSpotWsOrderMsg{}
+	if err := easyjson.Unmarshal(data, &order); err == nil && order.Order.OrderId != "" {
 		ctime, _ := time.Parse(time.RFC3339, order.Order.Time)
 		utime, _ := time.Parse(time.RFC3339, order.Order.UTime)
 		symbol := bo.convSymbol(bo.spotWsPrivateSymbolMap, order.Order.Symbol)
@@ -751,14 +735,8 @@ func (bo *Bigone) spotWsHandleAccountSnap(data []byte, ch chan<- any) {
 	}
 }
 func (bo *Bigone) spotWsHandleAccountUpdate(data []byte, ch chan<- any) {
-	as := struct {
-		Account struct {
-			Symbol  string          `json:"asset"`
-			Balance decimal.Decimal `json:"balance"`
-			Locked  decimal.Decimal `json:"lockedBalance"`
-		} `json:"account"`
-	}{}
-	if err := json.Unmarshal(data, &as); err == nil && len(as.Account.Symbol) > 0 {
+	as := BigoneSpotWsAccountUpdate{}
+	if err := easyjson.Unmarshal(data, &as); err == nil && len(as.Account.Symbol) > 0 {
 		ch <- &SpotAsset{
 			Symbol: as.Account.Symbol,
 			Avail:  as.Account.Balance.Sub(as.Account.Locked),
