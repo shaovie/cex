@@ -264,6 +264,49 @@ func (sa *Safetrade) SpotGetOrder(symbol, orderId, cltId string) (*SpotOrder, er
 		UTime:     utime.UnixMilli(),
 	}, nil
 }
+
+type safetradeOrder struct {
+	Id           int64           `json:"id"`
+	Market       string          `json:"market"`
+	Side         string          `json:"side"`
+	Type         string          `json:"type"`
+	OrdType      string          `json:"ord_type"` // 文档未列出, 实际返回ord_type
+	State        string          `json:"state"`
+	Price        decimal.Decimal `json:"price"`
+	AvgPrice     decimal.Decimal `json:"avg_price"` // 文档未列出
+	OriginAmount decimal.Decimal `json:"origin_amount"`
+	FilledAmount decimal.Decimal `json:"filled_amount"`
+	CreatedAt    string          `json:"created_at,omitempty"`
+	UpdatedAt    string          `json:"updated_at,omitempty"`
+}
+
+func (sa *Safetrade) toStdOrder(v *safetradeOrder) *SpotOrder {
+	ordType := v.OrdType
+	if ordType == "" {
+		ordType = v.Type
+	}
+	ctime, _ := time.Parse(time.RFC3339, v.CreatedAt)
+	utime, _ := time.Parse(time.RFC3339, v.UpdatedAt)
+	status := sa.toStdOrderState(v.State)
+	if status == "NEW" && v.FilledAmount.IsPositive() {
+		status = "PARTIALLY_FILLED"
+	}
+	return &SpotOrder{
+		Symbol:    strings.ToUpper(v.Market),
+		OrderId:   strconv.FormatInt(v.Id, 10),
+		Price:     v.Price,
+		Qty:       v.OriginAmount,
+		FilledQty: v.FilledAmount,
+		FilledAmt: v.FilledAmount.Mul(v.AvgPrice),
+		AvgPrice:  v.AvgPrice,
+		Status:    status,
+		Type:      sa.toStdOrderType(ordType),
+		Side:      sa.toStdSide(v.Side),
+		CTime:     ctime.UnixMilli(),
+		UTime:     utime.UnixMilli(),
+	}
+}
+
 func (sa *Safetrade) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 	params := "?state=wait,pending&limit=100&page=1"
 	if symbol != "" {
@@ -281,51 +324,50 @@ func (sa *Safetrade) SpotGetOpenOrders(symbol string) ([]*SpotOrder, error) {
 	if len(resp) == 0 || resp[0] != '[' {
 		return nil, sa.handleExceptionResp("SpotGetOpenOrders", resp)
 	}
-	ret := []struct {
-		Id           int64           `json:"id"`
-		Market       string          `json:"market"`
-		Side         string          `json:"side"`
-		Type         string          `json:"type"`
-		OrdType      string          `json:"ord_type"` // 文档未列出, 实际返回ord_type
-		State        string          `json:"state"`
-		Price        decimal.Decimal `json:"price"`
-		AvgPrice     decimal.Decimal `json:"avg_price"` // 文档未列出
-		OriginAmount decimal.Decimal `json:"origin_amount"`
-		FilledAmount decimal.Decimal `json:"filled_amount"`
-		CreatedAt    string          `json:"created_at,omitempty"`
-		UpdatedAt    string          `json:"updated_at,omitempty"`
-	}{}
+	ret := []safetradeOrder{}
 	if err = json.Unmarshal(resp, &ret); err != nil {
 		return nil, errors.New(sa.Name() + " unmarshal fail! " + err.Error())
 	}
-
 	dl := make([]*SpotOrder, 0, len(ret))
 	for i := range ret {
-		ordType := ret[i].OrdType
-		if ordType == "" {
-			ordType = ret[i].Type
+		dl = append(dl, sa.toStdOrder(&ret[i]))
+	}
+	return dl, nil
+}
+
+// SpotGetFilledOrders 已成交订单: state=done, 按页取完
+func (sa *Safetrade) SpotGetFilledOrders(symbol string) ([]*SpotOrder, error) {
+	market := ""
+	if symbol != "" {
+		market = sa.getSpotSymbol(symbol)
+		if market == "" {
+			return nil, errors.New(sa.Name() + " unknown symbol! " + symbol)
 		}
-		ctime, _ := time.Parse(time.RFC3339, ret[i].CreatedAt)
-		utime, _ := time.Parse(time.RFC3339, ret[i].UpdatedAt)
-		status := sa.toStdOrderState(ret[i].State)
-		if status == "NEW" && ret[i].FilledAmount.IsPositive() {
-			status = "PARTIALLY_FILLED"
+	}
+	dl := make([]*SpotOrder, 0, 128)
+	for page := 1; ; page++ {
+		params := "?state=done&limit=100&page=" + strconv.Itoa(page)
+		if market != "" {
+			params += "&market=" + market
 		}
-		so := SpotOrder{
-			Symbol:    strings.ToUpper(ret[i].Market),
-			OrderId:   strconv.FormatInt(ret[i].Id, 10),
-			Price:     ret[i].Price,
-			Qty:       ret[i].OriginAmount,
-			FilledQty: ret[i].FilledAmount,
-			FilledAmt: ret[i].FilledAmount.Mul(ret[i].AvgPrice),
-			AvgPrice:  ret[i].AvgPrice,
-			Status:    status,
-			Type:      sa.toStdOrderType(ordType),
-			Side:      sa.toStdSide(ret[i].Side),
-			CTime:     ctime.UnixMilli(),
-			UTime:     utime.UnixMilli(),
+		link := stEndpoint + "/trade/market/orders" + params
+		_, resp, err := sa.Get(link, stApiDeadline, sa.buildHeaders())
+		if err != nil {
+			return nil, errors.New(sa.Name() + " net error! " + err.Error())
 		}
-		dl = append(dl, &so)
+		if len(resp) == 0 || resp[0] != '[' {
+			return nil, sa.handleExceptionResp("SpotGetFilledOrders", resp)
+		}
+		ret := []safetradeOrder{}
+		if err = json.Unmarshal(resp, &ret); err != nil {
+			return nil, errors.New(sa.Name() + " unmarshal fail! " + err.Error())
+		}
+		for i := range ret {
+			dl = append(dl, sa.toStdOrder(&ret[i]))
+		}
+		if len(ret) < 100 { // 不够一页说明取完了
+			break
+		}
 	}
 	return dl, nil
 }
