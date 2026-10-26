@@ -17,7 +17,8 @@ func (ba *BnAlpha) SpotSupported() bool {
 // alpha的交易对是ALPHA_<tokenId><quote>, 需要先用Token列表把 ALPHA_<tokenId> 还原成代币符号
 func (ba *BnAlpha) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	link := baEndpoint + "/bapi/defi/v1/public/wallet-direct/buw/wallet/cex/alpha/all/token/list"
-	_, resp, err := ba.Get(link, baRuleDeadline, nil)
+	_, resp, err := ba.GetWithCache(link, baRuleDeadline, nil,
+		spotPairRuleCacheFile(ba.Name())+".tokens")
 	if err != nil {
 		return nil, errors.New(ba.Name() + " net error! " + err.Error())
 	}
@@ -44,7 +45,8 @@ func (ba *BnAlpha) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, erro
 	}
 
 	link = baEndpoint + "/bapi/defi/v1/public/alpha-trade/get-exchange-info"
-	_, resp, err = ba.Get(link, baRuleDeadline, nil)
+	_, resp, err = ba.GetWithCache(link, baRuleDeadline, nil,
+		spotPairRuleCacheFile(ba.Name())+".exchange")
 	if err != nil {
 		return nil, errors.New(ba.Name() + " net error! " + err.Error())
 	}

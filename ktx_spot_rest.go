@@ -11,7 +11,7 @@ import (
 
 func (ktx *Ktx) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	link := ktxSpotEndpoint + "/v1/products?market=spot"
-	_, resp, err := ktx.Get(link, ktxApiDeadline, nil)
+	_, resp, err := ktx.GetWithCache(link, ktxApiDeadline, nil, spotPairRuleCacheFile(ktx.Name()))
 	if err != nil {
 		return nil, errors.New(ktx.Name() + " net error! " + err.Error())
 	}

@@ -28,7 +28,7 @@ func (mc *Mexc) SpotServerTime() (int64, error) {
 }
 func (mc *Mexc) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	link := mcUniEndpoint + "/api/v3/exchangeInfo"
-	_, resp, err := mc.Get(link, mcApiDeadline, nil)
+	_, resp, err := mc.GetWithCache(link, mcApiDeadline, nil, spotPairRuleCacheFile(mc.Name()))
 	if err != nil {
 		return nil, errors.New(mc.Name() + " net error! " + err.Error())
 	}

@@ -3,7 +3,6 @@ package cex
 import (
 	"encoding/json"
 	"errors"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -11,22 +10,15 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-const stPairRuleCacheFile = "/tmp/cex_safetrade_spot_pair_rule.json"
-
 func (sa *Safetrade) SpotSupported() bool {
 	return true
 }
 func (sa *Safetrade) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	link := stEndpoint + "/trade/public/markets"
-	_, resp, err := sa.Get(link, stApiDeadline, stHttpHeaders)
-	fromCache := false
+	_, resp, err := sa.GetWithCache(link, stApiDeadline, stHttpHeaders,
+		spotPairRuleCacheFile(sa.Name()))
 	if err != nil {
-		var cache []byte
-		if cache, err = os.ReadFile(stPairRuleCacheFile); err != nil {
-			return nil, errors.New(sa.Name() + " net error! " + err.Error())
-		}
-		resp = cache
-		fromCache = true
+		return nil, errors.New(sa.Name() + " net error! " + err.Error())
 	}
 
 	ret := []struct {
@@ -69,9 +61,6 @@ func (sa *Safetrade) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, er
 	stSpotSymbolMapMtx.Lock()
 	stSpotSymbolMap = tSymbolMap
 	stSpotSymbolMapMtx.Unlock()
-	if !fromCache { // 缓存API原始响应, curl下载的同名文件可直接使用
-		_ = os.WriteFile(stPairRuleCacheFile, resp, 0644)
-	}
 	return all, nil
 }
 func (sa *Safetrade) SpotGetBBO(symbol string) (BestBidAsk, error) {

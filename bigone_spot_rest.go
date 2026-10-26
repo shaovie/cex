@@ -39,7 +39,7 @@ func (bo *Bigone) SpotServerTime() (int64, error) {
 }
 func (bo *Bigone) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	url := boSpotEndpoint + "/asset_pairs"
-	_, resp, err := bo.Get(url, boApiDeadline, nil)
+	_, resp, err := bo.GetWithCache(url, boApiDeadline, nil, spotPairRuleCacheFile(bo.Name()))
 	if err != nil {
 		return nil, errors.New(bo.Name() + " net error! " + err.Error())
 	}

@@ -34,7 +34,7 @@ func (gt *Gate) SpotServerTime() (int64, error) {
 func (gt *Gate) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	path := "/api/v4/spot/currency_pairs"
 	url := gtUniEndpoint + path
-	_, resp, err := gt.Get(url, gtApiDeadline, nil)
+	_, resp, err := gt.GetWithCache(url, gtApiDeadline, nil, spotPairRuleCacheFile(gt.Name()))
 	if err != nil {
 		return nil, errors.New(gt.Name() + " net error! " + err.Error())
 	}

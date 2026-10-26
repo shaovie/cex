@@ -42,7 +42,7 @@ func (bg *Bitget) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error
 	path := "/api/v3/market/instruments"
 	params := "category=SPOT"
 	link := bgEndpoint + path + "?" + params
-	_, resp, err := bg.Get(link, bgApiDeadline, nil)
+	_, resp, err := bg.GetWithCache(link, bgApiDeadline, nil, spotPairRuleCacheFile(bg.Name()))
 	if err != nil {
 		return nil, errors.New(bg.Name() + " net error! " + err.Error())
 	}

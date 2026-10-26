@@ -17,7 +17,7 @@ func (kc *Kucoin) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error
 	path := "/api/ua/v1/market/instrument"
 	params := "tradeType=SPOT"
 	link := kcSpotEndpoint + path + "?" + params
-	_, resp, err := kc.Get(link, kcApiDeadline, nil)
+	_, resp, err := kc.GetWithCache(link, kcApiDeadline, nil, spotPairRuleCacheFile(kc.Name()))
 	if err != nil {
 		return nil, errors.New(kc.Name() + " net error! " + err.Error())
 	}

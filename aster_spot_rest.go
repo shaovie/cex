@@ -48,7 +48,7 @@ func (as *Aster) SpotServerTime() (int64, error) {
 }
 func (as *Aster) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	link := asSpotEndpoint + "/api/v3/exchangeInfo"
-	_, resp, err := as.Get(link, asApiDeadline, nil)
+	_, resp, err := as.GetWithCache(link, asApiDeadline, nil, spotPairRuleCacheFile(as.Name()))
 	if err != nil {
 		return nil, errors.New(as.Name() + " net error! " + err.Error())
 	}

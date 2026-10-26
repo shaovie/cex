@@ -3,6 +3,7 @@ package cex
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -61,13 +62,19 @@ func (bb *Bybit) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error)
 	all := make(map[string]*SpotExchangePairRule)
 	now := time.Now().Unix()
 	cursor, lastCursor := "", ""
+	page := 0
 	for {
+		page++
 		link := url
 		if cursor != "" {
 			link += "&cursor=" + cursor
 		}
-		_, resp, err := bb.Get(link, bbApiDeadline, nil)
+		cacheFile := fmt.Sprintf("%s.%d", spotPairRuleCacheFile(bb.Name()), page)
+		_, resp, err := bb.GetWithCache(link, bbApiDeadline, nil, cacheFile)
 		if err != nil {
+			if page > 1 { // 后续页没有缓存, 使用已取到的部分
+				break
+			}
 			return nil, errors.New(bb.Name() + " net error! " + err.Error())
 		}
 		var recv instrumentsResp

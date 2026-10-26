@@ -39,7 +39,7 @@ func (kk *Kraken) SpotServerTime() (int64, error) {
 }
 func (kk *Kraken) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	link := kkSpotEndpoint + "/0/public/AssetPairs"
-	_, resp, err := kk.Get(link, kkApiDeadline, nil)
+	_, resp, err := kk.GetWithCache(link, kkApiDeadline, nil, spotPairRuleCacheFile(kk.Name()))
 	if err != nil {
 		return nil, errors.New(kk.Name() + " net error! " + err.Error())
 	}
@@ -102,7 +102,8 @@ func (kk *Kraken) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error
 
 	// get xstocks
 	link = kkSpotEndpoint + "/0/public/AssetPairs?aclass_base=tokenized_asset"
-	_, resp, err = kk.Get(link, kkApiDeadline, nil)
+	_, resp, err = kk.GetWithCache(link, kkApiDeadline, nil,
+		spotPairRuleCacheFile(kk.Name())+".tokenized")
 	if err != nil {
 		return nil, errors.New(kk.Name() + " net error! " + err.Error())
 	}

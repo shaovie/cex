@@ -29,7 +29,7 @@ func (bn *Binance) SpotServerTime() (int64, error) {
 }
 func (bn *Binance) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	url := bnSpotEndpoint + "/api/v3/exchangeInfo?permissions=SPOT&symbolStatus=TRADING"
-	_, resp, err := bn.Get(url, bnApiDeadline, nil)
+	_, resp, err := bn.GetWithCache(url, bnApiDeadline, nil, spotPairRuleCacheFile(bn.Name()))
 	if err != nil {
 		return nil, errors.New(bn.Name() + " net error! " + err.Error())
 	}

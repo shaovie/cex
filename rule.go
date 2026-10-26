@@ -19,6 +19,9 @@ func init() {
 	spotExchangePairRule = make(map[string]map[string]*SpotExchangePairRule)
 	futuresExchangePairRule = make(map[string]map[string]*FuturesExchangePairRule)
 }
+func spotPairRuleCacheFile(cexName string) string {
+	return "/tmp/cex_" + cexName + "_spot_pair_rule.json"
+}
 func ruleInit() {
 	var wg sync.WaitGroup
 	for cexName := range CexList {

@@ -43,7 +43,7 @@ func (ok *Okx) SpotServerTime() (int64, error) {
 }
 func (ok *Okx) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error) {
 	url := okUniEndpoint + "/api/v5/public/instruments?instType=SPOT"
-	retCode, resp, err := ok.Get(url, okApiDeadline, nil)
+	retCode, resp, err := ok.GetWithCache(url, okApiDeadline, nil, spotPairRuleCacheFile(ok.Name()))
 	if err != nil {
 		return nil, errors.New(ok.Name() + " net error! " + err.Error())
 	}

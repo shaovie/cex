@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -172,6 +174,20 @@ func newClient(cexName, localIP string) (*http.Client, error) {
 func (h *Http) Get(link string, timeout time.Duration,
 	headers map[string]string) (int, []byte, error) {
 	return h.doRequest(http.MethodGet, link, nil, timeout, headers)
+}
+
+// GetWithCache 成功时把原始响应写入cacheFile, 网络/HTTP错误时回退读缓存
+func (h *Http) GetWithCache(link string, timeout time.Duration,
+	headers map[string]string, cacheFile string) (int, []byte, error) {
+	code, resp, err := h.Get(link, timeout, headers)
+	if err == nil && code == http.StatusOK && json.Valid(resp) {
+		_ = os.WriteFile(cacheFile, resp, 0644)
+		return code, resp, nil
+	}
+	if cached, cacheErr := os.ReadFile(cacheFile); cacheErr == nil {
+		return http.StatusOK, cached, nil
+	}
+	return code, resp, err
 }
 func (h *Http) Post(link string, pl []byte, timeout time.Duration,
 	headers map[string]string) (int, []byte, error) {
