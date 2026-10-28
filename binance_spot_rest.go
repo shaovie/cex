@@ -238,7 +238,7 @@ func (bn *Binance) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 	if cltId != "" {
 		params += "&newClientOrderId=" + cltId
 	}
-	if orderType == "LIMIT" {
+	if orderType == "LIMIT" && timeInForce != "" {
 		params += "&timeInForce=" + timeInForce
 	}
 	if orderType == "LIMIT" || orderType == "LIMIT_MAKER" {
