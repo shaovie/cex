@@ -15,7 +15,7 @@ func main() {
 		fmt.Println("open log file failed! " + err.Error())
 		os.Exit(1)
 	}
-	if err = cex.Init(); err != nil {
+	if err = cex.Init(cex.Options{}); err != nil {
 		fmt.Println("cex init failed! " + err.Error())
 		os.Exit(1)
 	}

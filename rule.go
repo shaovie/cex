@@ -4,6 +4,7 @@ import (
 	"errors"
 	"maps"
 	"sync"
+	"sync/atomic"
 
 	"github.com/shopspring/decimal"
 )
@@ -13,6 +14,9 @@ var (
 	spotExchangePairRuleMtx    sync.RWMutex
 	futuresExchangePairRule    map[string]map[string]*FuturesExchangePairRule
 	futuresExchangePairRuleMtx sync.RWMutex
+
+	ruleCacheFirst atomic.Bool  // 只在ruleInit期间为true, 外部主动更新时仍走实时请求
+	ruleCacheTTL   atomic.Int64 // 规则缓存有效期(nanosecond)
 )
 
 func init() {
@@ -23,6 +27,10 @@ func spotPairRuleCacheFile(cexName string) string {
 	return "/tmp/cex_" + cexName + "_spot_pair_rule.json"
 }
 func ruleInit() {
+	if ruleCacheTTL.Load() > 0 {
+		ruleCacheFirst.Store(true)
+		defer ruleCacheFirst.Store(false)
+	}
 	var wg sync.WaitGroup
 	for cexName := range CexList {
 		wg.Add(1)

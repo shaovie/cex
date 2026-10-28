@@ -234,7 +234,7 @@ func main() {
 	passphrase := os.Getenv("PASSPHRASE")
 	cex.CexList = make(map[string]string)
 	cex.CexList[cexName] = cexName
-	if err = cex.Init(); err != nil {
+	if err = cex.Init(cex.Options{}); err != nil {
 		fmt.Println("cex init failed! " + err.Error())
 		os.Exit(1)
 	}

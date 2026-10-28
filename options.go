@@ -6,6 +6,13 @@ import (
 	"time"
 )
 
+// Options cex.Init的可选配置
+type Options struct {
+	// RuleCacheTTL 启动时交易规则缓存的有效期
+	// 缓存文件修改时间在此范围内则直接使用, 0表示不优先读缓存
+	RuleCacheTTL time.Duration
+}
+
 // CexOptions cex对象的可选配置, 每个交易所结构体里内嵌一份
 type CexOptions struct {
 	spotBboThrottle    WsBboThrottle // 现货公共ws的BBO节流

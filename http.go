@@ -179,6 +179,13 @@ func (h *Http) Get(link string, timeout time.Duration,
 // GetWithCache 成功时把原始响应写入cacheFile, 网络/HTTP错误时回退读缓存
 func (h *Http) GetWithCache(link string, timeout time.Duration,
 	headers map[string]string, cacheFile string) (int, []byte, error) {
+	if ruleCacheFirst.Load() {
+		if ttl := time.Duration(ruleCacheTTL.Load()); ttl > 0 {
+			if data, ok := loadFreshRuleCache(cacheFile, ttl); ok {
+				return http.StatusOK, data, nil
+			}
+		}
+	}
 	code, resp, err := h.Get(link, timeout, headers)
 	if err == nil && code == http.StatusOK && json.Valid(resp) {
 		_ = os.WriteFile(cacheFile, resp, 0644)
@@ -188,6 +195,18 @@ func (h *Http) GetWithCache(link string, timeout time.Duration,
 		return http.StatusOK, cached, nil
 	}
 	return code, resp, err
+}
+
+func loadFreshRuleCache(path string, ttl time.Duration) ([]byte, bool) {
+	fi, err := os.Stat(path)
+	if err != nil || time.Since(fi.ModTime()) > ttl {
+		return nil, false
+	}
+	data, err := os.ReadFile(path)
+	if err != nil || !json.Valid(data) {
+		return nil, false
+	}
+	return data, true
 }
 func (h *Http) Post(link string, pl []byte, timeout time.Duration,
 	headers map[string]string) (int, []byte, error) {

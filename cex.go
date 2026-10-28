@@ -233,7 +233,8 @@ var (
 
 // Init 加载交易规则; cexNames为空时使用当前CexList, 传了则只加载这些交易所
 // 传入的名称会重建CexList(标签沿用默认值), 外部不需要再手动修改CexList
-func Init(cexNames ...string) error {
+func Init(opts Options, cexNames ...string) error {
+	ruleCacheTTL.Store(int64(opts.RuleCacheTTL))
 	if len(cexNames) > 0 {
 		m := make(map[string]string, len(cexNames))
 		for _, cexName := range cexNames {
