@@ -386,10 +386,10 @@ func (kk *Kraken) spotWsHandleOrderBook1(symbol string, ch chan<- any) {
 
 type KrakenSpotTicker struct {
 	Symbol   string `json:"symbol"`
-	BidPrice string `json:"bid"`
-	BidQty   string `json:"bid_qty"`
-	AskPrice string `json:"ask"`
-	AskQty   string `json:"ask_qty"`
+	BidPrice json.Number `json:"bid"`
+	BidQty   json.Number `json:"bid_qty"`
+	AskPrice json.Number `json:"ask"`
+	AskQty   json.Number `json:"ask_qty"`
 }
 
 func (kk *Kraken) spotWsHandleBBO(data []byte, ch chan<- any) {
@@ -407,19 +407,19 @@ func (kk *Kraken) spotWsHandleBBO(data []byte, ch chan<- any) {
 			if !kk.spotWsBboAllow(symbol) { // n毫秒内的BBO丢弃
 				continue
 			}
-			bidPrice, err := decimal.NewFromString(bbo[i].BidPrice)
+			bidPrice, err := decimal.NewFromString(bbo[i].BidPrice.String())
 			if err != nil {
 				continue
 			}
-			bidQty, err := decimal.NewFromString(bbo[i].BidQty)
+			bidQty, err := decimal.NewFromString(bbo[i].BidQty.String())
 			if err != nil {
 				continue
 			}
-			askPrice, err := decimal.NewFromString(bbo[i].AskPrice)
+			askPrice, err := decimal.NewFromString(bbo[i].AskPrice.String())
 			if err != nil {
 				continue
 			}
-			askQty, err := decimal.NewFromString(bbo[i].AskQty)
+			askQty, err := decimal.NewFromString(bbo[i].AskQty.String())
 			if err != nil {
 				continue
 			}
