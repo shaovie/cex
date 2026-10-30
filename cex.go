@@ -29,6 +29,7 @@ type Exchanger interface {
 
 	// 市价 amt/qty任选1(优先amt) binance全支持, bigone只qty, gate,okx只amt
 	// 限价 只能qty=base qty, 参数涵义参考 struct SpotOrder
+	// 市价 price: safetrade必填, 作为max_price保护价(买入上限/卖出下限); 其他交易所忽略
 	SpotPlaceOrder(symbol, cltId string, price, amt, qty decimal.Decimal,
 		side, timeInForce, orderType string, postOnly bool) (string, error)
 	// 批量下单: bigone (支持部分成功)

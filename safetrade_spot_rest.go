@@ -132,12 +132,13 @@ func (sa *Safetrade) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 	}
 	// 该交易所不支持client order id, cltId 忽略
 	req := struct {
-		Market string `json:"market"`
-		Side   string `json:"side"`
-		Type   string `json:"type"`
-		Price  string `json:"price,omitempty"`
-		Amount string `json:"amount,omitempty"`
-		Total  string `json:"total,omitempty"`
+		Market   string `json:"market"`
+		Side     string `json:"side"`
+		Type     string `json:"type"`
+		Price    string `json:"price,omitempty"`
+		Amount   string `json:"amount,omitempty"`
+		Total    string `json:"total,omitempty"`
+		MaxPrice string `json:"max_price,omitempty"`
 	}{
 		Market: id,
 		Side:   sa.fromStdSide(side),
@@ -147,6 +148,11 @@ func (sa *Safetrade) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 		req.Price = price.String()
 		req.Amount = qty.String()
 	} else if orderType == "MARKET" {
+		// 市价单price为保护价: 买入最高可接受价, 卖出最低可接受价
+		if !price.IsPositive() {
+			return "", errors.New(sa.Name() + " market order needs price(max_price)!")
+		}
+		req.MaxPrice = price.String()
 		if amt.IsPositive() { // amt为计价币金额
 			req.Total = amt.String()
 		} else {
