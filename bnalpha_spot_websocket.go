@@ -39,7 +39,7 @@ func init() {
 }
 func (ba *BnAlpha) newWsDialer() websocket.Dialer {
 	dialer := websocket.Dialer{
-		EnableCompression: true, // 启用压缩扩展
+		EnableCompression: false, // 启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
 	}
 	if ba.localIP != "" {

@@ -39,7 +39,7 @@ func (ok *Okx) SpotWsPublicOpen() error {
 	url := "wss://ws.okx.com:8443/ws/v5/public"
 	var err error
 	dialer := websocket.Dialer{
-		EnableCompression: true, // 启用压缩扩展
+		EnableCompression: false, // 不启用压缩扩展
 		HandshakeTimeout:  2 * time.Second,
 	}
 	ok.spotWsPublicConn, _, err = dialer.Dial(url, nil)
