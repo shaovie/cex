@@ -172,3 +172,52 @@ func (gt *Gate) GetDepositAddress(symbol, network string) ([]DepositAddress, err
 	}
 	return daL, nil
 }
+
+// GetWalletAllAssetInfo 币种链级充值/提现可用状态, 结构与binance保持一致
+func (gt *Gate) GetWalletAllAssetInfo() (map[string]*WalletAssetInfo, error) {
+	path := "/api/v4/spot/currencies"
+	_, resp, err := gt.Get(gtUniEndpoint+path, gtApiDeadline, nil)
+	if err != nil {
+		return nil, errors.New(gt.Name() + " net error! " + err.Error())
+	}
+	if len(resp) == 0 || resp[0] != '[' {
+		return nil, gt.handleExceptionResp("GetWalletAllAssetInfo", resp)
+	}
+	recv := []struct {
+		Symbol           string `json:"currency"`
+		WithdrawDisabled bool   `json:"withdraw_disabled"`
+		WithdrawDelayed  bool   `json:"withdraw_delayed"`
+		DepositDisabled  bool   `json:"deposit_disabled"`
+		Chains           []struct {
+			Name             string `json:"name"`
+			WithdrawDisabled bool   `json:"withdraw_disabled"`
+			WithdrawDelayed  bool   `json:"withdraw_delayed"`
+			DepositDisabled  bool   `json:"deposit_disabled"`
+		} `json:"chains"`
+	}{}
+	if err = json.Unmarshal(resp, &recv); err != nil {
+		return nil, errors.New(gt.Name() + " unmarshal error! " + err.Error())
+	}
+	waiMap := make(map[string]*WalletAssetInfo, len(recv))
+	for _, v := range recv {
+		if len(v.Chains) == 0 {
+			continue
+		}
+		wai := &WalletAssetInfo{
+			Symbol:            v.Symbol,
+			IsTransferEnabled: true,
+			TransferScale:     8,
+			BindNetworks:      make(map[string]*WalletAssetBindNetworkInfo, len(v.Chains)),
+		}
+		for _, chain := range v.Chains {
+			wai.BindNetworks[chain.Name] = &WalletAssetBindNetworkInfo{
+				// withdraw_delayed 也算不可正常提现
+				IsWithdrawalEnabled: !v.WithdrawDisabled && !v.WithdrawDelayed &&
+					!chain.WithdrawDisabled && !chain.WithdrawDelayed,
+				IsDepositEnabled: !v.DepositDisabled && !chain.DepositDisabled,
+			}
+		}
+		waiMap[v.Symbol] = wai
+	}
+	return waiMap, nil
+}
