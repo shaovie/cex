@@ -83,8 +83,8 @@ func (bo *Bigone) SpotLoadAllPairRule() (map[string]*SpotExchangePairRule, error
 			MinNotional:   pair.MinNotional,
 			QtyStep:       PowOneTenth(pair.BaseScale),
 			PriceTickSize: PowOneTenth(pair.QuoteScale),
-			MaxPrice:      decimal.NewFromFloat(999999999),
-			MaxOrderQty:   decimal.NewFromFloat(999999999),
+			MaxPrice:      decimal.NewFromFloat(99999999999),
+			MaxOrderQty:   decimal.NewFromFloat(99999999999),
 		}
 		ep.MinPrice = ep.PriceTickSize
 		ep.MinOrderQty = ep.QtyStep
