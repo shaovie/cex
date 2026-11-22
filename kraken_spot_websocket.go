@@ -371,10 +371,10 @@ func (kk *Kraken) spotWsHandleOrderBook1(symbol string, ch chan<- any) {
 		obd.AskPrice = it.Key()
 		obd.AskQty = it.Value()
 	}
-	if kk.spotWsOrderBookBid1Ask1Cache.BidPrice.Equals(obd.BidPrice) &&
-		kk.spotWsOrderBookBid1Ask1Cache.BidQty.Equals(obd.BidQty) &&
-		kk.spotWsOrderBookBid1Ask1Cache.AskPrice.Equals(obd.AskPrice) &&
-		kk.spotWsOrderBookBid1Ask1Cache.AskQty.Equals(obd.AskQty) {
+	if kk.spotWsOrderBookBid1Ask1Cache.BidPrice.Equal(obd.BidPrice) &&
+		kk.spotWsOrderBookBid1Ask1Cache.BidQty.Equal(obd.BidQty) &&
+		kk.spotWsOrderBookBid1Ask1Cache.AskPrice.Equal(obd.AskPrice) &&
+		kk.spotWsOrderBookBid1Ask1Cache.AskQty.Equal(obd.AskQty) {
 		return
 	}
 	one := wsPublicBBOPool.Get().(*BestBidAsk)

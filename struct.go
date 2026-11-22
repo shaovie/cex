@@ -147,10 +147,10 @@ func (sa *SpotAsset) Val(v *SpotAsset) {
 	}
 	sa.Avail = v.Avail
 	v99 := decimal.NewFromInt(-999999999)
-	if !v.Total.Equals(v99) {
+	if !v.Total.Equal(v99) {
 		sa.Total = v.Total
 	}
-	if !v.Locked.Equals(v99) {
+	if !v.Locked.Equal(v99) {
 		sa.Locked = v.Locked
 	}
 }
@@ -167,13 +167,13 @@ func (fa *FuturesAsset) Val(v *FuturesAsset) {
 		fa.Symbol = v.Symbol
 	}
 	v99 := decimal.NewFromInt(-999999999)
-	if !v.Total.Equals(v99) {
+	if !v.Total.Equal(v99) {
 		fa.Total = v.Total
 	}
-	if !v.Avail.Equals(v99) {
+	if !v.Avail.Equal(v99) {
 		fa.Avail = v.Avail
 	}
-	if !v.MaxWithdrawAmount.Equals(v99) {
+	if !v.MaxWithdrawAmount.Equal(v99) {
 		fa.MaxWithdrawAmount = v.MaxWithdrawAmount
 	}
 }
@@ -189,13 +189,13 @@ func (sa *UnifiedAsset) Val(v *UnifiedAsset) {
 	if v.Symbol != "" {
 		sa.Symbol = v.Symbol
 	}
-	if !v.Avail.Equals(decimal.NewFromInt(999999999)) {
+	if !v.Avail.Equal(decimal.NewFromInt(999999999)) {
 		sa.Avail = v.Avail
 	}
-	if !v.Total.Equals(decimal.NewFromInt(999999999)) {
+	if !v.Total.Equal(decimal.NewFromInt(999999999)) {
 		sa.Total = v.Total
 	}
-	if !v.Locked.Equals(decimal.NewFromInt(999999999)) {
+	if !v.Locked.Equal(decimal.NewFromInt(999999999)) {
 		sa.Locked = v.Locked
 	}
 }
@@ -462,7 +462,7 @@ type WithdrawResult struct {
 	Info     string          // 失败原因
 	Qty      decimal.Decimal // 到账数量
 	Fee      decimal.Decimal //
-	CTime    int64           // 发起时间
+	CTime    int64           // second 发起时间
 	DoneTime int64           // second 完成时间
 }
 type DepositResult struct {
