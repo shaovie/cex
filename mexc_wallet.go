@@ -35,9 +35,9 @@ func (mc *Mexc) Transfer(symbol, from, to, typ, subAccount string, qty decimal.D
 		return mc.handleExceptionResp("Transfer", resp)
 	}
 	ret := struct {
-		Code   int         `json:"code,omitempty"`
-		Msg    string      `json:"msg,omitempty"`
-		TranId json.Number `json:"tranId,omitempty"`
+		Code   int        `json:"code,omitempty"`
+		Msg    string     `json:"msg,omitempty"`
+		TranId jsonNumber `json:"tranId,omitempty"`
 	}{}
 	if err = json.Unmarshal(resp, &ret); err != nil {
 		return errors.New(mc.Name() + " transfer unmarshal fail! " + err.Error())
@@ -62,9 +62,9 @@ func (mc *Mexc) Withdrawal(symbol, addr, memo, chain string, qty decimal.Decimal
 		return nil, errors.New(mc.Name() + " net error! " + err.Error())
 	}
 	ret := struct {
-		Code int         `json:"code,omitempty"`
-		Msg  string      `json:"msg,omitempty"`
-		Id   json.Number `json:"id,omitempty"`
+		Code int        `json:"code,omitempty"`
+		Msg  string     `json:"msg,omitempty"`
+		Id   jsonNumber `json:"id,omitempty"`
 	}{}
 	if err = json.Unmarshal(resp, &ret); err != nil {
 		return nil, errors.New(mc.Name() + " unmarshal fail! " + err.Error())

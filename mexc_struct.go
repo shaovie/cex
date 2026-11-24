@@ -1,8 +1,6 @@
 package cex
 
 import (
-	"encoding/json/v2"
-
 	"github.com/shopspring/decimal"
 )
 
@@ -11,7 +9,7 @@ type MexcSpotOrder struct {
 	Code          int             `json:"code,omitempty"`
 	Msg           string          `json:"msg,omitempty"`
 	Symbol        string          `json:"symbol,omitempty"`
-	OrderId       json.Number     `json:"orderId,omitempty"`
+	OrderId       jsonNumber      `json:"orderId,omitempty"`
 	ClientId      string          `json:"clientOrderId,omitempty"`
 	Price         decimal.Decimal `json:"price"`
 	OrigQty       decimal.Decimal `json:"origQty"`

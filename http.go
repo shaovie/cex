@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"encoding/json/v2"
+	"encoding/json/jsontext"
 	"errors"
 	"io"
 	"net"
@@ -187,7 +187,7 @@ func (h *Http) GetWithCache(link string, timeout time.Duration,
 		}
 	}
 	code, resp, err := h.Get(link, timeout, headers)
-	if err == nil && code == http.StatusOK && json.Valid(resp) {
+	if err == nil && code == http.StatusOK && jsontext.Value(resp).IsValid() {
 		_ = os.WriteFile(cacheFile, resp, 0644)
 		return code, resp, nil
 	}
@@ -203,7 +203,7 @@ func loadFreshRuleCache(path string, ttl time.Duration) ([]byte, bool) {
 		return nil, false
 	}
 	data, err := os.ReadFile(path)
-	if err != nil || !json.Valid(data) {
+	if err != nil || !jsontext.Value(data).IsValid() {
 		return nil, false
 	}
 	return data, true

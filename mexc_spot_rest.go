@@ -272,9 +272,9 @@ func (mc *Mexc) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 		return "", errors.New(mc.Name() + " net error! " + err.Error())
 	}
 	ret := struct {
-		Code    int         `json:"code,omitempty"`
-		Msg     string      `json:"msg,omitempty"`
-		OrderId json.Number `json:"orderId,omitempty"`
+		Code    int        `json:"code,omitempty"`
+		Msg     string     `json:"msg,omitempty"`
+		OrderId jsonNumber `json:"orderId,omitempty"`
 	}{}
 	if err = json.Unmarshal(resp, &ret); err != nil {
 		return "", errors.New(mc.Name() + " unmarshal fail! " + err.Error())
@@ -300,10 +300,10 @@ func (mc *Mexc) SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId string
 		return errors.New(mc.Name() + " net error! " + err.Error())
 	}
 	ret := struct {
-		Code    int         `json:"code,omitempty"`
-		Msg     string      `json:"msg,omitempty"`
-		OrderId json.Number `json:"orderId,omitempty"`
-		Status  string      `json:"status,omitempty"`
+		Code    int        `json:"code,omitempty"`
+		Msg     string     `json:"msg,omitempty"`
+		OrderId jsonNumber `json:"orderId,omitempty"`
+		Status  string     `json:"status,omitempty"`
 	}{}
 	if err = json.Unmarshal(resp, &ret); err != nil {
 		return errors.New(mc.Name() + " unmarshal fail! " + err.Error())

@@ -15,7 +15,7 @@ type AsterFuturesOrder struct {
 	Code         int             `json:"code,omitempty"`
 	Msg          string          `json:"msg,omitempty"`
 	Symbol       string          `json:"symbol,omitempty"`
-	OrderId      json.Number     `json:"orderId,omitempty"`
+	OrderId      jsonNumber      `json:"orderId,omitempty"`
 	ClientId     string          `json:"clientOrderId,omitempty"`
 	Price        decimal.Decimal `json:"price"`
 	AvgPrice     decimal.Decimal `json:"avgPrice"`
@@ -211,9 +211,9 @@ func (as *Aster) FuturesPlaceOrder(typ, symbol, clientId string, /*BTCUSDT*/
 		return "", errors.New(as.Name() + " net error! " + err.Error())
 	}
 	ret := struct {
-		Code    int         `json:"code,omitempty"`
-		Msg     string      `json:"msg,omitempty"`
-		OrderId json.Number `json:"orderId,omitempty"`
+		Code    int        `json:"code,omitempty"`
+		Msg     string     `json:"msg,omitempty"`
+		OrderId jsonNumber `json:"orderId,omitempty"`
 	}{}
 	if err = json.Unmarshal(resp, &ret); err != nil {
 		return "", errors.New(as.Name() + " unmarshal fail! " + err.Error())
@@ -300,10 +300,10 @@ func (as *Aster) futuresPlaceOrderMultiple(orders []FuturesPostOrder) ([]PostOrd
 		return nil, as.handleExceptionResp("FuturesPlaceOrderMultiple", resp)
 	}
 	ret := []struct {
-		Code          int         `json:"code,omitempty"`
-		Msg           string      `json:"msg,omitempty"`
-		OrderId       json.Number `json:"orderId,omitempty"`
-		ClientOrderId string      `json:"clientOrderId,omitempty"`
+		Code          int        `json:"code,omitempty"`
+		Msg           string     `json:"msg,omitempty"`
+		OrderId       jsonNumber `json:"orderId,omitempty"`
+		ClientOrderId string     `json:"clientOrderId,omitempty"`
 	}{}
 	if err = json.Unmarshal(resp, &ret); err != nil {
 		return nil, errors.New(as.Name() + " unmarshal fail! " + err.Error())
@@ -398,9 +398,9 @@ func (as *Aster) futuresCancelOrderMultiple(symbol string, orderIds, cltIds []st
 		return as.handleExceptionResp("FuturesCancelOrderMultiple", resp)
 	}
 	ret := []struct {
-		Code    int         `json:"code,omitempty"`
-		Msg     string      `json:"msg,omitempty"`
-		OrderId json.Number `json:"orderId,omitempty"`
+		Code    int        `json:"code,omitempty"`
+		Msg     string     `json:"msg,omitempty"`
+		OrderId jsonNumber `json:"orderId,omitempty"`
 	}{}
 	if err = json.Unmarshal(resp, &ret); err != nil {
 		return errors.New(as.Name() + " unmarshal fail! " + err.Error())

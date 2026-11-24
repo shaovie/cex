@@ -14,7 +14,7 @@ type AsterSpotOrder struct {
 	Code         int             `json:"code,omitempty"`
 	Msg          string          `json:"msg,omitempty"`
 	Symbol       string          `json:"symbol,omitempty"`
-	OrderId      json.Number     `json:"orderId,omitempty"`
+	OrderId      jsonNumber      `json:"orderId,omitempty"`
 	ClientId     string          `json:"clientOrderId,omitempty"`
 	Price        decimal.Decimal `json:"price"`
 	AvgPrice     decimal.Decimal `json:"avgPrice"`
@@ -303,9 +303,9 @@ func (as *Aster) SpotPlaceOrder(symbol, cltId string, /*BTCUSDT*/
 		return "", errors.New(as.Name() + " net error! " + err.Error())
 	}
 	ret := struct {
-		Code    int         `json:"code,omitempty"`
-		Msg     string      `json:"msg,omitempty"`
-		OrderId json.Number `json:"orderId,omitempty"`
+		Code    int        `json:"code,omitempty"`
+		Msg     string     `json:"msg,omitempty"`
+		OrderId jsonNumber `json:"orderId,omitempty"`
 	}{}
 	if err = json.Unmarshal(resp, &ret); err != nil {
 		return "", errors.New(as.Name() + " unmarshal fail! " + err.Error())
@@ -331,10 +331,10 @@ func (as *Aster) SpotCancelOrder(symbol string /*BTCUSDT*/, orderId, cltId strin
 		return errors.New(as.Name() + " net error! " + err.Error())
 	}
 	ret := struct {
-		Code    int         `json:"code,omitempty"`
-		Msg     string      `json:"msg,omitempty"`
-		OrderId json.Number `json:"orderId,omitempty"`
-		Status  string      `json:"status,omitempty"`
+		Code    int        `json:"code,omitempty"`
+		Msg     string     `json:"msg,omitempty"`
+		OrderId jsonNumber `json:"orderId,omitempty"`
+		Status  string     `json:"status,omitempty"`
 	}{}
 	if err = json.Unmarshal(resp, &ret); err != nil {
 		return errors.New(as.Name() + " unmarshal fail! " + err.Error())

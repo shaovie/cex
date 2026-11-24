@@ -385,11 +385,11 @@ func (kk *Kraken) spotWsHandleOrderBook1(symbol string, ch chan<- any) {
 }
 
 type KrakenSpotTicker struct {
-	Symbol   string `json:"symbol"`
-	BidPrice json.Number `json:"bid"`
-	BidQty   json.Number `json:"bid_qty"`
-	AskPrice json.Number `json:"ask"`
-	AskQty   json.Number `json:"ask_qty"`
+	Symbol   string     `json:"symbol"`
+	BidPrice jsonNumber `json:"bid"`
+	BidQty   jsonNumber `json:"bid_qty"`
+	AskPrice jsonNumber `json:"ask"`
+	AskQty   jsonNumber `json:"ask_qty"`
 }
 
 func (kk *Kraken) spotWsHandleBBO(data []byte, ch chan<- any) {
