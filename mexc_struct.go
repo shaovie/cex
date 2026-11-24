@@ -1,7 +1,7 @@
 package cex
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 
 	"github.com/shopspring/decimal"
 )

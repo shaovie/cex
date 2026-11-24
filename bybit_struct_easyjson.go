@@ -3,7 +3,7 @@
 package cex
 
 import (
-	json "encoding/json"
+	json "encoding/json/v2"
 	easyjson "github.com/mailru/easyjson"
 	jlexer "github.com/mailru/easyjson/jlexer"
 	jwriter "github.com/mailru/easyjson/jwriter"

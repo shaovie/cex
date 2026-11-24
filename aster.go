@@ -3,7 +3,7 @@ package cex
 import (
 	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"strconv"
 	"strings"
