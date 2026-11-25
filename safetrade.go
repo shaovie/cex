@@ -50,7 +50,7 @@ var (
 
 const stEndpoint = "https://safe.trade/api/v2"
 const stWsOrigin = "https://safe.trade"
-const stApiDeadline = 1500 * time.Millisecond
+const stApiDeadline = 2500 * time.Millisecond
 
 // 该站WAF会拦非浏览器UA的请求, REST与WS都必须带上
 const stUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
