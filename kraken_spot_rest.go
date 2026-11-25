@@ -285,7 +285,7 @@ func (kk *Kraken) SpotPlaceOrder(symbol, clientId string, /*BTCUSDT*/
 		Error  []string `json:"error,omitempty"`
 		Result struct {
 			OrderIds []string `json:"txid,omitempty"`
-		}
+		} `json:"result"`
 	}{}
 	err = json.Unmarshal(resp, &recv)
 	if err != nil {
@@ -319,7 +319,7 @@ func (kk *Kraken) SpotCancelOrder(symbol string, orderId, cltId string) error {
 		Error  []string `json:"error,omitempty"`
 		Result struct {
 			Count int64 `json:"count,omitempty"`
-		}
+		} `json:"result"`
 	}{}
 	err = json.Unmarshal(resp, &recv)
 	if err != nil {

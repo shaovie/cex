@@ -26,7 +26,7 @@ func (ok *Okx) SpotServerTime() (int64, error) {
 		Msg  string `json:"msg,omitempty"`
 		Data []struct {
 			Time string `json:"ts,omitempty"`
-		}
+		} `json:"data"`
 	}{}
 	err = json.Unmarshal(resp, &recv)
 	if err != nil {

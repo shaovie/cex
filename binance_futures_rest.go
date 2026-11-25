@@ -71,7 +71,7 @@ func (bn *Binance) FuturesLoadAllPairRule(typ string) (map[string]*FuturesExchan
 				TickSize    decimal.Decimal `json:"tickSize"`
 				StepSize    decimal.Decimal `json:"stepSize"`
 				MinNotional decimal.Decimal `json:"notional"` // for UM
-			}
+			} `json:"filters"`
 		} `json:"symbols"`
 	}{}
 	if err = json.Unmarshal(resp, &recv); err != nil {

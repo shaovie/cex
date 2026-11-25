@@ -33,7 +33,7 @@ func (kk *Kraken) Withdrawal(symbol, addr, memo, chain string, qty decimal.Decim
 		Error  []string `json:"error"`
 		Result struct {
 			Id string `json:"refid"`
-		}
+		} `json:"result"`
 	}{}
 	err = json.Unmarshal(resp, &recv)
 	if err != nil {
@@ -73,7 +73,7 @@ func (kk *Kraken) GetWithdrawalHistory(symbol string) ([]WithdrawResult, error) 
 			Qty    decimal.Decimal `json:"amount"`
 			Fee    decimal.Decimal `json:"fee"`
 			UTime  int64           `json:"time"`
-		}
+		} `json:"result"`
 	}{}
 	err = json.Unmarshal(resp, &ret)
 	if err != nil {
@@ -119,7 +119,7 @@ func (kk *Kraken) GetDepositHistory(symbol string) ([]DepositResult, error) {
 			Qty        decimal.Decimal `json:"amount"`
 			Fee        decimal.Decimal `json:"fee"`
 			UTime      int64           `json:"time"`
-		}
+		} `json:"result"`
 	}{}
 	err = json.Unmarshal(resp, &ret)
 	if err != nil {
@@ -166,7 +166,7 @@ func (kk *Kraken) getDepositMethods(symbol string) ([]string, error) {
 		Error  []string `json:"error"`
 		Result []struct {
 			Method string `json:"method"`
-		}
+		} `json:"result"`
 	}{}
 	err = json.Unmarshal(resp, &recv)
 	if err != nil {
@@ -217,7 +217,7 @@ func (kk *Kraken) GetDepositAddress(symbol, network string) ([]DepositAddress, e
 		Result []struct {
 			Addr string `json:"address"`
 			Memo string `json:"tag"`
-		}
+		} `json:"result"`
 	}{}
 	err = json.Unmarshal(resp, &recv)
 	if err != nil {
